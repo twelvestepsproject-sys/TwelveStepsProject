@@ -1,0 +1,205 @@
+import type { MenuItem, MenuLocation } from "@/lib/schemas";
+
+/**
+ * §6 menus + menu_items, §5 block 1 (header nav w/ dropdowns) and block
+ * 19 (footer quick nav). Shape here matches `MenuItem` — the resolved
+ * nested tree `getMenu()` returns, not flat rows (§5.5 rule 6). Sitemap
+ * sections per §4: studies hub, trainings, about (+ lecturers anchor),
+ * community, blog, gallery, podcast, contact.
+ */
+export const menusByLocation: Record<MenuLocation, MenuItem[]> = {
+  header: [
+    {
+      id: "a0000000-0000-4000-8000-000000000001",
+      label: "התוכנית",
+      href: "/tochnit-halimudim",
+      sort_order: 1,
+      open_in_new_tab: false,
+      children: [
+        {
+          id: "a0000000-0000-4000-8000-000000000002",
+          label: "שנה א׳",
+          href: "/tochnit-halimudim/shana-a",
+          sort_order: 1,
+          open_in_new_tab: false,
+          children: [],
+        },
+        {
+          id: "a0000000-0000-4000-8000-000000000003",
+          label: "שנה ב׳",
+          href: "/tochnit-halimudim/shana-b",
+          sort_order: 2,
+          open_in_new_tab: false,
+          children: [],
+        },
+        {
+          id: "a0000000-0000-4000-8000-000000000004",
+          label: "שנה ג׳",
+          href: "/tochnit-halimudim/shana-g",
+          sort_order: 3,
+          open_in_new_tab: false,
+          children: [],
+        },
+      ],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000005",
+      label: "הכשרות",
+      href: "/hachsharot",
+      sort_order: 2,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000006",
+      label: "אודות",
+      href: "/odot",
+      sort_order: 3,
+      open_in_new_tab: false,
+      children: [
+        {
+          id: "a0000000-0000-4000-8000-000000000007",
+          label: "המרצים שלנו",
+          href: "/odot#martsim",
+          sort_order: 1,
+          open_in_new_tab: false,
+          children: [],
+        },
+      ],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000008",
+      label: "קהילה",
+      href: "/kehila",
+      sort_order: 4,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000009",
+      label: "בלוג",
+      href: "/blog",
+      sort_order: 5,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000000a",
+      label: "גלריה",
+      href: "/gallery",
+      sort_order: 6,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000000b",
+      label: "פודקאסט",
+      href: "/podcast",
+      sort_order: 7,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000000c",
+      label: "צור קשר",
+      href: "/tsor-kesher",
+      sort_order: 8,
+      open_in_new_tab: false,
+      children: [],
+    },
+  ],
+
+  footer_quick: [
+    {
+      id: "a0000000-0000-4000-8000-00000000000d",
+      label: "התוכנית",
+      href: "/tochnit-halimudim",
+      sort_order: 1,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000000e",
+      label: "הכשרות",
+      href: "/hachsharot",
+      sort_order: 2,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000000f",
+      label: "בלוג",
+      href: "/blog",
+      sort_order: 3,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000010",
+      label: "נגישות",
+      href: "/accessibility-statement",
+      sort_order: 4,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000011",
+      label: "פרטיות",
+      href: "/privacy",
+      sort_order: 5,
+      open_in_new_tab: false,
+      children: [],
+    },
+  ],
+
+  mobile: [
+    {
+      id: "a0000000-0000-4000-8000-000000000012",
+      label: "התוכנית",
+      href: "/tochnit-halimudim",
+      sort_order: 1,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000013",
+      label: "הכשרות",
+      href: "/hachsharot",
+      sort_order: 2,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000014",
+      label: "אודות",
+      href: "/odot",
+      sort_order: 3,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000015",
+      label: "קהילה",
+      href: "/kehila",
+      sort_order: 4,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000016",
+      label: "בלוג",
+      href: "/blog",
+      sort_order: 5,
+      open_in_new_tab: false,
+      children: [],
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000017",
+      label: "צור קשר",
+      href: "/tsor-kesher",
+      sort_order: 6,
+      open_in_new_tab: false,
+      children: [],
+    },
+  ],
+};

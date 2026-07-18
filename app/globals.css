@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — §3.5 of docs/BUILD_SPEC.md.
+ * Every color, radius, and spacing decision lives here as a CSS variable.
+ * No component may write a hex value or a Tailwind arbitrary color.
+ * The brand-tier tokens (primary/accent/surfaces/ink/radii) are overridden
+ * per-request by site_settings.theme via an inline <style> block injected
+ * in the root layout, AFTER this stylesheet — unset keys fall back to
+ * these defaults through normal CSS cascade.
+ */
+@theme {
+  /*
+   * brand — admin-editable
+   * Richer-palette pass (design-direction task, 2026-07): deepened within
+   * the SAME teal/terracotta/sand family per §3.5's rationale (calm,
+   * low-contrast-shock, appropriate for a therapy/recovery audience) —
+   * only the specific hex values moved, not the direction. No new hue
+   * (tertiary "gold" token) added — stays a strict 2-accent system
+   * (teal primary + terracotta accent) per explicit decision. Every pair
+   * re-verified with a throwaway WCAG contrast script, not eyeballed —
+   * see final report for the numbers.
+   */
+  --color-primary: #164e49; /* deepened teal — more saturated, still calm/credible */
+  --color-primary-hover: #0f3b37;
+  --color-primary-fg: #ffffff;
+
+  --color-accent: #c1512b; /* richer terracotta — more chroma for CTA warmth */
+  --color-accent-hover: #a43f1f;
+  --color-accent-fg: #ffffff;
+  /* Use for ACCENT-COLORED TEXT on --color-bg/--color-surface only (never
+     for filled buttons — those use --color-accent + --color-accent-fg).
+     Raw --color-accent as text-on-bg measures 4.33:1, under the 4.5:1 AA
+     "normal text" threshold (still passes AA-large) — this darker shade
+     (shared with the hover fill) is the one that clears AA at any size. */
+  --color-accent-text: #a43f1f;
+
+  /* surfaces */
+  --color-bg: #fbf5ec; /* warm sand, slightly richer than before */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f3e7d6;
+  --color-border: #e4ded4;
+
+  /* text */
+  --color-ink: #221f1a;
+  --color-ink-muted: #5c564c;
+
+  /* semantic — not admin-editable, hex unchanged by this pass */
+  --color-success: #2e7d5b;
+  --color-error: #b3261e;
+  /* NOTE for whoever wires this up as text color: --color-warning as TEXT
+     on the new --color-bg measures ~4.49:1 — just under the 4.5:1 AA
+     "normal text" threshold (passes AA-large). Not a live violation today
+     (no component uses it as text yet, verified by grep), but re-check
+     before using it for small warning text on --color-bg; prefer it as a
+     filled chip/badge background with a dark ink foreground instead. */
+  --color-warning: #9a6700;
+
+  /* shape & type scale */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --font-display: "Heebo", sans-serif;
+  --font-body: "Assistant", sans-serif;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+/*
+ * Motion pass (design-direction task): shared entrance-transition and
+ * hover-affordance utilities. CSS transitions/keyframes only — no JS
+ * animation library — per §3's Lighthouse mobile >=90 constraint. The
+ * IntersectionObserver-driven class toggle lives in
+ * components/blocks/_shared/reveal-on-scroll.tsx; this stylesheet only
+ * defines what the class DOES, kept cheap (opacity + transform, both
+ * compositor-only properties, no layout/paint-triggering animation).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 0.5s ease-out,
+      transform 0.5s ease-out;
+  }
+  .reveal-on-scroll.is-revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* prefers-reduced-motion: reduce (or no support signal) -> content is
+   simply visible immediately, no animation, no motion. This matches the
+   plan's explicit "respects prefers-reduced-motion" commitment. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/*
+ * Accessibility toolbar (§5 block 20 / §3) — plain CSS classes toggled on
+ * <html> by components/layout/accessibility-toolbar.tsx. Kept dead simple
+ * (font-size scaling, a filter-based grayscale, and a manual high-contrast
+ * override) rather than a third-party overlay vendor, per §3's explicit
+ * "ask before adding any third-party overlay vendor" rule — nothing
+ * third-party is used here, so no such ask was needed for this piece.
+ */
+html.a11y-font-large {
+  font-size: 112.5%;
+}
+html.a11y-font-larger {
+  font-size: 125%;
+}
+html.a11y-grayscale {
+  filter: grayscale(1);
+}
+/* High contrast: pushes ink/bg further apart than the default token
+   values without editing the token layer itself (this is a user-session
+   preference, not a brand override — site_settings.theme, §3.5, is the
+   mechanism for admin-controlled brand color changes; this is separate
+   and always layered on top, never replacing it). */
+html.a11y-high-contrast {
+  --color-ink: #000000;
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f0f0f0;
+  --color-border: #000000;
+}

@@ -1,0 +1,33 @@
+{
+  "name": "site",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "typecheck:schema": "echo \"[typecheck:schema] no-op until Phase 5 generates DB types from Supabase — will assert generated types are assignable to /lib/schemas domain types\" && exit 0",
+    "check:placeholder": "node scripts/check-placeholder.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "mock:reset": "node scripts/mock-reset.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.1",
+    "typescript": "^5"
+  }
+}

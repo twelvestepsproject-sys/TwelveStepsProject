@@ -1,0 +1,120 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/queries";
+import { requireContentRole } from "@/lib/admin/role-check";
+import { toFriendlyMessage, type ActionResult } from "@/lib/admin/friendly-error";
+import { slugify, uniqueSlug, isSlugUnique } from "@/lib/admin/slug";
+import type { Training, SyllabusItem } from "@/lib/schemas";
+
+/**
+ * Every mutation here is a real Server Action: zod validation happens
+ * inside `db.saveTraining` (reusing `trainingSchema` from lib/schemas, per
+ * task brief — no ad-hoc validation written here), and a role check runs
+ * BEFORE any `db` call so a `viewer` posting directly to this action is
+ * rejected server-side, not just hidden in the UI.
+ */
+
+function parseSyllabus(raw: string): SyllabusItem[] {
+  // Simple line-based input in the form: "כותרת | תוכן" per line. Keeps the
+  // form usable for a non-technical admin without building a full nested
+  // repeatable-fieldset widget for syllabus items in this pass.
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, ...rest] = line.split("|");
+      return { title: (title ?? "").trim(), body: rest.join("|").trim() };
+    });
+}
+
+export async function saveTrainingAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
+  try {
+    await requireContentRole();
+
+    const id = (formData.get("id") as string) || undefined;
+    const title = String(formData.get("title") ?? "").trim();
+    let slug = String(formData.get("slug") ?? "").trim() || slugify(title);
+
+    const existingAdmin = await db.listTrainingsAdmin({ perPage: 500 });
+    const otherSlugs = existingAdmin.items.filter((t) => t.id !== id).map((t) => t.slug);
+    if (!id) {
+      slug = uniqueSlug(slug, otherSlugs);
+    } else if (!isSlugUnique(slug, otherSlugs)) {
+      return { ok: false, error: "כתובת ה-URL (slug) הזו כבר בשימוש בהכשרה אחרת." };
+    }
+
+    const instructorIds = formData.getAll("instructor_ids").map(String);
+
+    const input: Partial<Training> & { id?: string } = {
+      id,
+      slug,
+      title,
+      excerpt: String(formData.get("excerpt") ?? ""),
+      body: String(formData.get("body") ?? ""),
+      cover_image_id: (formData.get("cover_image_id") as string) || null,
+      starts_on: (formData.get("starts_on") as string) || null,
+      ends_on: (formData.get("ends_on") as string) || null,
+      meeting_day: (formData.get("meeting_day") as string) || null,
+      meeting_time: (formData.get("meeting_time") as string) || null,
+      academic_hours: Number(formData.get("academic_hours") ?? 0),
+      sessions_count: Number(formData.get("sessions_count") ?? 0),
+      instructors: instructorIds as unknown as Training["instructors"],
+      syllabus: parseSyllabus(String(formData.get("syllabus_raw") ?? "")),
+      price: formData.get("price") ? Number(formData.get("price")) : null,
+      registration_url: (formData.get("registration_url") as string) || null,
+      is_featured: formData.get("is_featured") === "on",
+      status: (formData.get("status") as Training["status"]) ?? "draft",
+      sort_order: Number(formData.get("sort_order") ?? 0),
+      seo_title: null,
+      seo_description: null,
+      seo_canonical: null,
+      seo_og_image_id: null,
+      seo_noindex: false,
+    };
+
+    const saved = await db.saveTraining(input);
+    revalidatePath("/admin/trainings");
+    return { ok: true, data: { id: saved.id } };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}
+
+export async function deleteTrainingAction(id: string): Promise<void> {
+  await requireContentRole();
+  await db.deleteTraining(id);
+  revalidatePath("/admin/trainings");
+}
+
+export async function togglePublishAction(id: string, nextStatus: "draft" | "published"): Promise<void> {
+  await requireContentRole();
+  await db.saveTraining({ id, status: nextStatus });
+  revalidatePath("/admin/trainings");
+}
+
+export async function duplicateTrainingAction(id: string): Promise<void> {
+  await requireContentRole();
+  const admin = await db.listTrainingsAdmin({ perPage: 500 });
+  const original = admin.items.find((t) => t.id === id);
+  if (!original) return;
+  const slugs = admin.items.map((t) => t.slug);
+  const newSlug = uniqueSlug(`${original.slug}-copy`, slugs);
+  await db.saveTraining({
+    ...original,
+    id: undefined,
+    slug: newSlug,
+    title: `${original.title} (עותק)`,
+    status: "draft",
+  });
+  revalidatePath("/admin/trainings");
+}
+
+export async function createTrainingAndRedirect(formData: FormData) {
+  const result = await saveTrainingAction(formData);
+  if (result.ok && result.data) {
+    redirect(`/admin/trainings/${result.data.id}`);
+  }
+}
