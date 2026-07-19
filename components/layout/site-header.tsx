@@ -116,7 +116,15 @@ export async function SiteHeader() {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-3">
+        {/* BUG FIX: on mobile, this wrapper (effectively just the hamburger
+            button, since search/CTA are hidden below md/sm) used to render
+            as the LAST flex child. With dir="rtl" + justify-between, the
+            last child paints at the visual LEFT — so the hamburger showed
+            up on the wrong side. `order-first` (mobile-only, undone at lg
+            where the desktop layout takes over) moves it to the visual
+            START of the row — the right side in RTL — without touching
+            desktop ordering at all. */}
+        <div className="order-first flex items-center gap-3 lg:order-none">
           <form action="/search" className="hidden items-center md:flex" role="search">
             <label htmlFor="site-search" className="sr-only">
               חיפוש באתר
