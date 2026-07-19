@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/queries";
+import { ContactForm } from "./contact-form";
 
 /**
  * `/tsor-kesher` — Contact (§4 `/[contact]`). Slug already present in
@@ -7,12 +8,13 @@ import { db } from "@/lib/queries";
  * used as-is per the task brief's instruction not to invent a competing
  * scheme.
  *
- * Contact form UI only, per §11 / task instructions — name/email/phone/
- * message matching `contact_messages`' shape (lib/schemas/leads.ts
- * `contactMessageInputSchema`), but no real submission wiring
- * (`db.createContactMessage` via a Server Action is Phase 4). Contact
- * details (phone/email/address) are read from `db.getSiteSettings()`,
- * never hardcoded, matching site-footer.tsx's own pattern.
+ * Contact form wired to `submitContactAction` (lib/actions/public-forms.ts)
+ * via the co-located `<ContactForm>` client component — writes a real row
+ * to `contact_messages`. Previously form markup only, no submission wiring
+ * (see docs/content-needed.md's "BUG — public forms don't actually submit"
+ * section). Contact details (phone/email/address) are read from
+ * `db.getSiteSettings()`, never hardcoded, matching site-footer.tsx's own
+ * pattern.
  */
 export const metadata: Metadata = {
   title: "צור קשר | מכללת אשד",
@@ -58,63 +60,7 @@ export default async function ContactPage() {
         ) : null}
       </dl>
 
-      {/* Form UI only — no submission wiring yet (Phase 4 Server Action,
-          per §11 / task instructions). */}
-      <form className="flex flex-col gap-4" aria-label="טופס יצירת קשר">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-name" className="text-sm font-semibold text-ink">
-            שם מלא
-          </label>
-          <input
-            id="contact-name"
-            name="name"
-            type="text"
-            required
-            className="rounded-md border border-border bg-surface px-4 py-2.5 text-ink transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-email" className="text-sm font-semibold text-ink">
-            אימייל
-          </label>
-          <input
-            id="contact-email"
-            name="email"
-            type="email"
-            required
-            className="rounded-md border border-border bg-surface px-4 py-2.5 text-ink transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-phone" className="text-sm font-semibold text-ink">
-            טלפון (לא חובה)
-          </label>
-          <input
-            id="contact-phone"
-            name="phone"
-            type="tel"
-            className="rounded-md border border-border bg-surface px-4 py-2.5 text-ink transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-message" className="text-sm font-semibold text-ink">
-            הודעה
-          </label>
-          <textarea
-            id="contact-message"
-            name="message"
-            required
-            rows={5}
-            className="rounded-md border border-border bg-surface px-4 py-2.5 text-ink transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
-        </div>
-        <button
-          type="submit"
-          className="mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg"
-        >
-          שליחה
-        </button>
-      </form>
+      <ContactForm />
     </main>
   );
 }

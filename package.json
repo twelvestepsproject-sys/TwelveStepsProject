@@ -11,15 +11,21 @@
     "typecheck:schema": "echo \"[typecheck:schema] no-op until Phase 5 generates DB types from Supabase — will assert generated types are assignable to /lib/schemas domain types\" && exit 0",
     "check:placeholder": "node scripts/check-placeholder.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "mock:reset": "node scripts/mock-reset.mjs"
+    "mock:reset": "node scripts/mock-reset.mjs",
+    "supabase:seed": "tsx supabase/seed/seed.mjs",
+    "supabase:create-first-admin": "tsx scripts/create-first-admin.mjs",
+    "supabase:rls-proof": "tsx supabase/tests/rls-anon-proof.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.7",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

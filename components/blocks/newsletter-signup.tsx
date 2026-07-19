@@ -1,12 +1,16 @@
 import type { z } from "zod";
 import type { newsletterSignupBlockDataSchema } from "@/lib/schemas";
 import { RevealOnScroll } from "./_shared/reveal-on-scroll";
+import { NewsletterForm } from "./newsletter-form";
 
 /**
- * §5 block 10 — Newsletter signup. Static form SHELL only — no `db` read,
- * no submit wiring. Actual submission goes through `db.subscribeNewsletter`
- * via a Server Action, which is Phase 4 territory (task brief explicitly
- * scopes this block to "form shell, no data read yet").
+ * §5 block 10 — Newsletter signup. Stays a Server Component (reads `data`
+ * only, no client state of its own); the actual form/submit logic lives in
+ * the co-located `<NewsletterForm>` client component below, which wraps
+ * `submitNewsletterAction` (lib/actions/public-forms.ts) via React 19's
+ * `useActionState`. See docs/content-needed.md's "BUG — public forms don't
+ * actually submit" section — this was previously a bare `<form>` with no
+ * `action` at all.
  */
 type NewsletterSignupData = z.infer<typeof newsletterSignupBlockDataSchema>;
 
@@ -18,25 +22,7 @@ export function NewsletterSignup({ data }: { data: NewsletterSignupData }) {
           {data.heading}
         </h2>
         {data.body ? <p className="text-ink-muted">{data.body}</p> : null}
-        <form className="flex w-full flex-col gap-3 sm:flex-row" aria-label={data.heading}>
-          <label htmlFor="newsletter-email" className="sr-only">
-            כתובת אימייל
-          </label>
-          <input
-            id="newsletter-email"
-            type="email"
-            name="email"
-            required
-            placeholder="כתובת אימייל"
-            className="flex-1 rounded-full border border-border bg-surface px-4 py-3 text-ink transition-colors placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          />
-          <button
-            type="submit"
-            className="rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg"
-          >
-            הרשמה
-          </button>
-        </form>
+        <NewsletterForm heading={data.heading} />
         <p className="text-xs text-ink-muted">
           {data.consent_text}{" "}
           <a

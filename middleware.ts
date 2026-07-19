@@ -1,33 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { DEV_SESSION_COOKIE_NAME } from "@/lib/admin/dev-session";
+import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
 
 /**
- * §7: "Middleware guards /admin/**." §16 Phase 4: "Auth stubbed with a dev
- * role switcher" — there is no real Supabase Auth session to check yet, so
- * this checks for the dev-session cookie instead (see lib/admin/dev-session.ts
- * for the cookie-vs-module-state design decision). `/admin/login` itself
- * must stay reachable without a session (that's where the cookie gets set),
- * or nobody could ever log in.
+ * §7: "Middleware guards /admin/**."
  *
- * DEFERRED (Redirects screen task, §6 "applied in middleware"): the
- * `redirects` table + admin CRUD screen (/admin/redirects) are built and
- * fully functional against `db.listRedirectsAdmin()`/`saveRedirect()`, but
- * this middleware does NOT yet consult them for public-site requests.
- * Reasoning: `lib/mock/store.ts` persists via `node:fs`, and the
- * mockDataSource module chain pulls in `node:crypto` — neither is
- * Edge-runtime-safe, so wiring "check the redirects table on every public
- * request" here would require either switching this middleware's runtime
- * to Node (a broader config change touching how `/admin/**` auth is
- * evaluated too) or building a second, Edge-safe read path just for
- * redirects. Given the login-loop regression earlier this session came
- * from exactly this kind of layout/middleware interaction, this is left as
- * a flagged follow-up rather than risking a regression to the working
- * `/admin/**` guard above. Follow-up: either move this middleware's config
- * to `runtime: "nodejs"` (Next.js 15+ supports this) and add a
- * `db.listRedirectsAdmin()` lookup + `NextResponse.redirect()` branch
- * before the `/admin` check, or expose a tiny Edge-safe redirects reader.
+ * PHASE 5 UPDATE: this file is NOT under /app or /components, so it is
+ * explicitly allowed to change (§16). It now branches on DATA_SOURCE:
+ *  - DATA_SOURCE=mock: UNCHANGED — checks the dev-session cookie exactly as
+ *    in Phase 4 (see lib/admin/dev-session.ts's mock-mode branch). Keeps
+ *    the mock path working exactly as before (verification requirement:
+ *    "confirm DATA_SOURCE=mock still works").
+ *  - DATA_SOURCE=supabase: checks a REAL Supabase Auth session via
+ *    @supabase/ssr's middleware client, which also transparently refreshes
+ *    the session cookie (standard @supabase/ssr middleware recipe) so a
+ *    near-expiry access token gets renewed on navigation.
+ *
+ * `/admin/login` itself must stay reachable without a session in both
+ * modes, or nobody could ever log in.
+ *
+ * DEFERRED (unchanged from Phase 4, still applies): the `redirects` table
+ * is not yet consulted here for public-site requests — see git history for
+ * the original reasoning (Edge-runtime-safety of the mock store). Now that
+ * a real Postgres-backed redirects table exists, this remains a flagged
+ * follow-up rather than an in-scope Phase 5 change (Phase 5's scope is the
+ * DB/auth swap, not new middleware features).
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!pathname.startsWith("/admin")) {
@@ -45,6 +44,23 @@ export function middleware(request: NextRequest) {
 
   if (pathname.startsWith("/admin/login")) {
     return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  if (process.env.DATA_SOURCE === "supabase") {
+    const { supabase, getResponse } = createSupabaseMiddlewareClient(request);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const response = getResponse();
+    response.headers.set("x-pathname", pathname);
+    return response;
   }
 
   const hasSession = request.cookies.has(DEV_SESSION_COOKIE_NAME);

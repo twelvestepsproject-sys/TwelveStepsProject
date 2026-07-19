@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { usePathname } from "next/navigation";
+import { submitRegistrationAction, type FormActionResult } from "@/lib/actions/public-forms";
 
 /**
  * §5 block 20 (part) — Registration modal, one piece of `global_overlays`.
  *
- * SCOPE (per task brief, explicit): UI SHELL ONLY. Form fields render,
- * client-side validation affordances (required/type=email/pattern for an
- * Israeli phone) are present, but there is NO working submit — no Server
- * Action, no `db.createLead()` call wired up. That's explicitly Phase 4
- * (§11: "Registration modal: ... -> leads. Israeli phone validation.
- * Honeypot + IP rate limit + Cloudflare Turnstile ... GTM event,
- * notification email"), not built here. Submitting this form currently
- * just prevents default and shows a "not yet wired up" note — it does NOT
- * silently no-op in a way that could look like a real submission succeeded.
+ * Wired to `submitRegistrationAction` (lib/actions/public-forms.ts) via
+ * React 19's `useActionState` — writes a real row to `leads`. Previously a
+ * UI shell only (see docs/content-needed.md's "BUG — public forms don't
+ * actually submit" section for the history): the form called
+ * `preventDefault()` and showed a "not yet wired up" message instead of
+ * submitting anywhere.
  *
  * Opens via any `<a href="#registration-modal">` in the page (see
  * site-header.tsx's CTA) — implemented as a simple open/close state
@@ -23,6 +23,20 @@ import { useEffect, useState } from "react";
  * defined in lib/schemas/blocks.ts) gates whether this even mounts.
  */
 const OPEN_EVENT = "open-registration-modal";
+const initialState: FormActionResult | null = null;
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg disabled:pointer-events-none disabled:opacity-60"
+    >
+      {pending ? "שולח..." : "שליחה"}
+    </button>
+  );
+}
 
 /** Call from anywhere (e.g. an onClick) to open the modal without prop
  * drilling — dispatched as a plain DOM CustomEvent. */
@@ -34,12 +48,17 @@ export function openRegistrationModal() {
 
 export function RegistrationModal() {
   const [open, setOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [state, formAction] = useActionState(submitRegistrationAction, initialState);
+  const pathname = usePathname();
 
+  // GTM event integration point: once a real GTM container is wired up
+  // (§13 NEXT_PUBLIC_GTM_ID / site_settings.gtm_id — nothing exists yet in
+  // this project), fire e.g. `window.dataLayer?.push({ event:
+  // 'registration_submit' })` here when `state?.ok` flips true. Skipped for
+  // now rather than faking an analytics call.
   useEffect(() => {
     function onOpen() {
       setOpen(true);
-      setSubmitted(false);
     }
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
@@ -54,7 +73,6 @@ export function RegistrationModal() {
       if (target) {
         e.preventDefault();
         setOpen(true);
-        setSubmitted(false);
       }
     }
     document.addEventListener("click", onHashClick);
@@ -105,21 +123,33 @@ export function RegistrationModal() {
           </button>
         </div>
 
-        {submitted ? (
+        {state?.ok ? (
           <p className="rounded-md bg-surface-alt p-4 text-sm text-ink-muted" role="status">
-            הטופס עדיין לא מחובר לשליחה אמיתית (שלב פיתוח הבא) — זהו תצוגה מקדימה של העיצוב בלבד.
+            {state.message}
           </p>
         ) : (
-          <form
-            className="flex flex-col gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSubmitted(true);
-            }}
-          >
+          <form action={formAction} className="flex flex-col gap-3">
+            <input type="hidden" name="source_page" value={pathname ?? undefined} />
+            {/* Honeypot: hidden from real users (off-screen + not
+                focusable), visible to naive bots that fill every field.
+                Server Action treats a non-empty value as a bot and
+                silently no-ops the write. */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              className="absolute h-0 w-0 overflow-hidden opacity-0"
+            />
             <p className="text-sm text-ink-muted">
               השאירו פרטים ונחזור אליכם לתיאום שיחת היכרות קצרה, ללא התחייבות.
             </p>
+            {state && !state.ok ? (
+              <p className="rounded-md bg-error/10 p-3 text-sm text-error" role="alert">
+                {state.message}
+              </p>
+            ) : null}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <label htmlFor="reg-first-name" className="text-sm font-semibold text-ink">
@@ -186,12 +216,7 @@ export function RegistrationModal() {
                 .
               </span>
             </label>
-            <button
-              type="submit"
-              className="mt-2 rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg"
-            >
-              שליחה
-            </button>
+            <SubmitButton />
           </form>
         )}
       </div>
