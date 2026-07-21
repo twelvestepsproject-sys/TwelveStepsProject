@@ -47,8 +47,9 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
           {shown.map((lecturer, i) => {
             const photo = photos[i];
             return (
-              <div
+              <RevealOnScroll
                 key={lecturer.id}
+                delayMs={i * 80}
                 className="flex flex-col items-center gap-2 text-center transition-transform duration-300 hover:-translate-y-1"
               >
                 {photo ? (
@@ -57,21 +58,22 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                     alt={photo.alt_he}
                     width={80}
                     height={80}
-                    className="h-20 w-20 rounded-full object-cover"
+                    className="h-20 w-20 rounded-full object-cover ring-2 ring-border transition-shadow duration-300"
                   />
                 ) : (
                   // No photo on file (fixture gap, not a rendering bug) —
                   // an empty circle stands in rather than a broken <img>
-                  // or a fabricated placeholder photo.
+                  // or a fabricated placeholder photo. Same ring treatment
+                  // as a real photo, for visual consistency across the grid.
                   <div
-                    className="h-20 w-20 rounded-full bg-surface-alt"
+                    className="h-20 w-20 rounded-full bg-surface-alt ring-2 ring-border"
                     role="img"
                     aria-label={lecturer.name}
                   />
                 )}
                 <p className="font-display font-bold text-ink">{lecturer.name}</p>
                 <p className="text-xs text-ink-muted">{lecturer.role}</p>
-              </div>
+              </RevealOnScroll>
             );
           })}
         </div>

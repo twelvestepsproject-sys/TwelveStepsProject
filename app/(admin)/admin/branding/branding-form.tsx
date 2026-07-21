@@ -94,8 +94,14 @@ function toFormState(s: SiteSettings): FormState {
     favicon_id: s.favicon_id,
     og_default_image_id: s.og_default_image_id,
     theme: { ...s.theme },
-    font_display: s.font_display,
-    font_body: s.font_body,
+    // font_display/font_body are nullable on SiteSettings (null = "no
+    // admin override yet, use the shipped @theme default") — but a <select>
+    // needs SOME concrete value to display. "Heebo"/"Assistant" here is
+    // just the dropdown's initial display value when nothing's been chosen
+    // yet; it does NOT get written back unless the admin actually saves
+    // the form, which is always an explicit choice at that point.
+    font_display: s.font_display ?? "Heebo",
+    font_body: s.font_body ?? "Assistant",
     radius_scale: s.radius_scale,
   };
 }

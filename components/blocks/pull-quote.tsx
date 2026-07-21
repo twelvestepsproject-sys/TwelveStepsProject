@@ -11,8 +11,8 @@ type PullQuoteData = z.infer<typeof pullQuoteBlockDataSchema>;
 export function PullQuote({ data }: { data: PullQuoteData }) {
   return (
     <section className="bg-bg px-6 py-16">
-      <RevealOnScroll className="mx-auto flex max-w-2xl flex-col items-center gap-2 text-center">
-        <p className="font-display text-5xl text-accent-text" aria-hidden="true">
+      <RevealOnScroll className="reveal-scale mx-auto flex max-w-2xl flex-col items-center gap-2 text-center">
+        <p className="font-accent-script text-7xl sm:text-8xl" aria-hidden="true">
           &rdquo;
         </p>
         <p className="font-display text-xl font-semibold text-ink sm:text-2xl">{data.quote}</p>

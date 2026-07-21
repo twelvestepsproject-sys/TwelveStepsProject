@@ -56,8 +56,14 @@ export const siteSettingsSchema = z.object({
   favicon_id: uuidSchema.nullable(),
   og_default_image_id: uuidSchema.nullable(),
   theme: themeOverridesSchema,
-  font_display: fontFamilyOptionSchema,
-  font_body: fontFamilyOptionSchema,
+  // null = no admin override yet, fall back to the shipped @theme default
+  // (Fredoka / Assistant) — same "unset falls back to default" principle
+  // §3.5 already applies to `theme` jsonb, extended here since these two
+  // fields are required top-level enums with no other way to express
+  // "nothing chosen." An explicit non-null value is a real admin choice
+  // and must render literally (see FONT_FAMILY_CSS in lib/fonts.ts).
+  font_display: fontFamilyOptionSchema.nullable(),
+  font_body: fontFamilyOptionSchema.nullable(),
   radius_scale: radiusScaleSchema,
 
   // Contact

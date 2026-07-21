@@ -21,8 +21,15 @@ export const siteSettings = {
   favicon_id: null,
   og_default_image_id: null,
   theme: {},
-  font_display: "Heebo",
-  font_body: "Assistant",
+  // Motion/design-direction pass (2026-07): `font_display`/`font_body` are
+  // nullable (see lib/schemas/site-settings.ts) — null means "no admin
+  // override yet," so the site renders the shipped @theme defaults
+  // (Fredoka / Assistant, lib/fonts.ts). An admin who explicitly picks
+  // "Heebo" from the Branding-screen dropdown still gets real Heebo
+  // (FONT_FAMILY_CSS.Heebo -> var(--font-heebo)) — that's a deliberate
+  // choice, not the default state these fixture rows represent.
+  font_display: null,
+  font_body: null,
   radius_scale: "soft",
 
   contact_phone: "03-000-0000",

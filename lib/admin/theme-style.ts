@@ -57,12 +57,18 @@ export function renderThemeStyleTag(settings: SiteSettings): string | null {
 }
 
 /** Font-family CSS var to attach at <html> level, honoring the admin's
- * font_display/font_body selection (§3.5 Typography dropdown). Falls back
- * to the shipped @theme defaults (--font-display/--font-body) when the
- * selected family has no self-hosted file yet — see lib/fonts.ts's
- * FONT_FAMILY_CSS comment for which families that currently applies to. */
+ * font_display/font_body selection (§3.5 Typography dropdown). `null` means
+ * no admin override yet — falls back to the shipped @theme defaults
+ * (--font-display/--font-body, currently Fredoka/Assistant) via the SAME
+ * cascade principle §3.5 already uses for `theme` jsonb colors: an absent
+ * choice doesn't get written into the override block at all. A non-null
+ * value is a real admin choice and always renders literally, even if that
+ * happens to equal the current default family. */
 export function fontFamilyVars(settings: SiteSettings): string {
-  const display = FONT_FAMILY_CSS[settings.font_display] ?? "var(--font-display)";
-  const body = FONT_FAMILY_CSS[settings.font_body] ?? "var(--font-body)";
-  return `:root{--font-display:${display};--font-body:${body};}`;
+  const display = settings.font_display ? FONT_FAMILY_CSS[settings.font_display] : null;
+  const body = settings.font_body ? FONT_FAMILY_CSS[settings.font_body] : null;
+  const decls: string[] = [];
+  if (display) decls.push(`--font-display:${display};`);
+  if (body) decls.push(`--font-body:${body};`);
+  return decls.length > 0 ? `:root{${decls.join("")}}` : "";
 }

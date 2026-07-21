@@ -27,7 +27,7 @@ export function NewsletterSignup({ data }: { data: NewsletterSignupData }) {
           {data.consent_text}{" "}
           <a
             href={data.privacy_link.href}
-            className="underline underline-offset-2 transition-colors hover:text-ink"
+            className="underline underline-offset-2 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {data.privacy_link.label}
           </a>

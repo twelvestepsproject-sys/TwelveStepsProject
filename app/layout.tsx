@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fontDisplay, fontBody, fontRubik, fontNotoSansHebrew } from "@/lib/fonts";
+import { fontDisplay, fontBody, fontRubik, fontNotoSansHebrew, fontFredoka } from "@/lib/fonts";
 import { db } from "@/lib/queries";
 import { renderThemeStyleTag, fontFamilyVars } from "@/lib/admin/theme-style";
 import "./globals.css";
@@ -36,13 +36,13 @@ export default async function RootLayout({
     <html
       lang="he"
       dir="rtl"
-      className={`${fontDisplay.variable} ${fontBody.variable} ${fontRubik.variable} ${fontNotoSansHebrew.variable} h-full antialiased`}
+      className={`${fontDisplay.variable} ${fontBody.variable} ${fontRubik.variable} ${fontNotoSansHebrew.variable} ${fontFredoka.variable} h-full antialiased`}
     >
       <head>
         {/* Server-rendered CSS custom-property overrides only; values are
             constrained to hex/length/keyword tokens by isSafeCssValue() in
             lib/admin/theme-style.ts before reaching this string. */}
-        <style dangerouslySetInnerHTML={{ __html: fontVarsStyle }} />
+        {fontVarsStyle ? <style dangerouslySetInnerHTML={{ __html: fontVarsStyle }} /> : null}
         {themeStyle ? <style dangerouslySetInnerHTML={{ __html: themeStyle }} /> : null}
       </head>
       <body className="min-h-full flex flex-col">{children}</body>

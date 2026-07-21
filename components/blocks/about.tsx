@@ -45,7 +45,7 @@ export function About({ data }: { data: AboutData }) {
             href={data.cta.href}
             target={data.cta.open_in_new_tab ? "_blank" : undefined}
             rel={data.cta.open_in_new_tab ? "noreferrer" : undefined}
-            className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline"
+            className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {data.cta.label}
           </a>

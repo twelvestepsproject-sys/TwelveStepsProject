@@ -28,11 +28,21 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 export function RevealOnScroll({
   children,
   className = "",
+  delayMs,
+  as = "div",
 }: {
   children: ReactNode;
   className?: string;
+  /** Optional stagger delay (ms) applied via inline `transition-delay` —
+   * used to stagger sibling cards/items instead of revealing them all at
+   * once. Backward compatible: omitting it behaves exactly as before. */
+  delayMs?: number;
+  /** Which element to render as. Defaults to "div" (unchanged behavior).
+   * "li" is needed when wrapping individual items inside a parent
+   * `<ol>`/`<ul>` for a stagger effect — a `<div>` isn't valid there. */
+  as?: "div" | "li";
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement & HTMLLIElement>(null);
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -62,12 +72,14 @@ export function RevealOnScroll({
     return () => observer.disconnect();
   }, []);
 
+  const Tag = as;
   return (
-    <div
+    <Tag
       ref={ref}
       className={`reveal-on-scroll ${revealed ? "is-revealed" : ""} ${className}`}
+      style={delayMs ? { transitionDelay: `${delayMs}ms` } : undefined}
     >
       {children}
-    </div>
+    </Tag>
   );
 }

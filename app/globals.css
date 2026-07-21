@@ -61,7 +61,13 @@
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-full: 9999px;
-  --font-display: "Heebo", sans-serif;
+  /* Fredoka is the shipped default display face (motion/design-direction
+     pass, 2026-07) — var(--font-fredoka) comes from next/font/local's
+     `variable` option in lib/fonts.ts, attached via a class on <html> in
+     app/layout.tsx. Heebo stays fully available as its own token
+     (--font-heebo) for the admin Branding-screen picker; it's just no
+     longer the shipped default here. */
+  --font-display: var(--font-fredoka), "Heebo", sans-serif;
   --font-body: "Assistant", sans-serif;
 }
 
@@ -92,7 +98,7 @@ h6 {
 @media (prefers-reduced-motion: no-preference) {
   .reveal-on-scroll {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(24px);
     transition:
       opacity 0.5s ease-out,
       transform 0.5s ease-out;
@@ -100,6 +106,17 @@ h6 {
   .reveal-on-scroll.is-revealed {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  /* Scale-in variant (pull-quote's decorative mark) — same class pair,
+     same RevealOnScroll/IntersectionObserver wrapper, just a different
+     starting transform. Compositor-only (opacity+transform), same cost
+     profile as the base variant. */
+  .reveal-on-scroll.reveal-scale {
+    transform: translateY(24px) scale(0.8);
+  }
+  .reveal-on-scroll.reveal-scale.is-revealed {
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -112,6 +129,102 @@ h6 {
     transform: none;
     transition: none;
   }
+}
+
+/*
+ * Oblique-Fredoka accent treatment (motion/design-direction pass, 2026-07).
+ * Approved fallback for a "script font" accent: no Hebrew-supporting
+ * script/handwriting Google Font exists (confirmed via live CSS2 API
+ * queries against ~15 candidates), so this uses a synthetic oblique slant
+ * on Fredoka at a light weight instead of a real script face. Sparing use
+ * only (pull-quote marks, short badge/callout labels) — color resolves
+ * through the existing --color-accent-text token, no new hex.
+ */
+.font-accent-script {
+  font-family: var(--font-display);
+  font-style: oblique 8deg;
+  font-weight: 400;
+  color: var(--color-accent-text);
+}
+
+/*
+ * Program-stages-stepper connecting line (motion pass): stroke-dashoffset
+ * "draw on" animation keyed off the SAME `.is-revealed` class
+ * RevealOnScroll already toggles via its one IntersectionObserver — no
+ * second observer. `stroke-dasharray`/`stroke-dashoffset` are paint-cost
+ * SVG properties, not compositor `transform`/`opacity`, but this is a
+ * single thin decorative line (not a large surface), one-time on reveal,
+ * so the cost is negligible relative to the Lighthouse budget.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .stage-connector-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    transition: stroke-dashoffset 1.1s ease-out;
+  }
+  .reveal-on-scroll.is-revealed .stage-connector-line {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-connector-line {
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * Hero "settle in" entrance (components/blocks/_shared/hero-entrance.tsx).
+ * The base/no-JS state (no `.hero-entrance-ready` class) is the FINAL
+ * settled appearance — opacity 1, no transform — so the H1/eyebrow/intro
+ * are never gated on JS for initial visibility. The client island instead
+ * plays a one-time Web Animations API rise-in FROM a near-identity starting
+ * point on mount; this class-based keyframe fallback exists only in case
+ * WAAPI isn't available, and still starts from a visible, near-final state.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-heading-rise {
+    animation: hero-rise-in 0.7s ease-out both;
+  }
+  @keyframes hero-rise-in {
+    from {
+      opacity: 0.85;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .hero-accent-12 {
+    display: inline-block;
+    animation: hero-accent-pop 0.6s ease-out 0.4s both;
+    transform-origin: center;
+  }
+  @keyframes hero-accent-pop {
+    from {
+      transform: scale(0.85);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+}
+
+/*
+ * Header shrink-on-scroll (motion pass). Class toggled directly on the
+ * <header> element by components/layout/header-shrink-on-scroll.tsx (a
+ * ref-based side-effect island, no new wrapping element — see that file's
+ * header comment for why, re: the backdrop-blur stacking-context bug this
+ * deliberately avoids reintroducing). transform/opacity-safe: only
+ * padding + shadow change, both already used elsewhere in the design
+ * system, no color/hex introduced.
+ */
+header.is-scrolled {
+  padding-block: 0;
+  box-shadow: 0 4px 12px -4px rgb(0 0 0 / 0.15);
+}
+header.is-scrolled .site-header-inner {
+  padding-block: 0.5rem;
 }
 
 /*

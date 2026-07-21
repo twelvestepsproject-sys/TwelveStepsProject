@@ -38,7 +38,7 @@ const homepageBlocks: PageBlock[] = [
         "מקום ללמידה, לליווי, ולתהליך אישי — בקצב שמתאים לך, לא בקצב שמישהו אחר קבע בשבילך.",
       phone_cta: "03-000-0000",
       primary_cta_label: "לתיאום שיחת היכרות",
-      background_media_id: null,
+      background_media_id: MEDIA_IDS.heroBackground,
     },
   },
   {

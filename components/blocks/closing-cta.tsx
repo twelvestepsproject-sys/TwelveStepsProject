@@ -29,7 +29,7 @@ export function ClosingCta({ data }: { data: ClosingCtaData }) {
           href={data.cta.href}
           target={data.cta.open_in_new_tab ? "_blank" : undefined}
           rel={data.cta.open_in_new_tab ? "noreferrer" : undefined}
-          className="rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg"
+          className="rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {data.cta.label}
         </a>

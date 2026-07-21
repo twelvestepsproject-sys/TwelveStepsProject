@@ -3,6 +3,7 @@ import Image from "next/image";
 import { db } from "@/lib/queries";
 import { mediaUrlFor } from "@/lib/media";
 import { MobileNav } from "./mobile-nav";
+import { HeaderShell } from "./header-shell";
 
 /**
  * §5 block 1 — Header (logo, primary nav with dropdowns, search with live
@@ -51,8 +52,15 @@ export async function SiteHeader() {
   const logo = settings.logo_id ? await db.getMedia(settings.logo_id) : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+    <HeaderShell className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur transition-[padding,box-shadow] duration-300">
+      <div className="site-header-inner mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-3 transition-[padding] duration-300 lg:flex lg:justify-between">
+        {/* BUG FIX (design feedback): on mobile there's no true center slot
+            with a 2-item flex justify-between layout — the site name sat
+            at whichever edge this link happened to land on. A 3-column
+            grid (logo | flexible-center-name | hamburger) genuinely centers
+            the middle column regardless of the outer groups' widths, mobile
+            only — lg: reverts to the original flex layout, where the
+            logo+name sit inline together as one lockup like before. */}
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
           {logo ? (
             <Image
@@ -60,23 +68,34 @@ export async function SiteHeader() {
               alt={logo.alt_he}
               width={36}
               height={36}
-              className="h-9 w-9 object-contain"
+              className="h-9 w-9 shrink-0 object-contain"
             />
           ) : (
             // No logo uploaded yet (site_settings.logo_id is null in the
             // fixture — §3.5's "obviously provisional" wordmark hasn't been
             // generated as an actual file this pass) — fall back to the
-            // site name as text rather than a broken <img> or an invented
-            // placeholder logo file.
+            // site name's first letter as an icon rather than a broken
+            // <img> or an invented placeholder logo file.
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-fg"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-fg"
             >
               {settings.site_name.slice(0, 1)}
             </span>
           )}
-          <span>{settings.site_name}</span>
+          {/* Inline name — desktop only. On mobile the name moves to its
+              own centered grid column below instead (larger text per
+              design feedback), so it isn't duplicated here. */}
+          <span className="hidden lg:inline">{settings.site_name}</span>
         </Link>
+
+        {/* Centered site name, mobile only — genuinely centered between the
+            logo and the hamburger regardless of either one's width, which
+            justify-between could never guarantee. Larger text per design
+            feedback ("שהמילה הנני יהיה בטקסט גדול"). */}
+        <span className="justify-self-center text-center font-display text-2xl font-bold text-ink lg:hidden">
+          {settings.site_name}
+        </span>
 
         <nav aria-label="ניווט ראשי" className="hidden lg:block">
           <ul className="flex items-center gap-1">
@@ -140,7 +159,7 @@ export async function SiteHeader() {
 
           <a
             href="#registration-modal"
-            className="hidden rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg sm:inline-block"
+            className="hidden rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-block"
           >
             תיאום שיחת היכרות
           </a>
@@ -148,6 +167,6 @@ export async function SiteHeader() {
           <MobileNav menu={menu} socialLinks={settings.social_links} siteName={settings.site_name} />
         </div>
       </div>
-    </header>
+    </HeaderShell>
   );
 }

@@ -29,10 +29,10 @@ export async function LatestArticles({ data }: { data: LatestArticlesData }) {
           {posts.map((post) => (
             <article
               key={post.id}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-bg p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              className="flex flex-col gap-2 rounded-lg border border-border bg-bg p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
             >
               {post.category ? (
-                <span className="w-fit rounded-full bg-surface-alt px-3 py-1 text-xs font-semibold text-ink-muted">
+                <span className="w-fit rounded-full bg-surface-alt px-3 py-1 text-xs font-semibold text-ink-muted transition-all duration-200 hover:shadow-sm">
                   {post.category.name}
                 </span>
               ) : null}
@@ -40,7 +40,7 @@ export async function LatestArticles({ data }: { data: LatestArticlesData }) {
               <p className="text-sm text-ink-muted">{post.excerpt}</p>
               <a
                 href={`/blog/${post.slug}`}
-                className="mt-auto font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline"
+                className="mt-auto font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 לקריאה נוספת
               </a>

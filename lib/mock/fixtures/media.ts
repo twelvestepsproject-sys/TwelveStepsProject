@@ -38,9 +38,26 @@ export const MEDIA_IDS = {
   galleryGroupCircleOutdoor: "80000000-0000-4000-8000-00000000001a",
   galleryHandsTogether: "80000000-0000-4000-8000-00000000001b",
   galleryLectureHall: "80000000-0000-4000-8000-00000000001c",
+  heroBackground: "80000000-0000-4000-8000-00000000001d",
 } as const;
 
 export const media = [
+  // ---- Hero background (real downloaded stock photo) ----
+  {
+    id: MEDIA_IDS.heroBackground,
+    storage_path: "images/hero-path-sunrise.jpg",
+    alt_he: "שביל הררי בין גבעות ירוקות בשעת שקיעה, אווירה חמה ומלאת תקווה.",
+    width: 2000,
+    height: 1333,
+    mime_type: "image/jpeg",
+    size_bytes: 562139,
+    blurhash: null,
+    license_note: "Unsplash License — Edoardo Bortoli (@edoa_rdo). See docs/licenses.md.",
+    uploaded_by: null,
+    created_at: "2026-07-21T08:00:00Z",
+    updated_at: "2026-07-21T08:00:00Z",
+  },
+
   // ---- Training cover (real downloaded stock photo) ----
   {
     id: MEDIA_IDS.trainingYesodotHakesherCover,

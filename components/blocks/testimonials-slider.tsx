@@ -52,7 +52,7 @@ export async function TestimonialsSlider({ data }: { data: TestimonialsSliderDat
             return (
               <li
                 key={t.id}
-                className="flex w-72 shrink-0 snap-start flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                className="flex w-72 shrink-0 snap-start flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
               >
                 {photo ? (
                   <div className="w-fit rounded-full bg-gradient-to-br from-accent/25 via-primary/15 to-accent/10 p-1">

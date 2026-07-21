@@ -52,7 +52,7 @@ export function GalleryLightbox({ images }: { images: GalleryLightboxImage[] }) 
             key={i}
             type="button"
             onClick={() => setOpenIndex(i)}
-            className="block w-full overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="block w-full overflow-hidden rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label={img.alt}
           >
             <Image

@@ -22,9 +22,10 @@ export function FocusAreas({ data }: { data: FocusAreasData }) {
         ) : null}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {data.cards.map((card, i) => (
-            <div
+            <RevealOnScroll
               key={i}
-              className="flex flex-col items-center gap-3 rounded-lg border border-border bg-bg p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              delayMs={i * 100}
+              className="flex flex-col items-center gap-3 rounded-lg border border-border bg-bg p-6 text-center transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg"
             >
               {card.icon ? (
                 <span
@@ -36,7 +37,7 @@ export function FocusAreas({ data }: { data: FocusAreasData }) {
               ) : null}
               <h3 className="font-display text-lg font-bold text-ink">{card.title}</h3>
               <p className="text-sm text-ink-muted">{card.body}</p>
-            </div>
+            </RevealOnScroll>
           ))}
         </div>
       </RevealOnScroll>
