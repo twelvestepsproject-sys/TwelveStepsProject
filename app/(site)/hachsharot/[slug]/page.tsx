@@ -33,11 +33,13 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const training = await db.getTraining(slug);
+  const [training, settings] = await Promise.all([db.getTraining(slug), db.getSiteSettings()]);
   if (!training) return {};
 
   return {
-    title: training.seo_title ?? `${training.title} | מכללת אשד`,
+    // BUG FIX: fallback title had the org name hardcoded — same class of
+    // bug as app/layout.tsx's root metadata.
+    title: training.seo_title ?? `${training.title} | ${settings.site_name}`,
     description: training.seo_description ?? training.excerpt,
     alternates: training.seo_canonical ? { canonical: training.seo_canonical } : undefined,
     robots: training.seo_noindex ? { index: false, follow: false } : undefined,
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SingleTrainingPage({ params }: PageProps) {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const training = await db.getTraining(slug);
+  const [training, settings] = await Promise.all([db.getTraining(slug), db.getSiteSettings()]);
 
   if (!training) notFound();
 
@@ -61,7 +63,10 @@ export default async function SingleTrainingPage({ params }: PageProps) {
     description: training.excerpt,
     provider: {
       "@type": "Organization",
-      name: "מכללת אשד",
+      // BUG FIX: was the hardcoded literal "מכללת אשד" — real structured-
+      // data providers must reflect the actual org name, same as the tab
+      // title bug.
+      name: settings.site_name,
     },
   };
 

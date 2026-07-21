@@ -28,11 +28,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { "year-slug": rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const studyYears = await db.listStudyYears();
+  const [studyYears, settings] = await Promise.all([db.listStudyYears(), db.getSiteSettings()]);
   const year = studyYears.find((y) => y.slug === slug);
   if (!year) return {};
   return {
-    title: `${year.label} | תוכנית הלימודים | מכללת אשד`,
+    // BUG FIX: title had the org name hardcoded.
+    title: `${year.label} | תוכנית הלימודים | ${settings.site_name}`,
     description: year.description,
   };
 }

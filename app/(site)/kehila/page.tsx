@@ -17,10 +17,15 @@ import { db } from "@/lib/queries";
  * everything else here is page-local copy, consistent with `community_cta`
  * not being db-backed either.
  */
-export const metadata: Metadata = {
-  title: "קהילה | מכללת אשד",
-  description: "הקהילה של מכללת אשד — מרחב לשיתוף, שאלות, ועדכונים בין הבוגרים והתלמידים.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `קהילה | ${settings.site_name}`,
+    description: `הקהילה של ${settings.site_name} — מרחב לשיתוף, שאלות, ועדכונים בין הבוגרים והתלמידים.`,
+  };
+}
 
 export default async function CommunityPage() {
   const settings = await db.getSiteSettings();
@@ -30,8 +35,9 @@ export default async function CommunityPage() {
     <main className="mx-auto max-w-2xl px-6 py-16 text-center">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">הקהילה שלנו</h1>
       <p className="mt-6 text-lg text-ink-muted">
-        מעבר לתוכניות הלימוד, מכללת אשד היא גם קהילה — מקום להישאר מחוברים אליו גם אחרי סיום
-        התהליך. בקבוצת הקהילה שלנו משתפים שאלות, עדכונים, ורגעים מהדרך, בין בוגרים לתלמידים
+        {/* BUG FIX: org name was hardcoded in this body copy too. */}
+        מעבר לתוכניות הלימוד, {settings.site_name} היא גם קהילה — מקום להישאר מחוברים אליו גם אחרי
+        סיום התהליך. בקבוצת הקהילה שלנו משתפים שאלות, עדכונים, ורגעים מהדרך, בין בוגרים לתלמידים
         נוכחיים.
       </p>
       {communityUrl ? (

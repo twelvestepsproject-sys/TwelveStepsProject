@@ -33,11 +33,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { "person-slug": rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const lecturer = await db.getLecturer(slug);
+  const [lecturer, settings] = await Promise.all([db.getLecturer(slug), db.getSiteSettings()]);
   if (!lecturer || !lecturer.is_visible) return {};
 
   return {
-    title: `${lecturer.name} | מכללת אשד`,
+    // BUG FIX: title had the org name hardcoded.
+    title: `${lecturer.name} | ${settings.site_name}`,
     description: lecturer.bio,
   };
 }

@@ -15,10 +15,15 @@ import { renderBlock } from "@/components/blocks";
  * dropdown and the homepage's own lecturers_grid link) resolves to a real
  * DOM landmark on this page.
  */
-export const metadata: Metadata = {
-  title: "אודות | מכללת אשד",
-  description: "אודות מכללת אשד — הגישה שלנו, והמרצים והמדריכים שמלווים את התהליך.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `אודות | ${settings.site_name}`,
+    description: `אודות ${settings.site_name} — הגישה שלנו, והמרצים והמדריכים שמלווים את התהליך.`,
+  };
+}
 
 export default async function AboutPage() {
   const page = await db.getPage("odot");

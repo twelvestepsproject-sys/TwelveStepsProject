@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { db } from "@/lib/queries";
 
 /**
  * `/accessibility-statement` — Accessibility statement (§4
@@ -19,21 +20,30 @@ import type { Metadata } from "next";
  * (§16 Phase 7 is where axe + manual keyboard + screen-reader passes
  * happen), so this page doesn't claim compliance it can't yet back up.
  */
-export const metadata: Metadata = {
-  title: "הצהרת נגישות | מכללת אשד",
-  description: "הצהרת הנגישות של אתר מכללת אשד וכלי הנגישות המובנים בו.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `הצהרת נגישות | ${settings.site_name}`,
+    description: `הצהרת הנגישות של אתר ${settings.site_name} וכלי הנגישות המובנים בו.`,
+  };
+}
 
-export default function AccessibilityStatementPage() {
+export default async function AccessibilityStatementPage() {
+  const settings = await db.getSiteSettings();
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">הצהרת נגישות</h1>
 
       <div className="mt-6 flex flex-col gap-6 text-ink">
         <p>
-          מכללת אשד רואה חשיבות רבה בהנגשת האתר לכלל הציבור, כולל אנשים עם מוגבלויות. אנו שואפים
-          לעמוד בהמלצות תקן ישראלי 5568 (IS 5568) ובהנחיות WCAG 2.1 ברמה AA. זהו יעד שאנו פועלים
-          להשיג — האתר טרם עבר ביקורת נגישות מלאה ופורמלית, ועדכון בנושא יפורסם כאן לאחר שתתבצע.
+          {/* BUG FIX: org name was hardcoded in this body copy too. */}
+          {settings.site_name} רואה חשיבות רבה בהנגשת האתר לכלל הציבור, כולל אנשים עם מוגבלויות. אנו
+          שואפים לעמוד בהמלצות תקן ישראלי 5568 (IS 5568) ובהנחיות WCAG 2.1 ברמה AA. זהו יעד שאנו
+          פועלים להשיג — האתר טרם עבר ביקורת נגישות מלאה ופורמלית, ועדכון בנושא יפורסם כאן לאחר
+          שתתבצע.
         </p>
 
         <section>

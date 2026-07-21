@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { db } from "@/lib/queries";
 
 /**
  * `/privacy` — Privacy policy (§4 `/[privacy]`, §11, §15, §3). Per §3 /
@@ -16,13 +17,20 @@ import type { Metadata } from "next";
  * their consent copy (§11), so the route must exist and resolve even
  * before real content lands.
  */
-export const metadata: Metadata = {
-  title: "מדיניות פרטיות | מכללת אשד",
-  description: "מדיניות הפרטיות של מכללת אשד.",
-  robots: { index: false, follow: false },
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `מדיניות פרטיות | ${settings.site_name}`,
+    description: `מדיניות הפרטיות של ${settings.site_name}.`,
+    robots: { index: false, follow: false },
+  };
+}
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const settings = await db.getSiteSettings();
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">מדיניות פרטיות</h1>
@@ -32,9 +40,10 @@ export default function PrivacyPolicyPage() {
       >
         <p className="font-semibold text-ink">מדיניות הפרטיות טרם פורסמה.</p>
         <p className="mt-3">
-          עמוד זה מיועד למדיניות הפרטיות המלאה של מכללת אשד, כפי שתנוסח על ידי הגורם המשפטי של
-          הארגון. מתוך אחריות לתוכן בהקשר של בריאות הנפש, איננו כותבים או ממציאים נוסח משפטי
-          מטעם הארגון — הטקסט המלא יעודכן כאן לכשיתקבל.
+          {/* BUG FIX: org name was hardcoded in this body copy too. */}
+          עמוד זה מיועד למדיניות הפרטיות המלאה של {settings.site_name}, כפי שתנוסח על ידי הגורם
+          המשפטי של הארגון. מתוך אחריות לתוכן בהקשר של בריאות הנפש, איננו כותבים או ממציאים נוסח
+          משפטי מטעם הארגון — הטקסט המלא יעודכן כאן לכשיתקבל.
         </p>
         <p className="mt-3">
           הפער מתועד ב-<code>docs/content-needed.md</code> כפריט חובה לפני עלייה לאוויר.

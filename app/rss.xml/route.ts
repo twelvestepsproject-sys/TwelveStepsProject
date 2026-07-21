@@ -27,7 +27,10 @@ function siteUrl(): string {
 
 export async function GET() {
   const base = siteUrl();
-  const { items: posts } = await db.listPosts({ perPage: 50 });
+  const [{ items: posts }, settings] = await Promise.all([
+    db.listPosts({ perPage: 50 }),
+    db.getSiteSettings(),
+  ]);
 
   const items = posts
     .map((post) => {
@@ -43,12 +46,15 @@ export async function GET() {
     })
     .join("\n");
 
+  // BUG FIX: both the feed title and description had the org name
+  // hardcoded — same class of bug as the tab-title issue, just in XML
+  // instead of HTML metadata.
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
 <channel>
-  <title>מכללת אשד — בלוג</title>
+  <title>${escapeXml(settings.site_name)} — בלוג</title>
   <link>${base}/blog</link>
-  <description>מאמרים, כלים, ומחשבות מהעולם של מכללת אשד.</description>
+  <description>${escapeXml(`מאמרים, כלים, ומחשבות מהעולם של ${settings.site_name}.`)}</description>
   <language>he-IL</language>
   ${items}
 </channel>

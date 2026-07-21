@@ -14,10 +14,15 @@ import { db } from "@/lib/queries";
  * a different URL prefix to link out correctly, since `SearchResult` only
  * carries a bare `slug`, not a full href.
  */
-export const metadata: Metadata = {
-  title: "חיפוש | מכללת אשד",
-  robots: { index: false, follow: true },
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `חיפוש | ${settings.site_name}`,
+    robots: { index: false, follow: true },
+  };
+}
 
 function hrefForResult(type: "post" | "training" | "page", slug: string): string {
   switch (type) {

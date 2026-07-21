@@ -16,10 +16,15 @@ import { ContactForm } from "./contact-form";
  * `db.getSiteSettings()`, never hardcoded, matching site-footer.tsx's own
  * pattern.
  */
-export const metadata: Metadata = {
-  title: "צור קשר | מכללת אשד",
-  description: "יצירת קשר עם מכללת אשד — טלפון, אימייל, וטופס פנייה.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `צור קשר | ${settings.site_name}`,
+    description: `יצירת קשר עם ${settings.site_name} — טלפון, אימייל, וטופס פנייה.`,
+  };
+}
 
 export default async function ContactPage() {
   const settings = await db.getSiteSettings();

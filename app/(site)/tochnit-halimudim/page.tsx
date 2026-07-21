@@ -16,10 +16,15 @@ import { renderBlock } from "@/components/blocks";
  * collection, not imported directly (see `DataSource.listStudyYears`'s own
  * comment for the full reasoning).
  */
-export const metadata: Metadata = {
-  title: "תוכנית הלימודים | מכללת אשד",
-  description: "תוכנית הלימודים הרב-שנתית של מכללת אשד — שלב אחר שלב.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `תוכנית הלימודים | ${settings.site_name}`,
+    description: `תוכנית הלימודים הרב-שנתית של ${settings.site_name} — שלב אחר שלב.`,
+  };
+}
 
 export default async function StudiesHubPage() {
   const [page, studyYears] = await Promise.all([

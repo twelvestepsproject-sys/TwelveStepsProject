@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDevSession } from "@/lib/admin/dev-session";
 import { RoleSwitcher } from "@/components/admin/role-switcher";
 import { ADMIN_NAV } from "@/components/admin/nav-config";
+import { db } from "@/lib/queries";
 
 /**
  * Admin shell (§8: "Hebrew RTL, mobile-usable, built for a non-technical
@@ -43,6 +44,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const visibleNav = ADMIN_NAV.filter((item) => item.minRole.includes(session.role));
+  // BUG FIX: this used to be the literal string "מכללת אשד — ניהול" — same
+  // class of bug as app/layout.tsx's static `metadata` export, just here
+  // it's a hardcoded JSX string instead of a build-time-only export, but
+  // the effect was identical: it could never reflect a real site_name
+  // saved via /admin/branding. Reads db.getSiteSettings() same as the
+  // public-site root layout does.
+  const settings = await db.getSiteSettings();
 
   return (
     <div dir="rtl" className="min-h-screen bg-surface-alt md:flex">
@@ -54,7 +62,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </a>
       <aside className="shrink-0 border-b border-border bg-surface p-4 md:w-64 md:border-b-0 md:border-e">
         <Link href="/admin" className="font-display text-lg font-bold text-ink">
-          מכללת אשד — ניהול
+          {settings.site_name} — ניהול
         </Link>
         <div className="mt-3 rounded-md bg-surface-alt p-3">
           <p className="text-sm font-semibold text-ink">{session.full_name}</p>

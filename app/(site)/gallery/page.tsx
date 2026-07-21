@@ -12,10 +12,16 @@ import { GalleryLightbox, type GalleryLightboxImage } from "@/components/blocks/
  * Renders every gallery in the collection (not just the one instance the
  * homepage block references), each as its own titled section.
  */
-export const metadata: Metadata = {
-  title: "גלריה | מכללת אשד",
-  description: "רגעים מהתהליך, מהסדנאות, ומהקהילה של מכללת אשד.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded — same class of bug as app/layout.tsx's root metadata, fixed
+// the same way (generateMetadata + db.getSiteSettings()).
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `גלריה | ${settings.site_name}`,
+    description: `רגעים מהתהליך, מהסדנאות, ומהקהילה של ${settings.site_name}.`,
+  };
+}
 
 export default async function GalleryPage() {
   const galleries = await db.listGalleries();

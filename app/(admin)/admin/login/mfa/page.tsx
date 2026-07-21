@@ -1,4 +1,5 @@
 import { verifyMfaChallenge } from "./actions";
+import { db } from "@/lib/queries";
 
 /**
  * Phase 5 — TOTP MFA challenge screen. Reached only when the signed-in
@@ -15,11 +16,12 @@ export default async function MfaChallengePage({
 }) {
   const { next, error } = await searchParams;
   const dest = next && next.startsWith("/admin") ? next : "/admin";
+  const settings = await db.getSiteSettings();
 
   return (
     <div dir="rtl" className="flex min-h-screen items-center justify-center bg-surface-alt p-4">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
-        <p className="font-display text-lg font-bold text-ink">מכללת אשד — ניהול</p>
+        <p className="font-display text-lg font-bold text-ink">{settings.site_name} — ניהול</p>
         <h1 className="mt-1 font-display text-2xl font-bold text-ink">אימות דו-שלבי</h1>
         <p className="mt-2 text-sm text-ink-muted">
           הזינו את הקוד בן 6 הספרות מאפליקציית האימות שלכם.

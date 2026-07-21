@@ -4,10 +4,25 @@ import { db } from "@/lib/queries";
 import { renderThemeStyleTag, fontFamilyVars } from "@/lib/admin/theme-style";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "מכללת אשד",
-  description: "לזוז, בקצב שלך.",
-};
+/**
+ * BUG FIX: this used to be a static `export const metadata` object with a
+ * literal hardcoded title/description — Next.js only evaluates a static
+ * `metadata` export once at build time, so it could NEVER reflect
+ * `site_settings.site_name`/`tagline` no matter what the admin saved,
+ * directly violating this file's own §3.5 acceptance-bar promise just
+ * below ("the site name... zero code changes and zero redeploy"). Real
+ * symptom: the browser tab kept showing the old placeholder org name
+ * long after the real name was saved. `generateMetadata` is the
+ * async/dynamic equivalent — same `db.getSiteSettings()` call already
+ * used by the layout body below, so this adds no new read.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: settings.site_name,
+    description: settings.tagline,
+  };
+}
 
 /**
  * §3.5 acceptance bar: "I can change the primary color, the logo, the

@@ -1,5 +1,6 @@
 import { devLogin } from "./dev-actions";
 import { loginWithPassword } from "./actions";
+import { db } from "@/lib/queries";
 
 /**
  * PHASE 5 REPLACEMENT (§16 pre-flagged exception — see actions.ts's header
@@ -20,6 +21,10 @@ export default async function AdminLoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const { next, error } = await searchParams;
+  // BUG FIX: "מכללת אשד — ניהול" was a hardcoded literal in both branches
+  // below — site_settings.site_name is public branding data (no session
+  // needed to read it), so this fetch is safe on an unauthenticated page.
+  const settings = await db.getSiteSettings();
 
   if (process.env.DATA_SOURCE !== "supabase") {
     const roles: { value: "admin" | "editor" | "viewer"; label: string; desc: string }[] = [
@@ -31,7 +36,7 @@ export default async function AdminLoginPage({
     return (
       <div dir="rtl" className="flex min-h-screen items-center justify-center bg-surface-alt p-4">
         <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
-          <p className="font-display text-lg font-bold text-ink">מכללת אשד — ניהול</p>
+          <p className="font-display text-lg font-bold text-ink">{settings.site_name} — ניהול</p>
           <h1 className="mt-1 font-display text-2xl font-bold text-ink">כניסה (מצב פיתוח)</h1>
           <p className="mt-2 text-sm text-ink-muted">
             אימות אמיתי (Supabase Auth) ייכנס בשלב הבא. כרגע ניתן לבחור תפקיד לצורך פיתוח ובדיקה
@@ -65,7 +70,7 @@ export default async function AdminLoginPage({
   return (
     <div dir="rtl" className="flex min-h-screen items-center justify-center bg-surface-alt p-4">
       <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
-        <p className="font-display text-lg font-bold text-ink">מכללת אשד — ניהול</p>
+        <p className="font-display text-lg font-bold text-ink">{settings.site_name} — ניהול</p>
         <h1 className="mt-1 font-display text-2xl font-bold text-ink">כניסה למערכת הניהול</h1>
         <p className="mt-2 text-sm text-ink-muted">
           הזינו את כתובת הדוא&quot;ל והסיסמה שקיבלתם ממנהל/ת המערכת. אין הרשמה עצמית.

@@ -9,10 +9,15 @@ import { formatDuration } from "@/lib/format";
  * (an English loanword already used as-is in the header nav, matching the
  * same style as `/gallery` staying literal per §4).
  */
-export const metadata: Metadata = {
-  title: "פודקאסט | מכללת אשד",
-  description: "הפודקאסט של מכללת אשד — שיחות על תהליכי שינוי, ליווי, וקהילה.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `פודקאסט | ${settings.site_name}`,
+    description: `הפודקאסט של ${settings.site_name} — שיחות על תהליכי שינוי, ליווי, וקהילה.`,
+  };
+}
 
 export default async function PodcastIndexPage() {
   const episodes = await db.listPodcastEpisodes();

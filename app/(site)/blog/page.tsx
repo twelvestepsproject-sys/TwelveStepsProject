@@ -17,10 +17,15 @@ import { formatReadingTime } from "@/lib/format";
  * needed, and letting each page number be a real, linkable, cacheable URL
  * (consistent with §10's static-by-default posture).
  */
-export const metadata: Metadata = {
-  title: "בלוג | מכללת אשד",
-  description: "מאמרים, כלים, ומחשבות מהעולם של מכללת אשד.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `בלוג | ${settings.site_name}`,
+    description: `מאמרים, כלים, ומחשבות מהעולם של ${settings.site_name}.`,
+  };
+}
 
 const PER_PAGE = 9;
 
@@ -32,9 +37,10 @@ export default async function BlogIndexPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ items: posts, total, perPage }, categories] = await Promise.all([
+  const [{ items: posts, total, perPage }, categories, settings] = await Promise.all([
     db.listPosts({ page, perPage: PER_PAGE }),
     db.listCategories(),
+    db.getSiteSettings(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -43,7 +49,8 @@ export default async function BlogIndexPage({
     <main className="mx-auto max-w-6xl px-6 py-16">
       <header className="mb-8 text-center">
         <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">בלוג</h1>
-        <p className="mt-2 text-ink-muted">מאמרים, כלים, ומחשבות מהעולם של מכללת אשד.</p>
+        {/* BUG FIX: org name was hardcoded in this body copy too. */}
+        <p className="mt-2 text-ink-muted">מאמרים, כלים, ומחשבות מהעולם של {settings.site_name}.</p>
       </header>
 
       {categories.length > 0 ? (

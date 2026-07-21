@@ -28,11 +28,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const post = await db.getPost(slug);
+  const [post, settings] = await Promise.all([db.getPost(slug), db.getSiteSettings()]);
   if (!post) return {};
 
   return {
-    title: post.seo_title ?? `${post.title} | בלוג | מכללת אשד`,
+    // BUG FIX: fallback title had the org name hardcoded.
+    title: post.seo_title ?? `${post.title} | בלוג | ${settings.site_name}`,
     description: post.seo_description ?? post.excerpt,
     alternates: post.seo_canonical ? { canonical: post.seo_canonical } : undefined,
     robots: post.seo_noindex ? { index: false, follow: false } : undefined,
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function SingleArticlePage({ params }: PageProps) {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const post = await db.getPost(slug);
+  const [post, settings] = await Promise.all([db.getPost(slug), db.getSiteSettings()]);
 
   if (!post) notFound();
 
@@ -57,7 +58,8 @@ export default async function SingleArticlePage({ params }: PageProps) {
     dateModified: post.updated_at,
     author: {
       "@type": "Organization",
-      name: "מכללת אשד",
+      // BUG FIX: was the hardcoded literal "מכללת אשד".
+      name: settings.site_name,
     },
   };
 

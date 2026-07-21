@@ -28,10 +28,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const category = await db.getCategory(slug);
+  const [category, settings] = await Promise.all([db.getCategory(slug), db.getSiteSettings()]);
   if (!category) return {};
   return {
-    title: `${category.name} | בלוג | מכללת אשד`,
+    // BUG FIX: title had the org name hardcoded.
+    title: `${category.name} | בלוג | ${settings.site_name}`,
     description: category.description ?? `מאמרים בקטגוריית ${category.name}.`,
   };
 }

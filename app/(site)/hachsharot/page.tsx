@@ -22,10 +22,15 @@ import { formatPrice } from "@/lib/format";
  * as a blocking gap — just noted for whoever adds pagination if the
  * collection grows.
  */
-export const metadata: Metadata = {
-  title: "הכשרות | מכללת אשד",
-  description: "מגוון ההכשרות וסדנאות מכללת אשד — מסדנת היכרות קצרה ועד תוכנית העומק הרב-שנתית.",
-};
+// BUG FIX: was a static `export const metadata` with the org name
+// hardcoded — see app/layout.tsx's root metadata for the same fix pattern.
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await db.getSiteSettings();
+  return {
+    title: `הכשרות | ${settings.site_name}`,
+    description: `מגוון ההכשרות וסדנאות ${settings.site_name} — מסדנת היכרות קצרה ועד תוכנית העומק הרב-שנתית.`,
+  };
+}
 
 export default async function TrainingsIndexPage() {
   const trainings = await db.listTrainings();
