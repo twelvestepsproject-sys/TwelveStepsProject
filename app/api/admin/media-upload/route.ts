@@ -5,21 +5,25 @@ import { db } from "@/lib/queries";
 import { requireContentRole, AdminAuthError } from "@/lib/admin/role-check";
 import { toFriendlyMessage } from "@/lib/admin/friendly-error";
 import { sanitizeSvg } from "@/lib/admin/sanitize-svg";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Media Library upload (§8: "drag-drop upload... mandatory Hebrew alt
- * text, license note field"). This is a MOCK-phase upload path per §5.5 —
- * there is no real Storage yet, so "upload" here writes the file straight
+ * text, license note field").
+ *
+ * DATA_SOURCE=supabase: uploads to the public `media` Storage bucket via
+ * the request-scoped, RLS-respecting client (supabase/migrations/
+ * 00000000000013_storage.sql — editor+ write policy), never the
+ * service-role client.
+ *
+ * DATA_SOURCE=mock: unchanged mock-phase path — writes the file straight
  * into `lib/mock/fixtures/images/` (the same directory the read-side
- * `/api/mock-media/[...path]` route streams from) and creates a real
- * `media` row via `db.saveMedia()`, rather than faking it with a
- * client-only blob URL that disappears on reload. Phase 6 replaces this
- * route with a real Supabase Storage upload; the `Media` row shape and
- * `mediaUrl()` resolution are already what Phase 6 needs, so nothing else
- * changes.
+ * `/api/mock-media/[...path]` route streams from).
+ *
+ * Either way a real `media` row is created via `db.saveMedia()`.
  *
  * SVG uploads are sanitized per §3.5 (strip <script>, event handlers,
- * external refs) before being written to disk — the only place in the app
+ * external refs) before being stored — the only place in the app
  * that actually needs to run this at request time, since the DiceBear
  * avatar fixtures were sanitized once, by hand, before being committed.
  */
@@ -92,12 +96,6 @@ export async function POST(req: Request) {
     const base = safeBaseName(file.name);
     const fileName = `${base}-${Date.now().toString(36)}.${ext}`;
 
-    const imagesRoot = path.join(process.cwd(), "lib", "mock", "fixtures", "images");
-    const filePath = path.join(imagesRoot, fileName);
-    if (!filePath.startsWith(imagesRoot)) {
-      return NextResponse.json({ ok: false, error: "שם קובץ לא תקין." }, { status: 400 });
-    }
-
     let bytesToWrite: Buffer = buffer;
     let sanitizeNote: string | null = null;
     if (file.type === "image/svg+xml") {
@@ -116,11 +114,32 @@ export async function POST(req: Request) {
       }
     }
 
-    await fs.mkdir(imagesRoot, { recursive: true });
-    await fs.writeFile(filePath, bytesToWrite);
+    let storagePath: string;
+    if (process.env.DATA_SOURCE === "supabase") {
+      storagePath = `uploads/${fileName}`;
+      const supabase = await createSupabaseServerClient();
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(storagePath, bytesToWrite, { contentType: file.type, upsert: false });
+      if (uploadError) {
+        return NextResponse.json(
+          { ok: false, error: "העלאת הקובץ לאחסון נכשלה. נסו שוב." },
+          { status: 500 },
+        );
+      }
+    } else {
+      storagePath = `images/${fileName}`;
+      const imagesRoot = path.join(process.cwd(), "lib", "mock", "fixtures", "images");
+      const filePath = path.join(imagesRoot, fileName);
+      if (!filePath.startsWith(imagesRoot)) {
+        return NextResponse.json({ ok: false, error: "שם קובץ לא תקין." }, { status: 400 });
+      }
+      await fs.mkdir(imagesRoot, { recursive: true });
+      await fs.writeFile(filePath, bytesToWrite);
+    }
 
     const media = await db.saveMedia({
-      storage_path: `images/${fileName}`,
+      storage_path: storagePath,
       alt_he: altHe,
       width,
       height,

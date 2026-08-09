@@ -7,14 +7,20 @@ import type { Media } from "@/lib/schemas";
  * from `db.getMedia()` (or a nested/resolved field already carrying one),
  * and only pass its `storage_path` through this function to build the src.
  *
- * Mock phase: `storage_path` is a fixture-relative path
+ * DATA_SOURCE=mock: `storage_path` is a fixture-relative path
  * ("images/<file>"), served by the `/api/mock-media/[...path]` route
- * handler (see that file for why). Phase 5/6 swap: once Supabase Storage
- * is live, `storage_path` becomes a bucket-relative path and this is the
- * ONE place that changes to build the public Storage URL instead — no
- * component touches this logic directly, keeping the seam intact.
+ * handler (see that file for why).
+ *
+ * DATA_SOURCE=supabase: `storage_path` is a `media`-bucket-relative path
+ * (the bucket is public per supabase/migrations/00000000000013_storage.sql),
+ * so it resolves to the public Storage URL directly — this is the ONE
+ * place that builds it, no component touches this logic directly.
  */
 export function mediaUrl(storagePath: string): string {
+  if (process.env.DATA_SOURCE === "supabase") {
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\/$/, "");
+    return `${base}/storage/v1/object/public/media/${storagePath}`;
+  }
   return `/api/mock-media/${storagePath.replace(/^images\//, "")}`;
 }
 

@@ -63,7 +63,7 @@ export async function saveTrainingAction(formData: FormData): Promise<ActionResu
       sessions_count: Number(formData.get("sessions_count") ?? 0),
       instructors: instructorIds as unknown as Training["instructors"],
       syllabus: parseSyllabus(String(formData.get("syllabus_raw") ?? "")),
-      price: formData.get("price") ? Number(formData.get("price")) : null,
+      price: formData.get("price") ? Math.round(Number(formData.get("price")) * 100) : null,
       registration_url: (formData.get("registration_url") as string) || null,
       is_featured: formData.get("is_featured") === "on",
       status: (formData.get("status") as Training["status"]) ?? "draft",

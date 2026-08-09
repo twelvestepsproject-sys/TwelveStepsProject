@@ -45,7 +45,7 @@ function toFormState(t?: Training | null): FormState {
     academic_hours: String(t?.academic_hours ?? 0),
     sessions_count: String(t?.sessions_count ?? 0),
     syllabus_raw: (t?.syllabus ?? []).map((s) => `${s.title} | ${s.body}`).join("\n"),
-    price: t?.price != null ? String(t.price) : "",
+    price: t?.price != null ? String(t.price / 100) : "",
     registration_url: t?.registration_url ?? "",
     is_featured: t?.is_featured ?? false,
     status: t?.status ?? "draft",
@@ -248,10 +248,11 @@ export function TrainingForm({
               id="price"
               type="number"
               min={0}
+              step="0.01"
               className={inputClass}
               value={state.price}
               onChange={(e) => update("price", e.target.value)}
-              placeholder="באגורות, למשל 350000 = 3,500 ₪"
+              placeholder="לדוגמה: 3500"
             />
           </Field>
           <Field label="סדר תצוגה" htmlFor="sort_order">
