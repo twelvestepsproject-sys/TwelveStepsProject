@@ -24,9 +24,13 @@ function collectMediaIds(data: unknown, acc: Set<string>) {
 
 export default async function EditPagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [all, session] = await Promise.all([
+  // Lecturers are fetched here (server) and passed down because the block
+  // editor is a client component: the lecturers_grid form needs the full
+  // visible roster to render its selection checkboxes.
+  const [all, session, lecturers] = await Promise.all([
     db.listPages({ perPage: 500, includeDrafts: true }),
     getDevSession(),
+    db.listLecturers({ visibleOnly: true }),
   ]);
   const page = all.items.find((p) => p.id === id);
   if (!page) notFound();
@@ -46,7 +50,12 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   return (
     <div className="flex flex-col gap-4">
       <h1 className="font-display text-2xl font-bold text-ink">עריכת עמוד: {page.title}</h1>
-      <PageEditor page={page} canEdit={canEdit} mediaById={mediaById} />
+      <PageEditor
+        page={page}
+        canEdit={canEdit}
+        mediaById={mediaById}
+        lecturers={lecturers.map((l) => ({ id: l.id, name: l.name, role: l.role }))}
+      />
     </div>
   );
 }

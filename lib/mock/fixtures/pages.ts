@@ -168,6 +168,9 @@ const homepageBlocks: PageBlock[] = [
     data: {
       heading: "המרצים שלנו",
       all_lecturers_link: { label: "לכל המרצים", href: "/odot#martsim", open_in_new_tab: false },
+      // Empty = featured/all lecturers (the homepage grid's existing
+      // behavior); a specific selection is a per-page editorial choice.
+      lecturer_ids: [],
     },
   },
   {
@@ -316,6 +319,7 @@ const odotBlocks: PageBlock[] = [
     data: {
       heading: "המרצים והמדריכים שלנו",
       all_lecturers_link: null,
+      lecturer_ids: [],
     },
   },
 ];

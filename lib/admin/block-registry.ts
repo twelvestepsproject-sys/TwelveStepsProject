@@ -29,6 +29,10 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   closing_cta: "קריאה לפעולה — סיום",
   footer: "כותרת תחתונה (Footer)",
   global_overlays: "שכבות גלובליות",
+  training_details: "פרטי הכשרה",
+  requirements: "דרישות ההכשרה",
+  faq: "שאלות נפוצות",
+  reading_list: "ספרי ליבה / מקורות",
 };
 
 type BlockDataOf<T extends BlockType> = Extract<PageBlock, { block_type: T }>["data"];
@@ -71,7 +75,9 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
       privacy_link: { label: "מדיניות פרטיות", href: "/privacy", open_in_new_tab: false },
     },
     testimonials_slider: { heading: null },
-    lecturers_grid: { heading: null, all_lecturers_link: null },
+    // Empty selection = show featured/all (legacy behavior) until the
+    // editor picks specific lecturers.
+    lecturers_grid: { heading: null, all_lecturers_link: null, lecturer_ids: [] },
     program_stages: { heading: null },
     photo_gallery: { gallery_id: "", heading: null },
     podcast: {
@@ -105,6 +111,50 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
       chat_widget_slot: null,
       accessibility_toolbar_enabled: true,
     },
+    // All-null: every field is optional and the renderer omits empty rows,
+    // so a freshly-added block shows nothing until the editor fills it in
+    // — better than seeding placeholder dates that could reach a published
+    // page unedited.
+    training_details: {
+      heading: "פרטי ההכשרה",
+      starts_on: null,
+      ends_on: null,
+      meeting_day: null,
+      meeting_time: null,
+      sessions_count: null,
+      academic_hours: null,
+      price: null,
+      semesters_count: null,
+      registration_link: null,
+    },
+    // Starts with three empty rows so the add/remove UI is immediately
+    // legible; empty rows are filtered out at render time, so saving
+    // before filling them in publishes nothing stray.
+    requirements: {
+      heading: "דרישות ההכשרה",
+      intro: null,
+      items: ["", "", ""],
+    },
+    // Three empty pairs so the add/remove UI reads clearly on insert;
+    // rows with a blank question are dropped at render time.
+    faq: {
+      heading: "שאלות נפוצות",
+      intro: null,
+      items: [
+        { question: "", answer: "" },
+        { question: "", answer: "" },
+        { question: "", answer: "" },
+      ],
+    },
+    reading_list: {
+      heading: "ספרי ליבה",
+      intro: null,
+      items: [
+        { title: "", cover_media_id: null, description: null, link: null },
+        { title: "", cover_media_id: null, description: null, link: null },
+        { title: "", cover_media_id: null, description: null, link: null },
+      ],
+    },
   };
   return defaults[type] as BlockDataOf<T>;
 }
@@ -132,4 +182,9 @@ export const BLOCK_TYPES_WITH_CUSTOM_FORM: BlockType[] = [
   "about",
   "focus_areas",
   "pull_quote",
+  "training_details",
+  "lecturers_grid",
+  "requirements",
+  "faq",
+  "reading_list",
 ];

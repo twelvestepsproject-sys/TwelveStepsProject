@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:schema": "echo \"[typecheck:schema] no-op until Phase 5 generates DB types from Supabase — will assert generated types are assignable to /lib/schemas domain types\" && exit 0",
     "check:placeholder": "node scripts/check-placeholder.mjs",
+    "check:blocks": "tsx scripts/check-page-blocks.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "mock:reset": "node scripts/mock-reset.mjs",
     "supabase:seed": "tsx supabase/seed/seed.mjs",

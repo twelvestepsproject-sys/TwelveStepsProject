@@ -17,6 +17,10 @@ import { VideoTestimonials, VideoTestimonialsSkeleton } from "./video-testimonia
 import { PhotoGallery, PhotoGallerySkeleton } from "./photo-gallery";
 import { CommunityCta } from "./community-cta";
 import { ClosingCta } from "./closing-cta";
+import { TrainingDetails } from "./training-details";
+import { Requirements } from "./requirements";
+import { Faq } from "./faq";
+import { ReadingList, ReadingListSkeleton } from "./reading-list";
 import { BlockError } from "./skeleton";
 
 /**
@@ -111,6 +115,22 @@ export function renderBlock(block: PageBlock) {
 
     case "focus_areas":
       return <FocusAreas key={block.id} data={block.data} />;
+
+    case "training_details":
+      return <TrainingDetails key={block.id} data={block.data} />;
+
+    case "requirements":
+      return <Requirements key={block.id} data={block.data} />;
+
+    case "faq":
+      return <Faq key={block.id} data={block.data} />;
+
+    case "reading_list":
+      return (
+        <Suspense key={block.id} fallback={<ReadingListSkeleton />}>
+          <ReadingListSafe data={block.data} />
+        </Suspense>
+      );
 
     case "pull_quote":
       return <PullQuote key={block.id} data={block.data} />;
@@ -209,6 +229,14 @@ async function LecturersGridSafe(props: Parameters<typeof LecturersGrid>[0]) {
     return await LecturersGrid(props);
   } catch {
     return <BlockError label="מרצים" />;
+  }
+}
+
+async function ReadingListSafe(props: Parameters<typeof ReadingList>[0]) {
+  try {
+    return await ReadingList(props);
+  } catch {
+    return <BlockError label="ספרי ליבה" />;
   }
 }
 

@@ -8,12 +8,21 @@ import { RevealOnScroll } from "./_shared/reveal-on-scroll";
 
 /**
  * §5 block 12 — Lecturers grid. Reads `db.listLecturers({ visibleOnly: true })`.
- * `is_featured` lecturers are surfaced first for the homepage grid (§6:
- * "is_featured means also surfaced on the homepage grid"), but ALL visible
- * lecturers still render here per the current fixtures/behavior — a
- * dedicated "featured only" homepage filter isn't in scope of the
- * `DataSource` interface's `listLecturers` signature (see friction note in
- * the final report). Empty case: render nothing.
+ *
+ * Which lecturers render depends on whether this block instance has an
+ * explicit selection in `data.lecturer_ids`:
+ *  - non-empty: exactly those lecturers, IN THE ORDER CHOSEN in the admin
+ *    (so a page can show its own teaching staff — the year-by-year
+ *    psychotherapy pages each list different people).
+ *  - empty (the default, and what every pre-existing block row has):
+ *    unchanged legacy behavior — `is_featured` lecturers if any exist,
+ *    otherwise all visible ones.
+ *
+ * The selection is always re-filtered through the `visibleOnly` list rather
+ * than fetched by id, so hiding a lecturer (or revoking consent, which the
+ * `lecturerSchema` refinement ties to visibility) removes them from every
+ * page that selected them. A stale id left behind by a deleted lecturer is
+ * simply skipped.
  *
  * Avatars: each lecturer carries `photo_id`, resolved via `db.getMedia()`
  * (no join left to the caller beyond that one extra lookup — `Lecturer`
@@ -28,8 +37,20 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
 
   if (lecturers.length === 0) return null;
 
-  const featured = lecturers.filter((l) => l.is_featured);
-  const shown = featured.length > 0 ? featured : lecturers;
+  const selectedIds = data.lecturer_ids ?? [];
+  let shown;
+  if (selectedIds.length > 0) {
+    const byId = new Map(lecturers.map((l) => [l.id, l]));
+    shown = selectedIds.map((id) => byId.get(id)).filter((l) => l !== undefined);
+  } else {
+    const featured = lecturers.filter((l) => l.is_featured);
+    shown = featured.length > 0 ? featured : lecturers;
+  }
+
+  // Every selected lecturer was hidden/deleted — render nothing rather
+  // than silently falling back to the site-wide list, which would show
+  // people this page's editor did not choose.
+  if (shown.length === 0) return null;
 
   const photos = await Promise.all(
     shown.map((l) => (l.photo_id ? db.getMedia(l.photo_id) : Promise.resolve(null))),

@@ -301,6 +301,663 @@ export function AboutFields({ data, onChange }: { data: Record<string, unknown>;
   );
 }
 
+/**
+ * Training details panel. Every field is optional (client request) and the
+ * renderer drops empty rows, so there is no `required` here and no
+ * validation beyond "whatever the editor typed."
+ *
+ * Dates use `type="date"` for a picker, but the stored value is the plain
+ * string the input yields (YYYY-MM-DD) — the block schema types these as
+ * strings, not dates, so an editor can also clear one back to empty. The
+ * numeric-looking fields (sessions/hours/semesters) are deliberately text
+ * inputs, not `type="number"`: editors write things like "כ-30" or
+ * "2 (סתיו ואביב)", which a number input would silently reject.
+ */
+export function TrainingDetailsFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as {
+    heading: string | null;
+    starts_on: string | null;
+    ends_on: string | null;
+    meeting_day: string | null;
+    meeting_time: string | null;
+    sessions_count: string | null;
+    academic_hours: string | null;
+    price: string | null;
+    semesters_count: string | null;
+    registration_link: { label: string; href: string; open_in_new_tab: boolean } | null;
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת האזור" htmlFor="td-heading" hint="ריק = ללא כותרת מעל הפרטים">
+        <input
+          id="td-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+
+      <p className="text-xs text-ink-muted">
+        כל השדות אופציונליים — שדה שיישאר ריק פשוט לא יוצג באתר.
+      </p>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="תאריך התחלה" htmlFor="td-starts">
+          <input
+            id="td-starts"
+            type="date"
+            className={inputClass}
+            value={d.starts_on ?? ""}
+            onChange={(e) => onChange({ ...d, starts_on: e.target.value || null })}
+          />
+        </Field>
+        <Field label="תאריך סיום" htmlFor="td-ends">
+          <input
+            id="td-ends"
+            type="date"
+            className={inputClass}
+            value={d.ends_on ?? ""}
+            onChange={(e) => onChange({ ...d, ends_on: e.target.value || null })}
+          />
+        </Field>
+        <Field label="יום מפגש" htmlFor="td-day" hint="לדוגמה: יום שלישי">
+          <input
+            id="td-day"
+            className={inputClass}
+            value={d.meeting_day ?? ""}
+            onChange={(e) => onChange({ ...d, meeting_day: e.target.value || null })}
+          />
+        </Field>
+        <Field label="שעת מפגש" htmlFor="td-time" hint="לדוגמה: 17:00–20:30">
+          <input
+            id="td-time"
+            className={inputClass}
+            value={d.meeting_time ?? ""}
+            onChange={(e) => onChange({ ...d, meeting_time: e.target.value || null })}
+          />
+        </Field>
+        <Field label="מספר מפגשים" htmlFor="td-sessions">
+          <input
+            id="td-sessions"
+            className={inputClass}
+            value={d.sessions_count ?? ""}
+            onChange={(e) => onChange({ ...d, sessions_count: e.target.value || null })}
+          />
+        </Field>
+        <Field label="שעות אקדמיות" htmlFor="td-hours">
+          <input
+            id="td-hours"
+            className={inputClass}
+            value={d.academic_hours ?? ""}
+            onChange={(e) => onChange({ ...d, academic_hours: e.target.value || null })}
+          />
+        </Field>
+        <Field label="מספר סמסטרים" htmlFor="td-semesters">
+          <input
+            id="td-semesters"
+            className={inputClass}
+            value={d.semesters_count ?? ""}
+            onChange={(e) => onChange({ ...d, semesters_count: e.target.value || null })}
+          />
+        </Field>
+        <Field label="מחיר" htmlFor="td-price" hint="טקסט חופשי, לדוגמה: 3,500 ₪">
+          <input
+            id="td-price"
+            className={inputClass}
+            value={d.price ?? ""}
+            onChange={(e) => onChange({ ...d, price: e.target.value || null })}
+          />
+        </Field>
+      </div>
+
+      <LinkFields
+        label="קישור הרשמה"
+        value={d.registration_link}
+        onChange={(registration_link) => onChange({ ...d, registration_link })}
+      />
+    </div>
+  );
+}
+
+/**
+ * Requirements list. One text input per requirement, with add/remove and
+ * ↑↓ reordering — the "add and remove freely" the client asked for.
+ *
+ * Rows are keyed by index rather than by a generated id: the list is a
+ * plain `string[]` (see the schema note on why it isn't objects), so there
+ * is no stable id to key on. That is safe here because every mutation
+ * rebuilds the whole array through `onChange` and the inputs are
+ * controlled — React re-renders values from state rather than preserving
+ * per-row DOM identity across a reorder.
+ */
+export function RequirementsFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as { heading: string; intro: string | null; items?: string[] };
+  const items = d.items ?? [];
+
+  function updateItem(index: number, value: string) {
+    onChange({ ...d, items: items.map((it, i) => (i === index ? value : it)) });
+  }
+
+  function addItem() {
+    onChange({ ...d, items: [...items, ""] });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...d, items: items.filter((_, i) => i !== index) });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, items: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="rq-heading" required>
+        <input
+          id="rq-heading"
+          className={inputClass}
+          value={d.heading}
+          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+        />
+      </Field>
+
+      <Field label="טקסט פתיחה" htmlFor="rq-intro" hint="אופציונלי — פסקה קצרה מעל הרשימה">
+        <textarea
+          id="rq-intro"
+          className={textareaClass}
+          value={d.intro ?? ""}
+          onChange={(e) => onChange({ ...d, intro: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">רשימת הדרישות</p>
+
+        {items.length === 0 ? (
+          <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+            אין דרישות ברשימה. לחצו ״הוספת דרישה״ כדי להתחיל.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {items.map((item, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <span className="w-5 shrink-0 text-xs text-ink-muted">{i + 1}.</span>
+                <input
+                  className={inputClass}
+                  value={item}
+                  placeholder="לדוגמה: תואר ראשון במקצועות הטיפול"
+                  onChange={(e) => updateItem(i, e.target.value)}
+                  aria-label={`דרישה ${i + 1}`}
+                />
+                <span className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    aria-label="הזזה למעלה"
+                    className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    aria-label="הזזה למטה"
+                    className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    aria-label={`מחיקת דרישה ${i + 1}`}
+                    className="rounded p-1 text-error hover:bg-error/10"
+                  >
+                    🗑
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={addItem}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+        >
+          + הוספת דרישה
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Reading list (core books / sources). Add/remove/reorder like the other
+ * list blocks, but each row also gets its own <MediaPickerField> for the
+ * cover — hence the `mediaById` prop, which supplies already-resolved
+ * Media rows so a thumbnail renders without a client fetch per row.
+ */
+export function ReadingListFields({
+  data,
+  onChange,
+  mediaById,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  mediaById: Record<string, Media>;
+}) {
+  type Item = {
+    title: string;
+    cover_media_id: string | null;
+    description: string | null;
+    link: { label: string; href: string; open_in_new_tab: boolean } | null;
+  };
+  const d = data as { heading: string; intro: string | null; items?: Item[] };
+  const items = d.items ?? [];
+
+  function updateItem(index: number, patch: Partial<Item>) {
+    onChange({ ...d, items: items.map((it, i) => (i === index ? { ...it, ...patch } : it)) });
+  }
+
+  function addItem() {
+    onChange({
+      ...d,
+      items: [...items, { title: "", cover_media_id: null, description: null, link: null }],
+    });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...d, items: items.filter((_, i) => i !== index) });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, items: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="rl-heading" required>
+        <input
+          id="rl-heading"
+          className={inputClass}
+          value={d.heading}
+          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+        />
+      </Field>
+
+      <Field label="טקסט פתיחה" htmlFor="rl-intro" hint="אופציונלי — פסקה קצרה מעל הרשימה">
+        <textarea
+          id="rl-intro"
+          className={textareaClass}
+          value={d.intro ?? ""}
+          onChange={(e) => onChange({ ...d, intro: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">רשימת הספרים / המקורות</p>
+
+        {items.length === 0 ? (
+          <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+            אין פריטים ברשימה. לחצו ״הוספת ספר / מקור״ כדי להתחיל.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {items.map((item, i) => (
+              <li key={i} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-ink-muted">פריט {i + 1}</span>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      aria-label="הזזה למעלה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      aria-label="הזזה למטה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      aria-label={`מחיקת פריט ${i + 1}`}
+                      className="rounded p-1 text-error hover:bg-error/10"
+                    >
+                      🗑
+                    </button>
+                  </span>
+                </div>
+
+                <input
+                  className={inputClass}
+                  value={item.title}
+                  placeholder="שם הספר / המקור"
+                  aria-label={`שם פריט ${i + 1}`}
+                  onChange={(e) => updateItem(i, { title: e.target.value })}
+                />
+
+                <textarea
+                  className={textareaClass}
+                  value={item.description ?? ""}
+                  placeholder="תיאור קצר (אופציונלי)"
+                  aria-label={`תיאור פריט ${i + 1}`}
+                  onChange={(e) => updateItem(i, { description: e.target.value || null })}
+                />
+
+                <MediaPickerField
+                  label="תמונת כריכה (אופציונלי)"
+                  value={item.cover_media_id}
+                  media={item.cover_media_id ? mediaById[item.cover_media_id] : null}
+                  onChange={(mediaId) => updateItem(i, { cover_media_id: mediaId })}
+                />
+
+                <LinkFields
+                  label="קישור (אופציונלי)"
+                  value={item.link}
+                  onChange={(link) => updateItem(i, { link })}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={addItem}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+        >
+          + הוספת ספר / מקור
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * FAQ accordion. Same add/remove/reorder shape as RequirementsFields, but
+ * each row is a question+answer pair, so the answer gets a textarea.
+ * Rows are keyed by index for the same reason (no stable id on the data).
+ */
+export function FaqFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as {
+    heading: string;
+    intro: string | null;
+    items?: { question: string; answer: string }[];
+  };
+  const items = d.items ?? [];
+
+  function updateItem(index: number, patch: Partial<{ question: string; answer: string }>) {
+    onChange({ ...d, items: items.map((it, i) => (i === index ? { ...it, ...patch } : it)) });
+  }
+
+  function addItem() {
+    onChange({ ...d, items: [...items, { question: "", answer: "" }] });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...d, items: items.filter((_, i) => i !== index) });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, items: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="faq-heading" required>
+        <input
+          id="faq-heading"
+          className={inputClass}
+          value={d.heading}
+          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+        />
+      </Field>
+
+      <Field label="טקסט פתיחה" htmlFor="faq-intro" hint="אופציונלי — פסקה קצרה מעל השאלות">
+        <textarea
+          id="faq-intro"
+          className={textareaClass}
+          value={d.intro ?? ""}
+          onChange={(e) => onChange({ ...d, intro: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">שאלות ותשובות</p>
+
+        {items.length === 0 ? (
+          <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+            אין שאלות ברשימה. לחצו ״הוספת שאלה״ כדי להתחיל.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {items.map((item, i) => (
+              <li key={i} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-ink-muted">שאלה {i + 1}</span>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      aria-label="הזזה למעלה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      aria-label="הזזה למטה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      aria-label={`מחיקת שאלה ${i + 1}`}
+                      className="rounded p-1 text-error hover:bg-error/10"
+                    >
+                      🗑
+                    </button>
+                  </span>
+                </div>
+                <input
+                  className={inputClass}
+                  value={item.question}
+                  placeholder="השאלה"
+                  aria-label={`שאלה ${i + 1}`}
+                  onChange={(e) => updateItem(i, { question: e.target.value })}
+                />
+                <textarea
+                  className={textareaClass}
+                  value={item.answer}
+                  placeholder="התשובה"
+                  aria-label={`תשובה ${i + 1}`}
+                  onChange={(e) => updateItem(i, { answer: e.target.value })}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={addItem}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+        >
+          + הוספת שאלה
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lecturers grid. The checkbox list is the selection; the ↑↓ buttons on the
+ * chosen rows set display order (`lecturer_ids` is order-significant, and
+ * the renderer honors it).
+ *
+ * Leaving everything unchecked is a valid, meaningful state — it means
+ * "show featured/all", which is what every pre-existing block does — so the
+ * empty case gets an explicit note rather than being treated as an error.
+ *
+ * `lecturers` comes from the server component that renders the editor;
+ * this is a client component and cannot query `db` itself. Only visible
+ * lecturers are offered, since hidden ones would not render anyway.
+ */
+export function LecturersGridFields({
+  data,
+  onChange,
+  lecturers,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  lecturers: { id: string; name: string; role: string }[];
+}) {
+  const d = data as {
+    heading: string | null;
+    all_lecturers_link: { label: string; href: string; open_in_new_tab: boolean } | null;
+    lecturer_ids?: string[];
+  };
+  const selected = d.lecturer_ids ?? [];
+  const byId = new Map(lecturers.map((l) => [l.id, l]));
+
+  function toggle(id: string) {
+    const next = selected.includes(id)
+      ? selected.filter((x) => x !== id)
+      : [...selected, id];
+    onChange({ ...d, lecturer_ids: next });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= selected.length) return;
+    const next = [...selected];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, lecturer_ids: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="lg-heading" hint="ריק = ללא כותרת">
+        <input
+          id="lg-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">בחירת מרצים</p>
+
+        {lecturers.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            אין מרצים גלויים להצגה. יש להוסיף מרצים במסך המרצים.
+          </p>
+        ) : (
+          <>
+            {selected.length === 0 ? (
+              <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+                לא נבחרו מרצים — יוצגו המרצים המומלצים, ואם אין כאלה כל המרצים הגלויים.
+              </p>
+            ) : (
+              <ol className="flex flex-col gap-1">
+                {selected.map((id, i) => {
+                  const l = byId.get(id);
+                  return (
+                    <li
+                      key={id}
+                      className="flex items-center justify-between gap-2 rounded border border-border px-2 py-1"
+                    >
+                      <span className="text-sm text-ink">
+                        {i + 1}. {l ? l.name : "(מרצה שהוסר)"}
+                        {l ? <span className="text-xs text-ink-muted"> — {l.role}</span> : null}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => move(i, -1)}
+                          aria-label="הזזה למעלה"
+                          className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => move(i, 1)}
+                          aria-label="הזזה למטה"
+                          className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggle(id)}
+                          className="rounded px-1.5 py-1 text-xs text-ink-muted underline"
+                        >
+                          הסרה
+                        </button>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+
+            <div className="mt-1 flex flex-col gap-1">
+              <p className="text-xs text-ink-muted">סימון מרצה יוסיף אותו לרשימה:</p>
+              <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+                {lecturers.map((l) => (
+                  <label key={l.id} className="flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(l.id)}
+                      onChange={() => toggle(l.id)}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                    <span>
+                      {l.name}
+                      <span className="text-xs text-ink-muted"> — {l.role}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <LinkFields
+        label="קישור ״לכל המרצים״"
+        value={d.all_lecturers_link}
+        onChange={(all_lecturers_link) => onChange({ ...d, all_lecturers_link })}
+      />
+    </div>
+  );
+}
+
 export function FocusAreasFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
   const d = data as {
     heading: string | null;

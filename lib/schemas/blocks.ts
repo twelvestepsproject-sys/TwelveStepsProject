@@ -131,9 +131,20 @@ export const testimonialsSliderBlockDataSchema = z.object({
 });
 
 // 12. Lecturers grid
+// `lecturer_ids` picks WHICH lecturers this instance shows, in the order
+// chosen. Added so the same block can appear on several pages (the
+// year-by-year psychotherapy pages) each showing a different set — before
+// it, every instance rendered the same site-wide list, because the block
+// carried no selection at all.
+//
+// Empty array = "not configured", which keeps the pre-existing behavior
+// (featured lecturers, else all visible ones). That default is what makes
+// this backward-compatible: every lecturers_grid block already in the
+// database parses and renders exactly as before without a data migration.
 export const lecturersGridBlockDataSchema = z.object({
   heading: z.string().nullable(),
   all_lecturers_link: linkSchema.nullable(),
+  lecturer_ids: z.array(uuidSchema).default([]),
 });
 
 // 13. Program stages stepper/accordion
@@ -194,6 +205,91 @@ export const globalOverlaysBlockDataSchema = z.object({
   accessibility_toolbar_enabled: z.boolean().default(true),
 });
 
+// 21. Training details panel
+// The same "at a glance" panel `/hachsharot/[slug]` renders from its
+// `trainings` row, but as a block whose values live in `page_blocks.data`
+// — so it can sit on an ordinary content page that has no training behind
+// it (the year-by-year psychotherapy pages). Every field is optional per
+// the client request; the renderer omits any row left empty, so an
+// editor filling in only two fields gets a clean two-row panel rather
+// than blank labels.
+//
+// `price` is a plain string here, NOT the agorot integer used by
+// `trainings.price`: that column is a real currency amount feeding
+// `formatPrice()` and JSON-LD, whereas this is free text an editor types
+// into a panel ("3,500 ₪", "1,200 ₪ לסמסטר", "לפי הרשמה"). Reusing the
+// integer would force a unit conversion and forbid the qualifiers editors
+// actually write — see the unit-mismatch bug that shipped on the
+// trainings form for why that pairing is worth avoiding here.
+export const trainingDetailsBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+  starts_on: z.string().nullable(),
+  ends_on: z.string().nullable(),
+  meeting_day: z.string().nullable(),
+  meeting_time: z.string().nullable(),
+  sessions_count: z.string().nullable(),
+  academic_hours: z.string().nullable(),
+  price: z.string().nullable(),
+  semesters_count: z.string().nullable(),
+  registration_link: linkSchema.nullable(),
+});
+
+// 22. Requirements list
+// Heading + optional intro + a freely-growable list of prerequisites.
+// `items` is a flat array of strings rather than {title, body} objects:
+// the request was "רשימת דרישות שניתן להוסיף ולמחוק באופן חופשי" — a
+// plain list — and a flat shape keeps the admin UI a single text input per
+// row (add/remove/reorder) instead of a nested sub-form. An editor who
+// wants emphasis can still write it inline in the one line.
+//
+// No `.min()`: a block with an empty list is a valid intermediate state
+// while an editor is filling it in, and the renderer omits the list (or
+// the whole block) rather than erroring.
+export const requirementsBlockDataSchema = z.object({
+  heading: z.string(),
+  intro: z.string().nullable(),
+  items: z.array(z.string()).default([]),
+});
+
+// 23. FAQ accordion
+// Unlike `requirements` (a flat string[]), each item needs two fields, so
+// this is an array of objects. No `.min()`/`.max()`: "מספר בלתי מוגבל של
+// שאלות ותשובות", and an empty list is a valid state while an editor fills
+// it in — the renderer drops rows whose question is blank.
+export const faqBlockDataSchema = z.object({
+  heading: z.string(),
+  intro: z.string().nullable(),
+  items: z
+    .array(
+      z.object({
+        question: z.string(),
+        answer: z.string(),
+      }),
+    )
+    .default([]),
+});
+
+// 24. Reading list (core books / sources)
+// Per item: title (the only required field), optional cover image,
+// optional short description, optional link. Only the title is required
+// because a source can legitimately be listed by name alone — the client
+// marked cover and link explicitly optional, and a description the editor
+// hasn't written yet shouldn't block saving the rest of the list.
+export const readingListBlockDataSchema = z.object({
+  heading: z.string(),
+  intro: z.string().nullable(),
+  items: z
+    .array(
+      z.object({
+        title: z.string(),
+        cover_media_id: uuidSchema.nullable(),
+        description: z.string().nullable(),
+        link: linkSchema.nullable(),
+      }),
+    )
+    .default([]),
+});
+
 export const blockTypeSchema = z.enum([
   "header",
   "hero",
@@ -215,6 +311,10 @@ export const blockTypeSchema = z.enum([
   "closing_cta",
   "footer",
   "global_overlays",
+  "training_details",
+  "requirements",
+  "faq",
+  "reading_list",
 ]);
 export type BlockType = z.infer<typeof blockTypeSchema>;
 
@@ -248,5 +348,9 @@ export const pageBlockSchema = z.discriminatedUnion("block_type", [
   z.object({ ...pageBlockBaseFields, block_type: z.literal("closing_cta"), data: closingCtaBlockDataSchema }),
   z.object({ ...pageBlockBaseFields, block_type: z.literal("footer"), data: footerBlockDataSchema }),
   z.object({ ...pageBlockBaseFields, block_type: z.literal("global_overlays"), data: globalOverlaysBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_details"), data: trainingDetailsBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("requirements"), data: requirementsBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("faq"), data: faqBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("reading_list"), data: readingListBlockDataSchema }),
 ]);
 export type PageBlock = z.infer<typeof pageBlockSchema>;

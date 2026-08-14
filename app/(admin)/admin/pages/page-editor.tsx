@@ -15,6 +15,11 @@ import {
   AboutFields,
   FocusAreasFields,
   PullQuoteFields,
+  TrainingDetailsFields,
+  LecturersGridFields,
+  RequirementsFields,
+  FaqFields,
+  ReadingListFields,
   GenericJsonFields,
 } from "./block-fields";
 import type { BlockType, Media, Page, PageBlock } from "@/lib/schemas";
@@ -74,6 +79,7 @@ export function PageEditor({
   page,
   canEdit,
   mediaById,
+  lecturers = [],
 }: {
   page?: Page | null;
   canEdit: boolean;
@@ -81,6 +87,9 @@ export function PageEditor({
    * blocks, keyed by id, so <MediaPickerField> can render a thumbnail
    * without an extra client fetch per block. */
   mediaById: Record<string, Media>;
+  /** Visible lecturers, for the lecturers_grid block's selection UI —
+   * fetched server-side since this is a client component. */
+  lecturers?: { id: string; name: string; role: string }[];
 }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>(() => toFormState(page));
@@ -361,6 +370,7 @@ export function PageEditor({
                       <BlockDataForm
                         block={block}
                         mediaById={mediaById}
+                        lecturers={lecturers}
                         onChange={(data) => updateBlockData(block.id, data)}
                       />
                     </div>
@@ -400,10 +410,12 @@ export function PageEditor({
 function BlockDataForm({
   block,
   mediaById,
+  lecturers,
   onChange,
 }: {
   block: PageBlock;
   mediaById: Record<string, Media>;
+  lecturers: { id: string; name: string; role: string }[];
   onChange: (data: Record<string, unknown>) => void;
 }) {
   const data = block.data as Record<string, unknown>;
@@ -432,6 +444,16 @@ function BlockDataForm({
       return <FocusAreasFields data={data} onChange={onChange} />;
     case "pull_quote":
       return <PullQuoteFields data={data} onChange={onChange} />;
+    case "training_details":
+      return <TrainingDetailsFields data={data} onChange={onChange} />;
+    case "lecturers_grid":
+      return <LecturersGridFields data={data} onChange={onChange} lecturers={lecturers} />;
+    case "requirements":
+      return <RequirementsFields data={data} onChange={onChange} />;
+    case "faq":
+      return <FaqFields data={data} onChange={onChange} />;
+    case "reading_list":
+      return <ReadingListFields data={data} onChange={onChange} mediaById={mediaById} />;
     default:
       return <GenericJsonFields data={data} onChange={onChange} />;
   }
