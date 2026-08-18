@@ -1,9 +1,51 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
-import { mediaUrlFor } from "@/lib/media";
-import { formatPrice, formatHours } from "@/lib/format";
+import { renderBlock } from "@/components/blocks";
+import {
+  TrainingIntro,
+  TrainingBody,
+  TrainingSyllabus,
+  TrainingInstructors,
+  TrainingRegistrationCta,
+} from "@/components/blocks/training-sections";
+import type { BlockType, Media, PageBlock, Training } from "@/lib/schemas";
+
+/** The pre-migration-20 section order, used for trainings with no blocks
+ * and as the seed for the conversion script. */
+const DEFAULT_TRAINING_LAYOUT: BlockType[] = [
+  "training_intro",
+  "training_body",
+  "training_syllabus",
+  "training_instructors",
+  "training_registration_cta",
+];
+
+/**
+ * Training-owned blocks come in two kinds:
+ *  - the five `training_*` sections, which read from the `training` row
+ *    (their values are still edited in /admin/trainings, not in the block);
+ *  - any ordinary content block (faq, requirements, reading_list, …),
+ *    which renders through the shared registry exactly as on a page.
+ */
+function renderTrainingBlock(block: PageBlock, training: Training, cover: Media | null) {
+  switch (block.block_type) {
+    case "training_intro":
+      return (
+        <TrainingIntro key={block.id} data={block.data} training={training} cover={cover} />
+      );
+    case "training_body":
+      return <TrainingBody key={block.id} data={block.data} training={training} />;
+    case "training_syllabus":
+      return <TrainingSyllabus key={block.id} data={block.data} training={training} />;
+    case "training_instructors":
+      return <TrainingInstructors key={block.id} data={block.data} training={training} />;
+    case "training_registration_cta":
+      return <TrainingRegistrationCta key={block.id} data={block.data} training={training} />;
+    default:
+      return renderBlock(block);
+  }
+}
 
 /**
  * `/hachsharot/[slug]` — Single training (§4 `/[trainings]/[slug]`).
@@ -54,7 +96,6 @@ export default async function SingleTrainingPage({ params }: PageProps) {
   if (!training) notFound();
 
   const cover = training.cover_image_id ? await db.getMedia(training.cover_image_id) : null;
-  const price = formatPrice(training.price);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -70,98 +111,29 @@ export default async function SingleTrainingPage({ params }: PageProps) {
     },
   };
 
+  // Block-composed when the training has blocks (migration 20); otherwise
+  // the original fixed layout, so a training that was never converted
+  // renders exactly as it always did. `DEFAULT_LAYOUT` is that same
+  // sequence expressed as blocks, which is also what the conversion script
+  // writes — one definition, no chance of the two drifting apart.
+  const layout: PageBlock[] =
+    training.blocks.length > 0
+      ? training.blocks
+      : (DEFAULT_TRAINING_LAYOUT.map((block_type, i) => ({
+          id: `default-${i}`,
+          training_id: training.id,
+          page_id: null,
+          block_type,
+          sort_order: i + 1,
+          is_visible: true,
+          data: {},
+        })) as unknown as PageBlock[]);
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {cover ? (
-        <Image
-          src={mediaUrlFor(cover)}
-          alt={cover.alt_he}
-          width={cover.width}
-          height={cover.height}
-          priority
-          className="mb-8 h-64 w-full rounded-lg object-cover sm:h-80"
-        />
-      ) : null}
-
-      <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{training.title}</h1>
-      <p className="mt-4 text-lg text-ink-muted">{training.excerpt}</p>
-
-      <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-5 text-sm sm:grid-cols-4">
-        {training.starts_on ? (
-          <div>
-            <dt className="font-semibold text-ink">תאריך התחלה</dt>
-            <dd className="text-ink-muted">{training.starts_on}</dd>
-          </div>
-        ) : null}
-        {training.meeting_day ? (
-          <div>
-            <dt className="font-semibold text-ink">ימי מפגש</dt>
-            <dd className="text-ink-muted">{training.meeting_day}</dd>
-          </div>
-        ) : null}
-        {training.meeting_time ? (
-          <div>
-            <dt className="font-semibold text-ink">שעות מפגש</dt>
-            <dd className="text-ink-muted">{training.meeting_time}</dd>
-          </div>
-        ) : null}
-        <div>
-          <dt className="font-semibold text-ink">היקף</dt>
-          <dd className="text-ink-muted">{formatHours(training.academic_hours)}</dd>
-        </div>
-        {price ? (
-          <div>
-            <dt className="font-semibold text-ink">מחיר</dt>
-            <dd className="text-ink-muted">{price}</dd>
-          </div>
-        ) : null}
-      </dl>
-
-      <div className="prose prose-ink mt-8 max-w-none whitespace-pre-line text-ink">
-        {training.body}
-      </div>
-
-      {training.syllabus.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="font-display text-xl font-bold text-ink">תוכנית הלימודים</h2>
-          <ol className="mt-4 flex flex-col gap-4">
-            {training.syllabus.map((item, i) => (
-              <li key={i} className="rounded-md border border-border bg-surface p-4">
-                <p className="font-display font-bold text-ink">{item.title}</p>
-                <p className="mt-1 text-sm text-ink-muted">{item.body}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
-
-      {training.instructors.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="font-display text-xl font-bold text-ink">מרצים ומדריכים</h2>
-          <ul className="mt-4 flex flex-wrap gap-4">
-            {training.instructors.map((instructor) => (
-              <li key={instructor.id} className="rounded-md border border-border bg-surface px-4 py-2">
-                <p className="font-display font-bold text-ink">{instructor.name}</p>
-                <p className="text-xs text-ink-muted">{instructor.role}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* Registration CTA — UI only, no real submission yet (Phase 4 Server
-          Actions), same rule as the homepage registration modal. */}
-      <div className="mt-10 rounded-lg bg-primary p-6 text-center text-primary-fg">
-        <p className="mb-4 font-display text-lg font-bold">מעוניינים להצטרף להכשרה?</p>
-        <a
-          href="#registration-modal"
-          className="inline-block rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-lg"
-        >
-          לתיאום שיחת היכרות
-        </a>
-      </div>
+      {layout.map((block) => renderTrainingBlock(block, training, cover))}
     </main>
   );
 }

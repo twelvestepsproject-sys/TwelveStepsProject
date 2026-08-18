@@ -36,8 +36,19 @@ async function fetchMedia(q: string): Promise<Media[]> {
   return data.items;
 }
 
+/** Documents (PDF) carry no pixel dimensions — the server stores 1x1 and
+ * every consumer branches on `mime_type` rather than trusting the numbers. */
+export function isDocumentMime(mime: string): boolean {
+  return mime === "application/pdf";
+}
+
 function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
+    if (isDocumentMime(file.type)) {
+      // Never decoded as an image; the server substitutes its own value.
+      resolve({ width: 1, height: 1 });
+      return;
+    }
     if (file.type === "image/svg+xml") {
       // SVGs don't reliably report natural size via <img> without a
       // viewBox; fall back to a reasonable square default (still stored
@@ -64,6 +75,9 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
  * anything wider than 2000px to cap upload size; skipped for SVG, which
  * has no raster dimensions to resize). Uses a <canvas>, no new dependency. */
 async function maybeResize(file: File, maxDim = 2000): Promise<File> {
+  // A PDF has no raster to downscale, and running it through <canvas>
+  // would corrupt it.
+  if (isDocumentMime(file.type)) return file;
   if (file.type === "image/svg+xml") return file;
   const dims = await readImageDimensions(file);
   if (Math.max(dims.width, dims.height) <= maxDim) return file;
@@ -155,24 +169,31 @@ function UploadPanel({ onUploaded }: { onUploaded: (media: Media) => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-surface-alt/40 p-4">
       <label htmlFor="media-picker-file" className="text-sm font-semibold text-ink">
-        קובץ (SVG, PNG, JPG, WebP)
+        קובץ (PDF, SVG, PNG, JPG, WebP)
       </label>
       <input
         id="media-picker-file"
         type="file"
-        accept="image/svg+xml,image/png,image/jpeg,image/webp"
+        accept="application/pdf,image/svg+xml,image/png,image/jpeg,image/webp"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         className="text-sm text-ink"
       />
       <label htmlFor="media-picker-alt" className="text-sm font-semibold text-ink">
-        טקסט חלופי (alt) בעברית <span className="text-error">*</span>
+        {/* For a document this is the accessible link text, not alt text —
+            labelled accordingly so an editor writes something sensible. */}
+        {file && isDocumentMime(file.type) ? "שם הקובץ לתצוגה" : "טקסט חלופי (alt) בעברית"}{" "}
+        <span className="text-error">*</span>
       </label>
       <input
         id="media-picker-alt"
         className={inputClass}
         value={altHe}
         onChange={(e) => setAltHe(e.target.value)}
-        placeholder="תיאור קצר של התמונה, לנגישות ול-SEO"
+        placeholder={
+          file && isDocumentMime(file.type)
+            ? "לדוגמה: סילבוס שנה א׳"
+            : "תיאור קצר של התמונה, לנגישות ול-SEO"
+        }
       />
       <label htmlFor="media-picker-license" className="text-sm font-semibold text-ink">
         הערת רישיון (אופציונלי)
@@ -315,12 +336,23 @@ function MediaPickerModal({
                     }}
                     className="flex flex-col gap-1 rounded-md border border-border p-2 text-start hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- admin picker thumbnail, mock-media route, next/image config not worth it for a fixed 96px admin thumbnail */}
-                    <img
-                      src={mediaUrl(m.storage_path)}
-                      alt={m.alt_he}
-                      className="h-24 w-full rounded-sm object-cover"
-                    />
+                    {isDocumentMime(m.mime_type) ? (
+                      // A PDF has no renderable thumbnail — an <img> here
+                      // would show a broken-image icon.
+                      <span
+                        className="flex h-24 w-full items-center justify-center rounded-sm bg-surface-alt text-3xl"
+                        aria-hidden="true"
+                      >
+                        📄
+                      </span>
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element -- admin picker thumbnail, mock-media route, next/image config not worth it for a fixed 96px admin thumbnail */
+                      <img
+                        src={mediaUrl(m.storage_path)}
+                        alt={m.alt_he}
+                        className="h-24 w-full rounded-sm object-cover"
+                      />
+                    )}
                     <span className="line-clamp-2 text-xs text-ink-muted">{m.alt_he}</span>
                   </button>
                 ))
@@ -367,7 +399,14 @@ export function MediaPickerField({
     <div className="flex flex-col gap-2">
       <span className="text-sm font-semibold text-ink">{label}</span>
       <div className="flex items-center gap-3">
-        {current ? (
+        {current && isDocumentMime(current.mime_type) ? (
+          <span
+            className="flex h-16 w-16 items-center justify-center rounded-md border border-border bg-surface-alt text-2xl"
+            aria-hidden="true"
+          >
+            📄
+          </span>
+        ) : current ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={mediaUrl(current.storage_path)}

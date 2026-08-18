@@ -20,6 +20,15 @@ import {
   RequirementsFields,
   FaqFields,
   ReadingListFields,
+  LinkCardsFields,
+  CertificatesFields,
+  SyllabusDownloadFields,
+  SemestersFields,
+  TrainingIntroFields,
+  TrainingBodyFields,
+  TrainingSyllabusFields,
+  TrainingInstructorsFields,
+  TrainingRegistrationCtaFields,
   GenericJsonFields,
 } from "./block-fields";
 import type { BlockType, Media, Page, PageBlock } from "@/lib/schemas";
@@ -407,7 +416,9 @@ export function PageEditor({
   );
 }
 
-function BlockDataForm({
+/** Exported so the trainings block editor dispatches through the exact same
+ * per-type forms, rather than keeping a second copy that could drift. */
+export function BlockDataForm({
   block,
   mediaById,
   lecturers,
@@ -454,6 +465,24 @@ function BlockDataForm({
       return <FaqFields data={data} onChange={onChange} />;
     case "reading_list":
       return <ReadingListFields data={data} onChange={onChange} mediaById={mediaById} />;
+    case "link_cards":
+      return <LinkCardsFields data={data} onChange={onChange} mediaById={mediaById} />;
+    case "certificates":
+      return <CertificatesFields data={data} onChange={onChange} mediaById={mediaById} />;
+    case "syllabus_download":
+      return <SyllabusDownloadFields data={data} onChange={onChange} mediaById={mediaById} />;
+    case "semesters":
+      return <SemestersFields data={data} onChange={onChange} />;
+    case "training_intro":
+      return <TrainingIntroFields data={data} onChange={onChange} />;
+    case "training_body":
+      return <TrainingBodyFields data={data} onChange={onChange} />;
+    case "training_syllabus":
+      return <TrainingSyllabusFields data={data} onChange={onChange} />;
+    case "training_instructors":
+      return <TrainingInstructorsFields data={data} onChange={onChange} />;
+    case "training_registration_cta":
+      return <TrainingRegistrationCtaFields data={data} onChange={onChange} />;
     default:
       return <GenericJsonFields data={data} onChange={onChange} />;
   }

@@ -33,6 +33,17 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   requirements: "דרישות ההכשרה",
   faq: "שאלות נפוצות",
   reading_list: "ספרי ליבה / מקורות",
+  // Training-page sections. Prefixed so they group together in the picker
+  // and read as "part of the training" rather than generic content blocks.
+  training_intro: "הכשרה — כותרת ופרטים",
+  training_body: "הכשרה — תוכן מלא",
+  training_syllabus: "הכשרה — סילבוס",
+  training_instructors: "הכשרה — מרצים",
+  training_registration_cta: "הכשרה — כפתור הרשמה",
+  link_cards: "כרטיסיות קישור",
+  certificates: "תעודות",
+  syllabus_download: "סילבוס להורדה",
+  semesters: "סמסטרים ומפגשים",
 };
 
 type BlockDataOf<T extends BlockType> = Extract<PageBlock, { block_type: T }>["data"];
@@ -155,6 +166,69 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
         { title: "", cover_media_id: null, description: null, link: null },
       ],
     },
+    // Training sections: `data` holds presentation choices only. Headings
+    // default to null so the renderer falls back to the wording the page
+    // used before it was block-based.
+    training_intro: { show_cover: true, show_details: true },
+    training_body: { heading: null },
+    training_syllabus: { heading: null },
+    training_instructors: { heading: null },
+    training_registration_cta: { heading: null, cta_label: null },
+    // Three empty cards: the block exists for the "choose a year" case, and
+    // three is that shape. Titles are left blank rather than pre-filled with
+    // "שנה א׳" — the block is generic, and blank rows are dropped at render
+    // time so an unfinished block never reaches a published page.
+    link_cards: {
+      heading: null,
+      intro: null,
+      cards: [
+        { title: "", body: null, image_media_id: null, link: null },
+        { title: "", body: null, image_media_id: null, link: null },
+        { title: "", body: null, image_media_id: null, link: null },
+      ],
+    },
+    // Two slots: the reference design pairs the certificate with the
+    // issuing body's cover. More can be added, empty ones are dropped.
+    certificates: {
+      heading: "התעודות שתקבלו",
+      intro: null,
+      items: [
+        { media_id: null, caption: null },
+        { media_id: null, caption: null },
+      ],
+    },
+    // `file_url` starts empty and the renderer hides the block until it is
+    // filled, so adding the block never publishes a dead button.
+    syllabus_download: {
+      heading: null,
+      body: null,
+      file_media_id: null,
+      file_url: "",
+      button_label: "סילבוס להורדה",
+      open_in_new_tab: true,
+    },
+    // One semester with one session and two parts: enough structure for the
+    // three-level shape to be obvious in the form, without pre-filling
+    // content. Empty rows are dropped at render time.
+    semesters: {
+      heading: null,
+      semesters: [
+        {
+          title: "",
+          subtitle: null,
+          sessions: [
+            {
+              label: "מפגש 1",
+              date: null,
+              parts: [
+                { title: "שיעור א׳", body: null },
+                { title: "שיעור ב׳", body: null },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   };
   return defaults[type] as BlockDataOf<T>;
 }
@@ -187,4 +261,13 @@ export const BLOCK_TYPES_WITH_CUSTOM_FORM: BlockType[] = [
   "requirements",
   "faq",
   "reading_list",
+  "training_intro",
+  "training_body",
+  "training_syllabus",
+  "training_instructors",
+  "training_registration_cta",
+  "link_cards",
+  "certificates",
+  "syllabus_download",
+  "semesters",
 ];

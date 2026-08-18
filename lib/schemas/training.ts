@@ -8,6 +8,7 @@ import {
   draftPublishedStatus,
 } from "./common";
 import { lecturerSchema } from "./lecturer";
+import { pageBlockSchema } from "./blocks";
 
 /** §6 syllabus jsonb — a simple ordered list of syllabus sections so the
  * shape is concrete enough to render and to validate on write. */
@@ -46,6 +47,13 @@ export const trainingSchema = z.object({
   is_featured: z.boolean(),
   status: draftPublishedStatus,
   sort_order: z.number().int(),
+  /**
+   * Ordered, visibility-filtered `page_blocks` rows owned by this training
+   * (migration 20). Empty for a training that has not been converted yet —
+   * `app/(site)/hachsharot/[slug]` falls back to its original fixed layout
+   * in that case, so an unconverted training renders exactly as before.
+   */
+  blocks: z.array(pageBlockSchema).default([]),
   ...seoFieldsSchema.shape,
   ...placeholderFields,
   created_at: timestampSchema,

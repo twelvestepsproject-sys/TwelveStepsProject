@@ -18,6 +18,7 @@ import {
   redirectSchema,
   profileSchema,
   type Page,
+  type PageBlock,
   type PageInput,
   type Post,
   type PostSummary,
@@ -320,6 +321,25 @@ async function deleteTraining(id: string): Promise<void> {
   await delay();
   maybeFail("deleteTraining");
   mockDb.trainings = mockDb.trainings.filter((t) => t.id !== id);
+  persist();
+}
+
+/** Mock counterpart of the Supabase `page_blocks.training_id` query. Blocks
+ * live on the training record itself here, since the mock store has no
+ * separate page_blocks collection. */
+async function getTrainingBlocksAdmin(trainingId: string): Promise<PageBlock[]> {
+  await delay();
+  maybeFail("getTrainingBlocksAdmin");
+  const training = mockDb.trainings.find((t) => t.id === trainingId);
+  return [...(training?.blocks ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+}
+
+async function saveTrainingBlocks(trainingId: string, blocks: PageBlock[]): Promise<void> {
+  await delay();
+  maybeFail("saveTrainingBlocks");
+  const training = mockDb.trainings.find((t) => t.id === trainingId);
+  if (!training) return;
+  training.blocks = blocks.map((b, i) => ({ ...b, training_id: trainingId, sort_order: i + 1 }));
   persist();
 }
 
@@ -1341,6 +1361,8 @@ export const mockDataSource: DataSource = {
   getTraining,
   saveTraining,
   deleteTraining,
+  getTrainingBlocksAdmin,
+  saveTrainingBlocks,
 
   listLecturers,
   listLecturersAdmin,

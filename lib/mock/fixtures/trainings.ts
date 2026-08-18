@@ -32,6 +32,7 @@ export const trainings = [
     academic_hours: 8,
     sessions_count: 2,
     instructors: [],
+    blocks: [],
     syllabus: [
       { title: "מפגש 1", body: "היכרות עם הגישה, ציפיות, ושאלות פתוחות." },
       { title: "מפגש 2", body: "תרגול קצר וסיכום, כולל הכוונה להמשך אפשרי." },
@@ -66,6 +67,7 @@ export const trainings = [
     academic_hours: 96,
     sessions_count: 24,
     instructors: [noaSagi],
+    blocks: [],
     syllabus: [
       { title: "רבעון 1", body: "יסודות תיאורטיים של דפוסי היקשרות ותקשורת זוגית." },
       { title: "רבעון 2", body: "תרגול בקבוצה קטנה וליווי מקרים." },
@@ -101,6 +103,7 @@ export const trainings = [
     academic_hours: 310,
     sessions_count: 90,
     instructors: [noaSagi, danielAviram, shiraNachmani],
+    blocks: [],
     syllabus: [
       { title: "שנה א׳", body: "יסודות תיאורטיים ומיומנויות בסיס." },
       { title: "שנה ב׳", body: "התמחות והתנסות מודרכת בליווי אמיתי." },
@@ -138,6 +141,7 @@ export const trainings = [
     academic_hours: 168,
     sessions_count: 42,
     instructors: [danielAviram],
+    blocks: [],
     syllabus: [
       { title: "שנה א׳", body: "תיאוריה משפחתית מערכתית ותרגול בסיסי." },
       { title: "שנה ב׳", body: "ליווי מקרה, אינטרוויזיה, והתמחות." },
@@ -172,6 +176,7 @@ export const trainings = [
     academic_hours: 21,
     sessions_count: 7,
     instructors: [shiraNachmani],
+    blocks: [],
     syllabus: [
       { title: "מפגשים 1–3", body: "יסודות הנחיה ותרגול בזוגות." },
       { title: "מפגשים 4–7", body: "תרגול קבוצתי מלא ומשוב אישי." },

@@ -616,6 +616,517 @@ check("drops rows with a blank title", () => {
 });
 
 // ---------------------------------------------------------------------
+// 4f. Training page blocks (migration 20)
+// ---------------------------------------------------------------------
+console.log("\n[schema] training page blocks");
+
+const TRAINING_SECTION_TYPES = [
+  "training_intro",
+  "training_body",
+  "training_syllabus",
+  "training_instructors",
+  "training_registration_cta",
+];
+
+for (const type of TRAINING_SECTION_TYPES) {
+  check(`'${type}' is wired end-to-end`, () => {
+    assert(blockTypeSchema.safeParse(type).success, "not in the zod enum");
+    assert(BLOCK_TYPE_LABELS[type], "missing a Hebrew label");
+    assert(BLOCK_TYPES_WITH_CUSTOM_FORM.includes(type), "would fall back to raw JSON");
+    const block = createNewBlock(type, "00000000-0000-4000-8000-000000000002", 1);
+    assert(block.data !== undefined, "createNewBlock produced no default data");
+  });
+}
+
+check("a block may be owned by a training instead of a page", () => {
+  const result = pageBlockSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    page_id: null,
+    training_id: "00000000-0000-4000-8000-000000000003",
+    sort_order: 1,
+    is_visible: true,
+    block_type: "training_intro",
+    data: { show_cover: true, show_details: true },
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("BACKWARD COMPAT: page-owned blocks still parse without training_id", () => {
+  const result = pageBlockSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    page_id: "00000000-0000-4000-8000-000000000002",
+    sort_order: 1,
+    is_visible: true,
+    block_type: "faq",
+    data: { heading: "שאלות", intro: null, items: [] },
+  });
+  assert(result.success, `legacy page block rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("the training page renders from blocks with a default-layout fallback", () => {
+  const src = readFileSync(
+    new URL("../app/(site)/hachsharot/[slug]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("DEFAULT_TRAINING_LAYOUT"), "no fallback layout for unconverted trainings");
+  assert(src.includes("renderTrainingBlock"), "not block-driven");
+  assert(src.includes("renderBlock"), "generic content blocks are not dispatched");
+});
+
+check("training sections read content from the training, not from data", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/training-sections.tsx", import.meta.url),
+    "utf8",
+  );
+  // Guards the single-source-of-truth rule: if a section ever started
+  // storing e.g. its own title in `data`, /admin/trainings would stop
+  // being the one place that content is edited.
+  assert(src.includes("training.title"), "intro no longer reads the training title");
+  assert(src.includes("training.syllabus"), "syllabus no longer reads the training syllabus");
+  assert(src.includes("training.instructors"), "instructors no longer read the training");
+});
+
+check("the DataSource exposes training block read/write", () => {
+  const src = readFileSync(new URL("../lib/queries/types.ts", import.meta.url), "utf8");
+  assert(src.includes("getTrainingBlocksAdmin"), "no admin read method");
+  assert(src.includes("saveTrainingBlocks"), "no save method");
+});
+
+check("saveTraining does not try to write `blocks` as a column", () => {
+  const src = readFileSync(new URL("../lib/queries/supabase/index.ts", import.meta.url), "utf8");
+  assert(
+    /const \{ id, instructors, blocks, \.\.\.fields \}/.test(src),
+    "`blocks` would be sent to Postgres as an unknown column",
+  );
+});
+
+check("the trainings admin page mounts the block editor", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/trainings/[id]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("TrainingBlocksEditor"), "editor not mounted");
+  assert(src.includes("TrainingForm"), "the original training form was removed");
+});
+
+// ---------------------------------------------------------------------
+// 4g. Link cards
+// ---------------------------------------------------------------------
+console.log("\n[schema] linkCardsBlockDataSchema");
+
+const { linkCardsBlockDataSchema } = await import("../lib/schemas/blocks.ts");
+
+check("accepts a card with ONLY a title", () => {
+  const result = linkCardsBlockDataSchema.safeParse({
+    heading: null,
+    intro: null,
+    cards: [{ title: "שנה א׳", body: null, image_media_id: null, link: null }],
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("accepts a fully-populated card", () => {
+  const result = linkCardsBlockDataSchema.safeParse({
+    heading: "בחרו שנה",
+    intro: "שלוש שנות המסלול",
+    cards: [
+      {
+        title: "שנה א׳",
+        body: "יסודות",
+        image_media_id: COVER_ID,
+        link: { label: "לשנה א׳", href: "/shana-a", open_in_new_tab: false },
+      },
+    ],
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("preserves card ORDER", () => {
+  const mk = (t) => ({ title: t, body: null, image_media_id: null, link: null });
+  const result = linkCardsBlockDataSchema.safeParse({
+    heading: null,
+    intro: null,
+    cards: [mk("ג"), mk("א")],
+  });
+  assert(result.success, "rejected");
+  assert(result.data.cards[0].title === "ג", "order was normalized away");
+});
+
+check("rejects a non-uuid image id", () => {
+  const result = linkCardsBlockDataSchema.safeParse({
+    heading: null,
+    intro: null,
+    cards: [{ title: "x", body: null, image_media_id: "nope", link: null }],
+  });
+  assert(!result.success, "a malformed media id should be rejected");
+});
+
+check("'link_cards' is wired into registry and picker", () => {
+  assert(blockTypeSchema.safeParse("link_cards").success, "not in the zod enum");
+  assert(BLOCK_TYPE_LABELS.link_cards, "missing a Hebrew label");
+  assert(ALL_BLOCK_TYPES.includes("link_cards"), "missing from ALL_BLOCK_TYPES");
+  assert(BLOCK_TYPES_WITH_CUSTOM_FORM.includes("link_cards"), "would fall back to raw JSON");
+});
+
+check("createNewBlock produces schema-valid default data", () => {
+  const block = createNewBlock("link_cards", "00000000-0000-4000-8000-000000000002", 1);
+  const result = linkCardsBlockDataSchema.safeParse(block.data);
+  assert(result.success, `defaults fail their own schema: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("renderBlock has a case for link_cards, wrapped in Suspense", () => {
+  const src = readFileSync(new URL("../components/blocks/index.tsx", import.meta.url), "utf8");
+  assert(src.includes('case "link_cards"'), "no case in components/blocks/index.tsx");
+  assert(src.includes("LinkCardsSafe"), "missing the async error-boundary wrapper");
+  assert(src.includes("LinkCardsSkeleton"), "missing a Suspense fallback");
+});
+
+check("the page editor dispatches to LinkCardsFields with mediaById", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/pages/page-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('case "link_cards"'), "page-editor.tsx has no case");
+  assert(/LinkCardsFields[^/]*mediaById/.test(src), "card thumbnails need mediaById");
+});
+
+check("drops cards with a blank title", () => {
+  const src = readFileSync(new URL("../components/blocks/link-cards.tsx", import.meta.url), "utf8");
+  assert(src.includes("title.trim()"), "blank cards would render as empty tiles");
+});
+
+check("does not nest an <a> inside the card anchor (invalid HTML)", () => {
+  const src = readFileSync(new URL("../components/blocks/link-cards.tsx", import.meta.url), "utf8");
+  // The button affordance must be a span; the card itself is the anchor.
+  assert(
+    src.includes("<span className=\"mt-auto pt-3 font-semibold text-primary\">"),
+    "the card button should render as a span inside the card anchor",
+  );
+});
+
+// ---------------------------------------------------------------------
+// 4h. Certificates + syllabus download
+// ---------------------------------------------------------------------
+console.log("\n[schema] certificatesBlockDataSchema");
+
+const { certificatesBlockDataSchema, syllabusDownloadBlockDataSchema } = await import(
+  "../lib/schemas/blocks.ts"
+);
+
+check("accepts several certificate images", () => {
+  const result = certificatesBlockDataSchema.safeParse({
+    heading: "התעודות שתקבלו",
+    intro: "תעודת גמר מטעם…",
+    items: [
+      { media_id: COVER_ID, caption: null },
+      { media_id: COVER_ID, caption: "תעודת הסמכה" },
+    ],
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+  assert(result.data.items.length === 2, "items were dropped");
+});
+
+check("requires a heading", () => {
+  const result = certificatesBlockDataSchema.safeParse({ intro: null, items: [] });
+  assert(!result.success, "a block with no heading should be rejected");
+});
+
+check("rejects a non-uuid media id", () => {
+  const result = certificatesBlockDataSchema.safeParse({
+    heading: "x",
+    intro: null,
+    items: [{ media_id: "nope", caption: null }],
+  });
+  assert(!result.success, "a malformed media id should be rejected");
+});
+
+check("certificates is wired into registry and picker", () => {
+  assert(blockTypeSchema.safeParse("certificates").success, "not in the zod enum");
+  assert(BLOCK_TYPE_LABELS.certificates, "missing a Hebrew label");
+  assert(ALL_BLOCK_TYPES.includes("certificates"), "missing from ALL_BLOCK_TYPES");
+  assert(BLOCK_TYPES_WITH_CUSTOM_FORM.includes("certificates"), "would fall back to raw JSON");
+  const block = createNewBlock("certificates", "00000000-0000-4000-8000-000000000002", 1);
+  assert(certificatesBlockDataSchema.safeParse(block.data).success, "defaults fail their schema");
+});
+
+check("certificates renders images uncropped (a certificate must not be cut)", () => {
+  const src = readFileSync(new URL("../components/blocks/certificates.tsx", import.meta.url), "utf8");
+  assert(src.includes("object-contain"), "object-cover would crop the certificate");
+  assert(!/alt=\{[^}]*caption/.test(src), "caption must not be used as alt text");
+});
+
+check("certificates is dispatched with Suspense + error boundary", () => {
+  const src = readFileSync(new URL("../components/blocks/index.tsx", import.meta.url), "utf8");
+  assert(src.includes('case "certificates"'), "no case in the block registry");
+  assert(src.includes("CertificatesSafe"), "missing the async error-boundary wrapper");
+});
+
+console.log("\n[schema] syllabusDownloadBlockDataSchema");
+
+check("accepts an external file URL (Drive/Dropbox)", () => {
+  const result = syllabusDownloadBlockDataSchema.safeParse({
+    heading: null,
+    body: null,
+    file_url: "https://drive.google.com/file/d/abc/view",
+    button_label: "סילבוס להורדה",
+    open_in_new_tab: true,
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("accepts an empty URL as a draft state", () => {
+  const result = syllabusDownloadBlockDataSchema.safeParse({
+    heading: null,
+    body: null,
+    file_url: "",
+    button_label: null,
+  });
+  assert(result.success, "an unfinished block should still save");
+  assert(result.data.open_in_new_tab === true, "open_in_new_tab should default to true");
+});
+
+check("syllabus_download is wired into registry and picker", () => {
+  assert(blockTypeSchema.safeParse("syllabus_download").success, "not in the zod enum");
+  assert(BLOCK_TYPE_LABELS.syllabus_download, "missing a Hebrew label");
+  assert(ALL_BLOCK_TYPES.includes("syllabus_download"), "missing from ALL_BLOCK_TYPES");
+  assert(
+    BLOCK_TYPES_WITH_CUSTOM_FORM.includes("syllabus_download"),
+    "would fall back to raw JSON",
+  );
+  const block = createNewBlock("syllabus_download", "00000000-0000-4000-8000-000000000002", 1);
+  assert(
+    syllabusDownloadBlockDataSchema.safeParse(block.data).success,
+    "defaults fail their schema",
+  );
+});
+
+check("hides the button until a file is set (never a dead link)", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/syllabus-download.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("if (!href) return null"), "an empty file would render a dead button");
+});
+
+check("accepts an uploaded PDF by media id", () => {
+  const result = syllabusDownloadBlockDataSchema.safeParse({
+    heading: null,
+    body: null,
+    file_media_id: COVER_ID,
+    file_url: "",
+    button_label: null,
+  });
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("BACKWARD COMPAT: a pre-PDF block (url only, no file_media_id) still parses", () => {
+  const result = syllabusDownloadBlockDataSchema.safeParse({
+    heading: null,
+    body: null,
+    file_url: "https://drive.google.com/file/d/abc/view",
+    button_label: null,
+  });
+  assert(result.success, "an existing block should keep working");
+  assert(result.data.file_media_id === null, "file_media_id should default to null");
+});
+
+check("an uploaded file takes precedence over an external URL", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/syllabus-download.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(
+    /uploaded \? mediaUrlFor\(uploaded\) : data\.file_url/.test(src),
+    "precedence between the uploaded file and the URL is not explicit",
+  );
+});
+
+// --- PDF upload support -------------------------------------------------
+console.log("\n[upload] PDF support");
+
+check("the upload route accepts application/pdf", () => {
+  const src = readFileSync(
+    new URL("../app/api/admin/media-upload/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('"application/pdf"'), "PDF is not in the MIME whitelist");
+  assert(src.includes("isDocument"), "no document branch for dimension handling");
+  assert(
+    /!isDoc && \(!width \|\| !height\)/.test(src),
+    "documents would still be rejected for having no pixel dimensions",
+  );
+});
+
+check("documents get a larger size cap than images", () => {
+  const src = readFileSync(
+    new URL("../app/api/admin/media-upload/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("MAX_DOC_BYTES"), "no separate document size limit");
+});
+
+check("the client skips image processing for PDFs", () => {
+  const src = readFileSync(
+    new URL("../components/admin/media-picker.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("isDocumentMime"), "no document helper");
+  // A PDF pushed through <canvas> would be corrupted.
+  assert(
+    /maybeResize[\s\S]{0,220}isDocumentMime\(file\.type\)\) return file/.test(src),
+    "maybeResize would try to rasterize a PDF",
+  );
+  assert(src.includes('accept="application/pdf'), "the file input still rejects PDFs");
+});
+
+check("PDFs render as an icon, not a broken thumbnail", () => {
+  const picker = readFileSync(
+    new URL("../components/admin/media-picker.tsx", import.meta.url),
+    "utf8",
+  );
+  const grid = readFileSync(
+    new URL("../app/(admin)/admin/media/media-grid.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(picker.includes("isDocumentMime(m.mime_type)"), "picker grid would show a broken image");
+  assert(grid.includes("isDocumentMime(media.mime_type)"), "media library would show a broken image");
+});
+
+check("both new types are dispatched by the page editor", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/pages/page-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(/CertificatesFields[^/]*mediaById/.test(src), "certificate thumbnails need mediaById");
+  assert(src.includes("SyllabusDownloadFields"), "syllabus form not dispatched");
+});
+
+// ---------------------------------------------------------------------
+// 4i. Semesters
+// ---------------------------------------------------------------------
+console.log("\n[schema] semestersBlockDataSchema");
+
+const { semestersBlockDataSchema } = await import("../lib/schemas/blocks.ts");
+
+const semesterFixture = {
+  heading: "תוכנית המפגשים",
+  semesters: [
+    {
+      title: "סמסטר א׳",
+      subtitle: "90 ש״א · 15 מפגשים",
+      sessions: [
+        {
+          label: "מפגש 1",
+          date: "11.11.26",
+          parts: [
+            { title: "שיעור א׳", body: "תוכן" },
+            { title: "שיעור ב׳", body: null },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+check("accepts the full three-level shape", () => {
+  const result = semestersBlockDataSchema.safeParse(semesterFixture);
+  assert(result.success, `rejected: ${JSON.stringify(result.error?.issues)}`);
+});
+
+check("all three levels are unbounded", () => {
+  const parts = Array.from({ length: 12 }, (_, i) => ({ title: `חלק ${i}`, body: null }));
+  const sessions = Array.from({ length: 30 }, (_, i) => ({
+    label: `מפגש ${i}`,
+    date: null,
+    parts,
+  }));
+  const result = semestersBlockDataSchema.safeParse({
+    heading: null,
+    semesters: Array.from({ length: 6 }, () => ({ title: "ס", subtitle: null, sessions })),
+  });
+  assert(result.success, "a large schedule was rejected");
+  assert(result.data.semesters[0].sessions[0].parts.length === 12, "parts were truncated");
+});
+
+check("session label is free text (supports 'יום עיון מרוכז', not just numbers)", () => {
+  const result = semestersBlockDataSchema.safeParse({
+    heading: null,
+    semesters: [
+      {
+        title: "ס",
+        subtitle: null,
+        sessions: [{ label: "יום עיון מרוכז", date: null, parts: [] }],
+      },
+    ],
+  });
+  assert(result.success, "a non-numeric session label should be allowed");
+});
+
+check("date and part body are optional", () => {
+  const result = semestersBlockDataSchema.safeParse({
+    heading: null,
+    semesters: [
+      {
+        title: "ס",
+        subtitle: null,
+        sessions: [{ label: "מפגש 1", date: null, parts: [{ title: "שיעור א׳", body: null }] }],
+      },
+    ],
+  });
+  assert(result.success, "a session with no date should be allowed");
+});
+
+check("preserves ORDER at every level", () => {
+  const result = semestersBlockDataSchema.safeParse({
+    heading: null,
+    semesters: [
+      { title: "ב", subtitle: null, sessions: [] },
+      { title: "א", subtitle: null, sessions: [] },
+    ],
+  });
+  assert(result.success, "rejected");
+  assert(result.data.semesters[0].title === "ב", "semester order was normalized away");
+});
+
+check("'semesters' is wired into registry and picker", () => {
+  assert(blockTypeSchema.safeParse("semesters").success, "not in the zod enum");
+  assert(BLOCK_TYPE_LABELS.semesters, "missing a Hebrew label");
+  assert(ALL_BLOCK_TYPES.includes("semesters"), "missing from ALL_BLOCK_TYPES");
+  assert(BLOCK_TYPES_WITH_CUSTOM_FORM.includes("semesters"), "would fall back to raw JSON");
+  const block = createNewBlock("semesters", "00000000-0000-4000-8000-000000000002", 1);
+  assert(semestersBlockDataSchema.safeParse(block.data).success, "defaults fail their schema");
+});
+
+check("renders collapsed by default (no `open` attribute)", () => {
+  const src = readFileSync(new URL("../components/blocks/semesters.tsx", import.meta.url), "utf8");
+  assert(src.includes("<details"), "not built on a native disclosure");
+  assert(!/<details[^>]*\sopen[\s>]/.test(src), "semesters would render expanded");
+});
+
+check("side by side on desktop, stacked on mobile", () => {
+  const src = readFileSync(new URL("../components/blocks/semesters.tsx", import.meta.url), "utf8");
+  assert(/grid-cols-1[^"]*lg:grid-cols-2/.test(src), "not responsive as specified");
+  // Without items-start, expanding one semester stretches its collapsed
+  // sibling to the same height, leaving a tall empty gap.
+  assert(src.includes("items-start"), "grid items would stretch to equal height");
+});
+
+check("drops empty semesters and sessions", () => {
+  const src = readFileSync(new URL("../components/blocks/semesters.tsx", import.meta.url), "utf8");
+  assert(src.includes("s.title.trim()"), "an untitled semester would render as a blank panel");
+  assert(src.includes("s.label.trim()"), "an unlabelled session would render blank");
+});
+
+check("the page editor dispatches to SemestersFields", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/pages/page-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('case "semesters"'), "page-editor.tsx has no case");
+  assert(src.includes("SemestersFields"), "SemestersFields is not imported/used");
+});
+
+// ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------
 console.log("\n[database] block_type enum");
@@ -653,6 +1164,15 @@ if (dataSource !== "supabase") {
         ["requirements", "00000000000017_requirements_block.sql"],
         ["faq", "00000000000018_faq_block.sql"],
         ["reading_list", "00000000000019_reading_list_block.sql"],
+        ["training_intro", "00000000000020_training_blocks.sql"],
+        ["training_body", "00000000000020_training_blocks.sql"],
+        ["training_syllabus", "00000000000020_training_blocks.sql"],
+        ["training_instructors", "00000000000020_training_blocks.sql"],
+        ["training_registration_cta", "00000000000020_training_blocks.sql"],
+        ["link_cards", "00000000000021_link_cards_block.sql"],
+        ["certificates", "00000000000022_certificates_and_syllabus_blocks.sql"],
+        ["syllabus_download", "00000000000022_certificates_and_syllabus_blocks.sql"],
+        ["semesters", "00000000000023_semesters_block.sql"],
       ];
       for (const [value, migration] of required) {
         if (labels.includes(value)) {

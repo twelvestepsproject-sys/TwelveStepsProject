@@ -290,6 +290,154 @@ export const readingListBlockDataSchema = z.object({
     .default([]),
 });
 
+// 30. Link cards
+// A row of navigational cards: title, text, optional image, optional
+// button. Built for "pick a year" style navigation (שנה א׳/ב׳/ג׳ from the
+// trainings page) but deliberately generic — nothing here knows about
+// years, so the same block serves any "choose one of these" section.
+//
+// Only `title` is required per card: a card with just a title and a link is
+// a perfectly good navigation tile, and an editor filling one in
+// gradually shouldn't be blocked from saving.
+export const linkCardsBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+  intro: z.string().nullable(),
+  cards: z
+    .array(
+      z.object({
+        title: z.string(),
+        body: z.string().nullable(),
+        image_media_id: uuidSchema.nullable(),
+        link: linkSchema.nullable(),
+      }),
+    )
+    .default([]),
+});
+
+// 31. Certificates
+// Heading + intro + a row of certificate images. `items` rather than a
+// single image because the real pages show the certificate alongside the
+// issuing body's cover — and an unbounded list also covers a program
+// carrying several accreditations.
+//
+// Each item is just a media reference plus an optional caption: the
+// certificate IS the content, so there is no title/body per item. Alt
+// text comes from the `media` row (mandatory there per §3), not duplicated
+// here.
+export const certificatesBlockDataSchema = z.object({
+  heading: z.string(),
+  intro: z.string().nullable(),
+  items: z
+    .array(
+      z.object({
+        media_id: uuidSchema.nullable(),
+        caption: z.string().nullable(),
+      }),
+    )
+    .default([]),
+});
+
+// 32. Syllabus download
+// A single download button pointing at either an uploaded PDF
+// (`file_media_id`, the normal case now that the media library accepts
+// PDFs) or an external URL (`file_url` — Drive/Dropbox, kept for files
+// hosted elsewhere).
+//
+// Both are optional and the uploaded file wins when both are set; the
+// renderer hides the block when neither is, so an unfinished block never
+// publishes a dead button. `file_url` predates PDF upload support, so
+// existing blocks keep working untouched.
+export const syllabusDownloadBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+  body: z.string().nullable(),
+  file_media_id: uuidSchema.nullable().default(null),
+  file_url: z.string(),
+  button_label: z.string().nullable(),
+  open_in_new_tab: z.boolean().default(true),
+});
+
+// 33. Semesters
+// Three nested levels: semester → session → parts. Every list is unbounded
+// and every label is free text.
+//
+// `label` on a session is free text rather than an auto-incrementing number
+// so a schedule can hold "מפגש 4א׳" or "יום עיון מרוכז" alongside plain
+// numbered meetings — real schedules are not a clean 1..n sequence.
+//
+// Only the semester `title` and the part `title` are required; a session
+// with no date, or a part with no body, is a legitimate half-filled state
+// and the renderer simply omits what is missing.
+export const semestersBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+  semesters: z
+    .array(
+      z.object({
+        title: z.string(),
+        subtitle: z.string().nullable(),
+        sessions: z
+          .array(
+            z.object({
+              label: z.string(),
+              date: z.string().nullable(),
+              parts: z
+                .array(
+                  z.object({
+                    title: z.string(),
+                    body: z.string().nullable(),
+                  }),
+                )
+                .default([]),
+            }),
+          )
+          .default([]),
+      }),
+    )
+    .default([]),
+});
+
+/**
+ * 25-29. Training page sections.
+ *
+ * These five carry the layout that used to be hardcoded in
+ * app/(site)/hachsharot/[slug]/page.tsx. Their VALUES still live on the
+ * `trainings` row and are still edited in /admin/trainings — the renderer
+ * receives the training as a prop and reads them from there. `data` holds
+ * only presentation choices (a heading override, a toggle), so there is
+ * exactly one place to edit a training's title, price or syllabus, and no
+ * copy of that content can drift out of sync.
+ *
+ * Making them blocks buys ordering, visibility and repeatability: an
+ * editor can move the syllabus above the details table, hide the
+ * instructors on one training, or drop an FAQ between them.
+ */
+
+// 25. Cover + title + excerpt + the details table
+export const trainingIntroBlockDataSchema = z.object({
+  show_cover: z.boolean().default(true),
+  show_details: z.boolean().default(true),
+});
+
+// 26. The training's long-form body text
+export const trainingBodyBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+});
+
+// 27. The syllabus list
+export const trainingSyllabusBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+});
+
+// 28. The instructors list
+export const trainingInstructorsBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+});
+
+// 29. Registration call-to-action band
+export const trainingRegistrationCtaBlockDataSchema = z.object({
+  heading: z.string().nullable(),
+  cta_label: z.string().nullable(),
+});
+
 export const blockTypeSchema = z.enum([
   "header",
   "hero",
@@ -315,12 +463,30 @@ export const blockTypeSchema = z.enum([
   "requirements",
   "faq",
   "reading_list",
+  "training_intro",
+  "training_body",
+  "training_syllabus",
+  "training_instructors",
+  "training_registration_cta",
+  "link_cards",
+  "certificates",
+  "syllabus_download",
+  "semesters",
 ]);
 export type BlockType = z.infer<typeof blockTypeSchema>;
 
+/**
+ * A block belongs to EITHER a page or a training, never both — mirroring
+ * the `page_blocks_single_owner` CHECK added in migration 20. Both are
+ * optional here rather than a zod union: the ownership invariant is
+ * enforced by the database, and modelling it as a union would force every
+ * consumer to narrow on a distinction none of them care about (renderers
+ * receive `data`; the editor already knows which parent it is editing).
+ */
 const pageBlockBaseFields = {
   id: uuidSchema,
-  page_id: uuidSchema,
+  page_id: uuidSchema.nullable().optional(),
+  training_id: uuidSchema.nullable().optional(),
   sort_order: z.number().int(),
   is_visible: z.boolean(),
 };
@@ -352,5 +518,14 @@ export const pageBlockSchema = z.discriminatedUnion("block_type", [
   z.object({ ...pageBlockBaseFields, block_type: z.literal("requirements"), data: requirementsBlockDataSchema }),
   z.object({ ...pageBlockBaseFields, block_type: z.literal("faq"), data: faqBlockDataSchema }),
   z.object({ ...pageBlockBaseFields, block_type: z.literal("reading_list"), data: readingListBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_intro"), data: trainingIntroBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_body"), data: trainingBodyBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_syllabus"), data: trainingSyllabusBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_instructors"), data: trainingInstructorsBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("training_registration_cta"), data: trainingRegistrationCtaBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("link_cards"), data: linkCardsBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("certificates"), data: certificatesBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("syllabus_download"), data: syllabusDownloadBlockDataSchema }),
+  z.object({ ...pageBlockBaseFields, block_type: z.literal("semesters"), data: semestersBlockDataSchema }),
 ]);
 export type PageBlock = z.infer<typeof pageBlockSchema>;

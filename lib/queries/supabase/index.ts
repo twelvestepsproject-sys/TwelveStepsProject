@@ -84,7 +84,8 @@ import { studyYears } from "@/lib/mock/fixtures/study-years";
 
 function rowToPageBlock(row: {
   id: string;
-  page_id: string;
+  page_id?: string | null;
+  training_id?: string | null;
   block_type: string;
   sort_order: number;
   is_visible: boolean;
@@ -92,7 +93,8 @@ function rowToPageBlock(row: {
 }): PageBlock {
   return {
     id: row.id,
-    page_id: row.page_id,
+    page_id: row.page_id ?? null,
+    training_id: row.training_id ?? null,
     sort_order: row.sort_order,
     is_visible: row.is_visible,
     block_type: row.block_type,
@@ -383,7 +385,9 @@ function rowToTraining(row: any): Training {
     .map((ti: any) => ti.lecturer)
     .filter((l: unknown): l is NonNullable<typeof l> => l !== null);
   const { training_instructors, ...rest } = row;
-  return { ...rest, instructors } as Training;
+  // `blocks` defaults to [] for list queries, which don't fetch them —
+  // only `getTraining` (the single-training page) needs the composition.
+  return { ...rest, instructors, blocks: rest.blocks ?? [] } as Training;
 }
 
 async function listTrainings(opts: ListTrainingsOptions = {}): Promise<Training[]> {
@@ -427,12 +431,65 @@ async function getTraining(slug: string): Promise<Training | null> {
     .eq("slug", slug)
     .maybeSingle();
   throwIfError(error, "getTraining");
-  return data ? rowToTraining(data) : null;
+  if (!data) return null;
+
+  // Blocks are a separate query rather than a nested embed: they live in
+  // `page_blocks` (shared with pages, see migration 20) and need the same
+  // is_visible + sort_order treatment `getPage` applies. Only the single
+  // -training page needs them, so list queries don't pay for this.
+  const { data: blocks, error: blocksError } = await supabase
+    .from("page_blocks")
+    .select("*")
+    .eq("training_id", (data as { id: string }).id)
+    .eq("is_visible", true)
+    .order("sort_order", { ascending: true });
+  throwIfError(blocksError, "getTraining blocks");
+
+  return rowToTraining({ ...data, blocks: (blocks ?? []).map(rowToPageBlock) });
+}
+
+/** Admin variant: every block regardless of `is_visible`, so the editor can
+ * see and re-enable hidden ones. */
+async function getTrainingBlocksAdmin(trainingId: string): Promise<PageBlock[]> {
+  const supabase = await getClient();
+  const { data, error } = await supabase
+    .from("page_blocks")
+    .select("*")
+    .eq("training_id", trainingId)
+    .order("sort_order", { ascending: true });
+  throwIfError(error, "getTrainingBlocksAdmin");
+  return (data ?? []).map(rowToPageBlock);
+}
+
+/** Replace-all-on-save, mirroring `savePage`'s handling of page blocks. */
+async function saveTrainingBlocks(trainingId: string, blocks: PageBlock[]): Promise<void> {
+  const supabase = await getClient();
+  const { error: deleteError } = await supabase
+    .from("page_blocks")
+    .delete()
+    .eq("training_id", trainingId);
+  throwIfError(deleteError, "saveTrainingBlocks delete");
+
+  if (blocks.length > 0) {
+    const rows = blocks.map((b, i) => ({
+      training_id: trainingId,
+      page_id: null,
+      block_type: b.block_type,
+      sort_order: i + 1,
+      is_visible: b.is_visible,
+      data: b.data,
+    }));
+    const { error: insertError } = await supabase.from("page_blocks").insert(rows);
+    throwIfError(insertError, "saveTrainingBlocks insert");
+  }
 }
 
 async function saveTraining(input: Partial<Training> & { id?: string }): Promise<Training> {
   const supabase = await getClient();
-  const { id, instructors, ...fields } = input as any;
+  // `blocks` is a resolved relation (page_blocks rows), not a trainings
+  // column — dropped here like `instructors`, or the update would fail on
+  // an unknown column. Block edits go through `saveTrainingBlocks`.
+  const { id, instructors, blocks, ...fields } = input as any;
   const payload = { ...fields, is_placeholder: false };
 
   let trainingId = id;
@@ -1351,6 +1408,8 @@ export const supabaseDataSource: DataSource = {
   getTraining,
   saveTraining,
   deleteTraining,
+  getTrainingBlocksAdmin,
+  saveTrainingBlocks,
 
   listLecturers,
   listLecturersAdmin,

@@ -21,6 +21,10 @@ import { TrainingDetails } from "./training-details";
 import { Requirements } from "./requirements";
 import { Faq } from "./faq";
 import { ReadingList, ReadingListSkeleton } from "./reading-list";
+import { LinkCards, LinkCardsSkeleton } from "./link-cards";
+import { Certificates, CertificatesSkeleton } from "./certificates";
+import { SyllabusDownload, SyllabusDownloadSkeleton } from "./syllabus-download";
+import { Semesters } from "./semesters";
 import { BlockError } from "./skeleton";
 
 /**
@@ -132,6 +136,30 @@ export function renderBlock(block: PageBlock) {
         </Suspense>
       );
 
+    case "link_cards":
+      return (
+        <Suspense key={block.id} fallback={<LinkCardsSkeleton />}>
+          <LinkCardsSafe data={block.data} />
+        </Suspense>
+      );
+
+    case "certificates":
+      return (
+        <Suspense key={block.id} fallback={<CertificatesSkeleton />}>
+          <CertificatesSafe data={block.data} />
+        </Suspense>
+      );
+
+    case "syllabus_download":
+      return (
+        <Suspense key={block.id} fallback={<SyllabusDownloadSkeleton />}>
+          <SyllabusDownloadSafe data={block.data} />
+        </Suspense>
+      );
+
+    case "semesters":
+      return <Semesters key={block.id} data={block.data} />;
+
     case "pull_quote":
       return <PullQuote key={block.id} data={block.data} />;
 
@@ -237,6 +265,30 @@ async function ReadingListSafe(props: Parameters<typeof ReadingList>[0]) {
     return await ReadingList(props);
   } catch {
     return <BlockError label="ספרי ליבה" />;
+  }
+}
+
+async function LinkCardsSafe(props: Parameters<typeof LinkCards>[0]) {
+  try {
+    return await LinkCards(props);
+  } catch {
+    return <BlockError label="כרטיסיות קישור" />;
+  }
+}
+
+async function CertificatesSafe(props: Parameters<typeof Certificates>[0]) {
+  try {
+    return await Certificates(props);
+  } catch {
+    return <BlockError label="תעודות" />;
+  }
+}
+
+async function SyllabusDownloadSafe(props: Parameters<typeof SyllabusDownload>[0]) {
+  try {
+    return await SyllabusDownload(props);
+  } catch {
+    return <BlockError label="סילבוס להורדה" />;
   }
 }
 

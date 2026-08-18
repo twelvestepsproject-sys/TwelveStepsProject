@@ -29,8 +29,23 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  */
 export const runtime = "nodejs";
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB — generous for a mock upload path
-const ALLOWED_MIME = new Set(["image/svg+xml", "image/png", "image/jpeg", "image/webp"]);
+// PDFs are commonly larger than images (a syllabus with scans runs well
+// past 8MB), so documents get their own, higher ceiling.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
+const MAX_DOC_BYTES = 25 * 1024 * 1024; // 25MB
+const ALLOWED_MIME = new Set([
+  "image/svg+xml",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/pdf",
+]);
+
+/** Documents carry no pixel dimensions, which changes how they're
+ * validated (no width/height required) and displayed (icon, not thumbnail). */
+function isDocument(mime: string): boolean {
+  return mime === "application/pdf";
+}
 
 function extFor(mime: string): string {
   switch (mime) {
@@ -40,6 +55,8 @@ function extFor(mime: string): string {
       return "png";
     case "image/webp":
       return "webp";
+    case "application/pdf":
+      return "pdf";
     default:
       return "jpg";
   }
@@ -77,14 +94,26 @@ export async function POST(req: Request) {
     }
     if (!ALLOWED_MIME.has(file.type)) {
       return NextResponse.json(
-        { ok: false, error: "סוג קובץ לא נתמך. יש להעלות SVG, PNG, JPG או WebP." },
+        { ok: false, error: "סוג קובץ לא נתמך. יש להעלות PDF, SVG, PNG, JPG או WebP." },
         { status: 400 },
       );
     }
-    if (file.size > MAX_BYTES) {
-      return NextResponse.json({ ok: false, error: "הקובץ גדול מדי (מקסימום 8MB)." }, { status: 400 });
+
+    const isDoc = isDocument(file.type);
+    const maxBytes = isDoc ? MAX_DOC_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > maxBytes) {
+      return NextResponse.json(
+        { ok: false, error: `הקובץ גדול מדי (מקסימום ${Math.round(maxBytes / 1024 / 1024)}MB).` },
+        { status: 400 },
+      );
     }
-    if (!width || !height) {
+
+    // Documents have no pixel dimensions to read. `media.width`/`height`
+    // are non-null positive integers in the schema (lib/schemas/common.ts),
+    // so a document stores 1x1 as an explicit "not applicable" marker
+    // rather than widening the column — every consumer that cares about
+    // real dimensions checks `mime_type` first.
+    if (!isDoc && (!width || !height)) {
       return NextResponse.json(
         { ok: false, error: "לא ניתן היה לקרוא את מידות התמונה. נסו קובץ אחר." },
         { status: 400 },
@@ -141,8 +170,9 @@ export async function POST(req: Request) {
     const media = await db.saveMedia({
       storage_path: storagePath,
       alt_he: altHe,
-      width,
-      height,
+      // 1x1 for documents — see the note above the dimension check.
+      width: isDoc ? 1 : width,
+      height: isDoc ? 1 : height,
       mime_type: file.type,
       size_bytes: bytesToWrite.byteLength,
       blurhash: null,

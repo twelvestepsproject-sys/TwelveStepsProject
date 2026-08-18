@@ -1,5 +1,6 @@
 import type {
   Page,
+  PageBlock,
   PageInput,
   PostSummary,
   Post,
@@ -115,6 +116,10 @@ export interface DataSource {
   getTraining(slug: string): Promise<Training | null>;
   saveTraining(input: Partial<Training> & { id?: string }): Promise<Training>;
   deleteTraining(id: string): Promise<void>;
+  /** Training page composition (migration 20). Admin variant returns hidden
+   * blocks too; `getTraining` already nests the visible ones for the site. */
+  getTrainingBlocksAdmin(trainingId: string): Promise<PageBlock[]>;
+  saveTrainingBlocks(trainingId: string, blocks: PageBlock[]): Promise<void>;
 
   // ---- Lecturers ----
   listLecturers(opts?: { visibleOnly?: boolean }): Promise<Lecturer[]>;

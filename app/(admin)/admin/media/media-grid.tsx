@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { mediaUrl } from "@/lib/media";
+import { isDocumentMime } from "@/components/admin/media-picker";
 import { updateMediaAction, deleteMediaAction, getMediaUsageAction } from "./actions";
 import { inputClass, textareaClass, PrimaryButton, SecondaryButton, DangerButton } from "@/components/admin/fields";
 import type { Media } from "@/lib/schemas";
@@ -66,12 +67,28 @@ function MediaCard({ media, canEdit }: { media: Media; canEdit: boolean }) {
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={mediaUrl(media.storage_path)}
-        alt={media.alt_he}
-        className="h-28 w-full rounded-md object-cover"
-      />
+      {isDocumentMime(media.mime_type) ? (
+        // PDFs have no thumbnail; link straight to the file so an editor can
+        // check they uploaded the right one.
+        <a
+          href={mediaUrl(media.storage_path)}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-md bg-surface-alt hover:bg-surface-alt/70"
+        >
+          <span className="text-3xl" aria-hidden="true">
+            📄
+          </span>
+          <span className="text-xs text-ink-muted">PDF — לחצו לפתיחה</span>
+        </a>
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={mediaUrl(media.storage_path)}
+          alt={media.alt_he}
+          className="h-28 w-full rounded-md object-cover"
+        />
+      )}
       {isEditing ? (
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-ink" htmlFor={`alt-${media.id}`}>

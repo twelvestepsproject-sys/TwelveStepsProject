@@ -6,7 +6,7 @@ import { db } from "@/lib/queries";
 import { requireContentRole } from "@/lib/admin/role-check";
 import { toFriendlyMessage, type ActionResult } from "@/lib/admin/friendly-error";
 import { slugify, uniqueSlug, isSlugUnique } from "@/lib/admin/slug";
-import type { Training, SyllabusItem } from "@/lib/schemas";
+import type { Training, SyllabusItem, PageBlock } from "@/lib/schemas";
 
 /**
  * Every mutation here is a real Server Action: zod validation happens
@@ -78,6 +78,33 @@ export async function saveTrainingAction(formData: FormData): Promise<ActionResu
     const saved = await db.saveTraining(input);
     revalidatePath("/admin/trainings");
     return { ok: true, data: { id: saved.id } };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}
+
+/**
+ * Saves a training page's block composition (migration 20). Separate from
+ * `saveTrainingAction` because the two are independent concerns: that one
+ * writes `trainings` columns (the content), this one writes `page_blocks`
+ * rows keyed by `training_id` (the layout). Keeping them apart means
+ * editing the layout can never accidentally rewrite the training's fields.
+ */
+export async function saveTrainingBlocksAction(
+  trainingId: string,
+  blocks: PageBlock[],
+): Promise<ActionResult<null>> {
+  try {
+    await requireContentRole();
+    await db.saveTrainingBlocks(trainingId, blocks);
+    revalidatePath(`/admin/trainings/${trainingId}`);
+    // The public page must reflect a layout change immediately (§3.5/§10),
+    // and that route is keyed by slug, not id.
+    const admin = await db.listTrainingsAdmin({ perPage: 500 });
+    const slug = admin.items.find((t) => t.id === trainingId)?.slug;
+    if (slug) revalidatePath(`/hachsharot/${slug}`);
+    revalidatePath("/hachsharot");
+    return { ok: true, data: null };
   } catch (err) {
     return { ok: false, error: toFriendlyMessage(err) };
   }

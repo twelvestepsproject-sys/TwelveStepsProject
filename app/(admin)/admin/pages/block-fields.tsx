@@ -537,6 +537,849 @@ export function RequirementsFields({ data, onChange }: { data: Record<string, un
 }
 
 /**
+ * Semesters — three nested editable levels (semester → session → part).
+ *
+ * Everything is driven through one `setSemesters` that rebuilds the whole
+ * array, rather than per-level state: `onChange` already replaces the
+ * block's entire `data`, so keeping a single immutable update path avoids
+ * three sets of nearly-identical add/remove/move handlers getting out of
+ * sync. Rows are keyed by index for the same reason as the other list
+ * blocks — the data carries no stable id, and inputs are controlled.
+ *
+ * Sessions and parts are collapsed behind <details> so a semester with
+ * fifteen sessions stays navigable in the admin.
+ */
+type SemesterPart = { title: string; body: string | null };
+type SemesterSession = { label: string; date: string | null; parts: SemesterPart[] };
+type Semester = { title: string; subtitle: string | null; sessions: SemesterSession[] };
+
+function moveInArray<T>(arr: T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction;
+  if (target < 0 || target >= arr.length) return arr;
+  const next = [...arr];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+/** Small ↑ ↓ 🗑 cluster, repeated at all three nesting levels. */
+function RowControls({
+  onUp,
+  onDown,
+  onRemove,
+  removeLabel,
+}: {
+  onUp: () => void;
+  onDown: () => void;
+  onRemove: () => void;
+  removeLabel: string;
+}) {
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={onUp}
+        aria-label="הזזה למעלה"
+        className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        onClick={onDown}
+        aria-label="הזזה למטה"
+        className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+      >
+        ↓
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={removeLabel}
+        className="rounded p-1 text-error hover:bg-error/10"
+      >
+        🗑
+      </button>
+    </span>
+  );
+}
+
+export function SemestersFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as { heading: string | null; semesters?: Semester[] };
+  const semesters = d.semesters ?? [];
+
+  function setSemesters(next: Semester[]) {
+    onChange({ ...d, semesters: next });
+  }
+
+  function updateSemester(si: number, patch: Partial<Semester>) {
+    setSemesters(semesters.map((s, i) => (i === si ? { ...s, ...patch } : s)));
+  }
+
+  function updateSessions(si: number, sessions: SemesterSession[]) {
+    updateSemester(si, { sessions });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת האזור" htmlFor="sem-heading" hint="אופציונלי">
+        <input
+          id="sem-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+
+      {semesters.length === 0 ? (
+        <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+          אין סמסטרים. לחצו ״הוספת סמסטר״ כדי להתחיל.
+        </p>
+      ) : null}
+
+      {semesters.map((semester, si) => {
+        const sessions = semester.sessions ?? [];
+        return (
+          <div key={si} className="flex flex-col gap-2 rounded-md border-2 border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-ink">סמסטר {si + 1}</span>
+              <RowControls
+                onUp={() => setSemesters(moveInArray(semesters, si, -1))}
+                onDown={() => setSemesters(moveInArray(semesters, si, 1))}
+                onRemove={() => setSemesters(semesters.filter((_, i) => i !== si))}
+                removeLabel={`מחיקת סמסטר ${si + 1}`}
+              />
+            </div>
+
+            <input
+              className={inputClass}
+              value={semester.title}
+              placeholder="כותרת הסמסטר (לדוגמה: סמסטר א׳ — תשתיות)"
+              aria-label={`כותרת סמסטר ${si + 1}`}
+              onChange={(e) => updateSemester(si, { title: e.target.value })}
+            />
+            <input
+              className={inputClass}
+              value={semester.subtitle ?? ""}
+              placeholder="כותרת משנה (לדוגמה: 90 ש״א · 15 מפגשים)"
+              aria-label={`כותרת משנה סמסטר ${si + 1}`}
+              onChange={(e) => updateSemester(si, { subtitle: e.target.value || null })}
+            />
+
+            <div className="flex flex-col gap-2 rounded border border-dashed border-border p-2">
+              <p className="text-xs font-semibold text-ink-muted">מפגשים ({sessions.length})</p>
+
+              {sessions.map((session, xi) => {
+                const parts = session.parts ?? [];
+                return (
+                  <details key={xi} className="rounded border border-border bg-surface-alt/30">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-2">
+                      <span className="text-sm text-ink">
+                        {session.label || `מפגש ${xi + 1}`}
+                        {session.date ? (
+                          <span className="text-xs text-ink-muted"> · {session.date}</span>
+                        ) : null}
+                      </span>
+                      <RowControls
+                        onUp={() => updateSessions(si, moveInArray(sessions, xi, -1))}
+                        onDown={() => updateSessions(si, moveInArray(sessions, xi, 1))}
+                        onRemove={() =>
+                          updateSessions(
+                            si,
+                            sessions.filter((_, i) => i !== xi),
+                          )
+                        }
+                        removeLabel={`מחיקת מפגש ${xi + 1}`}
+                      />
+                    </summary>
+
+                    <div className="flex flex-col gap-2 border-t border-border p-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <input
+                          className={inputClass}
+                          value={session.label}
+                          placeholder="כותרת (לדוגמה: מפגש 1)"
+                          aria-label={`כותרת מפגש ${xi + 1}`}
+                          onChange={(e) =>
+                            updateSessions(
+                              si,
+                              sessions.map((s, i) =>
+                                i === xi ? { ...s, label: e.target.value } : s,
+                              ),
+                            )
+                          }
+                        />
+                        <input
+                          className={inputClass}
+                          value={session.date ?? ""}
+                          placeholder="תאריך (אופציונלי, לדוגמה: 11.11.26)"
+                          aria-label={`תאריך מפגש ${xi + 1}`}
+                          onChange={(e) =>
+                            updateSessions(
+                              si,
+                              sessions.map((s, i) =>
+                                i === xi ? { ...s, date: e.target.value || null } : s,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+
+                      <p className="text-xs font-semibold text-ink-muted">תוכן המפגש</p>
+                      {parts.map((part, pi) => (
+                        <div key={pi} className="flex flex-col gap-1 rounded border border-border p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <input
+                              className={inputClass}
+                              value={part.title}
+                              placeholder="כותרת (לדוגמה: שיעור א׳)"
+                              aria-label={`כותרת חלק ${pi + 1}`}
+                              onChange={(e) =>
+                                updateSessions(
+                                  si,
+                                  sessions.map((s, i) =>
+                                    i === xi
+                                      ? {
+                                          ...s,
+                                          parts: parts.map((p, j) =>
+                                            j === pi ? { ...p, title: e.target.value } : p,
+                                          ),
+                                        }
+                                      : s,
+                                  ),
+                                )
+                              }
+                            />
+                            <RowControls
+                              onUp={() =>
+                                updateSessions(
+                                  si,
+                                  sessions.map((s, i) =>
+                                    i === xi ? { ...s, parts: moveInArray(parts, pi, -1) } : s,
+                                  ),
+                                )
+                              }
+                              onDown={() =>
+                                updateSessions(
+                                  si,
+                                  sessions.map((s, i) =>
+                                    i === xi ? { ...s, parts: moveInArray(parts, pi, 1) } : s,
+                                  ),
+                                )
+                              }
+                              onRemove={() =>
+                                updateSessions(
+                                  si,
+                                  sessions.map((s, i) =>
+                                    i === xi
+                                      ? { ...s, parts: parts.filter((_, j) => j !== pi) }
+                                      : s,
+                                  ),
+                                )
+                              }
+                              removeLabel={`מחיקת חלק ${pi + 1}`}
+                            />
+                          </div>
+                          <textarea
+                            className={textareaClass}
+                            value={part.body ?? ""}
+                            placeholder="טקסט"
+                            aria-label={`טקסט חלק ${pi + 1}`}
+                            onChange={(e) =>
+                              updateSessions(
+                                si,
+                                sessions.map((s, i) =>
+                                  i === xi
+                                    ? {
+                                        ...s,
+                                        parts: parts.map((p, j) =>
+                                          j === pi ? { ...p, body: e.target.value || null } : p,
+                                        ),
+                                      }
+                                    : s,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateSessions(
+                            si,
+                            sessions.map((s, i) =>
+                              i === xi ? { ...s, parts: [...parts, { title: "", body: null }] } : s,
+                            ),
+                          )
+                        }
+                        className="self-start rounded-md border border-border px-2 py-1 text-xs text-ink hover:border-primary hover:text-primary"
+                      >
+                        + הוספת חלק
+                      </button>
+                    </div>
+                  </details>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() =>
+                  updateSessions(si, [
+                    ...sessions,
+                    {
+                      label: `מפגש ${sessions.length + 1}`,
+                      date: null,
+                      parts: [{ title: "", body: null }],
+                    },
+                  ])
+                }
+                className="self-start rounded-md border border-border px-2 py-1 text-xs text-ink hover:border-primary hover:text-primary"
+              >
+                + הוספת מפגש
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={() =>
+          setSemesters([...semesters, { title: "", subtitle: null, sessions: [] }])
+        }
+        className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+      >
+        + הוספת סמסטר
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Certificates. Add/remove/reorder of media slots with an optional caption
+ * each. No alt-text field here on purpose: alt text lives on the `media`
+ * row (mandatory at upload per §3), so editing it in two places would let
+ * them disagree.
+ */
+export function CertificatesFields({
+  data,
+  onChange,
+  mediaById,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  mediaById: Record<string, Media>;
+}) {
+  type Item = { media_id: string | null; caption: string | null };
+  const d = data as { heading: string; intro: string | null; items?: Item[] };
+  const items = d.items ?? [];
+
+  function updateItem(index: number, patch: Partial<Item>) {
+    onChange({ ...d, items: items.map((it, i) => (i === index ? { ...it, ...patch } : it)) });
+  }
+
+  function addItem() {
+    onChange({ ...d, items: [...items, { media_id: null, caption: null }] });
+  }
+
+  function removeItem(index: number) {
+    onChange({ ...d, items: items.filter((_, i) => i !== index) });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, items: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="cert-heading" required>
+        <input
+          id="cert-heading"
+          className={inputClass}
+          value={d.heading}
+          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+        />
+      </Field>
+
+      <Field label="טקסט" htmlFor="cert-intro" hint="אופציונלי — הסבר קצר מתחת לכותרת">
+        <textarea
+          id="cert-intro"
+          className={textareaClass}
+          value={d.intro ?? ""}
+          onChange={(e) => onChange({ ...d, intro: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">תמונות התעודות</p>
+
+        {items.length === 0 ? (
+          <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+            אין תעודות. לחצו ״הוספת תעודה״ כדי להתחיל.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {items.map((item, i) => (
+              <li key={i} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-ink-muted">תעודה {i + 1}</span>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      aria-label="הזזה למעלה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      aria-label="הזזה למטה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      aria-label={`מחיקת תעודה ${i + 1}`}
+                      className="rounded p-1 text-error hover:bg-error/10"
+                    >
+                      🗑
+                    </button>
+                  </span>
+                </div>
+
+                <MediaPickerField
+                  label="תמונת התעודה"
+                  value={item.media_id}
+                  media={item.media_id ? mediaById[item.media_id] : null}
+                  onChange={(mediaId) => updateItem(i, { media_id: mediaId })}
+                />
+
+                <input
+                  className={inputClass}
+                  value={item.caption ?? ""}
+                  placeholder="כיתוב מתחת לתמונה (אופציונלי)"
+                  aria-label={`כיתוב תעודה ${i + 1}`}
+                  onChange={(e) => updateItem(i, { caption: e.target.value || null })}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={addItem}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+        >
+          + הוספת תעודה
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Syllabus download. Two ways to supply the file — upload a PDF to the
+ * media library, or paste a link to one hosted elsewhere. The uploaded file
+ * wins when both are set (matching the renderer), and the form says so
+ * rather than leaving the precedence a mystery.
+ */
+export function SyllabusDownloadFields({
+  data,
+  onChange,
+  mediaById,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  mediaById: Record<string, Media>;
+}) {
+  const d = data as {
+    heading: string | null;
+    body: string | null;
+    file_media_id?: string | null;
+    file_url: string;
+    button_label: string | null;
+    open_in_new_tab?: boolean;
+  };
+  const hasUpload = Boolean(d.file_media_id);
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת" htmlFor="sd-heading" hint="אופציונלי">
+        <input
+          id="sd-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+
+      <Field label="טקסט" htmlFor="sd-body" hint="אופציונלי — משפט מעל הכפתור">
+        <textarea
+          id="sd-body"
+          className={textareaClass}
+          value={d.body ?? ""}
+          onChange={(e) => onChange({ ...d, body: e.target.value || null })}
+        />
+      </Field>
+
+      <MediaPickerField
+        label="קובץ PDF (העלאה למערכת)"
+        hint="הדרך המומלצת — העלו את הסילבוס דרך ״בחירת קובץ״ והוא יאוחסן באתר."
+        value={d.file_media_id ?? null}
+        media={d.file_media_id ? mediaById[d.file_media_id] : null}
+        onChange={(mediaId) => onChange({ ...d, file_media_id: mediaId })}
+      />
+
+      <Field
+        label="או: קישור חיצוני לקובץ"
+        htmlFor="sd-url"
+        hint={
+          hasUpload
+            ? "לא בשימוש — הקובץ שהועלה למעלה גובר. להשתמש בקישור, הסירו קודם את הקובץ."
+            : "לחלופין, הדביקו קישור מגוגל דרייב / דרופבוקס. ודאו שהקישור פתוח לצפייה לכל מי שיש לו את הכתובת."
+        }
+      >
+        <input
+          id="sd-url"
+          className={inputClass}
+          dir="ltr"
+          placeholder="https://drive.google.com/..."
+          value={d.file_url}
+          onChange={(e) => onChange({ ...d, file_url: e.target.value })}
+        />
+      </Field>
+
+      <Field label="טקסט הכפתור" htmlFor="sd-label" hint="ריק = ״סילבוס להורדה״">
+        <input
+          id="sd-label"
+          className={inputClass}
+          value={d.button_label ?? ""}
+          onChange={(e) => onChange({ ...d, button_label: e.target.value || null })}
+        />
+      </Field>
+
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={d.open_in_new_tab !== false}
+          onChange={(e) => onChange({ ...d, open_in_new_tab: e.target.checked })}
+          className="h-4 w-4 rounded border-border"
+        />
+        פתיחה בכרטיסייה חדשה (מומלץ)
+      </label>
+
+      {!hasUpload && !d.file_url?.trim() ? (
+        <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+          עד שייבחר קובץ או יוזן קישור, הבלוק לא יוצג באתר.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Link cards. Same add/remove/reorder shape as the other list blocks; each
+ * card additionally gets its own <MediaPickerField>, hence `mediaById`.
+ * Rows are keyed by index — the data carries no stable id, and every
+ * mutation rebuilds the array through `onChange` with controlled inputs.
+ */
+export function LinkCardsFields({
+  data,
+  onChange,
+  mediaById,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  mediaById: Record<string, Media>;
+}) {
+  type Card = {
+    title: string;
+    body: string | null;
+    image_media_id: string | null;
+    link: { label: string; href: string; open_in_new_tab: boolean } | null;
+  };
+  const d = data as { heading: string | null; intro: string | null; cards?: Card[] };
+  const cards = d.cards ?? [];
+
+  function updateCard(index: number, patch: Partial<Card>) {
+    onChange({ ...d, cards: cards.map((c, i) => (i === index ? { ...c, ...patch } : c)) });
+  }
+
+  function addCard() {
+    onChange({
+      ...d,
+      cards: [...cards, { title: "", body: null, image_media_id: null, link: null }],
+    });
+  }
+
+  function removeCard(index: number) {
+    onChange({ ...d, cards: cards.filter((_, i) => i !== index) });
+  }
+
+  function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= cards.length) return;
+    const next = [...cards];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...d, cards: next });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Field label="כותרת האזור" htmlFor="lc-heading" hint="אופציונלי">
+        <input
+          id="lc-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+
+      <Field label="טקסט פתיחה" htmlFor="lc-intro" hint="אופציונלי — פסקה קצרה מעל הכרטיסיות">
+        <textarea
+          id="lc-intro"
+          className={textareaClass}
+          value={d.intro ?? ""}
+          onChange={(e) => onChange({ ...d, intro: e.target.value || null })}
+        />
+      </Field>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+        <p className="text-xs font-semibold text-ink-muted">כרטיסיות</p>
+
+        {cards.length === 0 ? (
+          <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+            אין כרטיסיות. לחצו ״הוספת כרטיסייה״ כדי להתחיל.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {cards.map((card, i) => (
+              <li key={i} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-ink-muted">כרטיסייה {i + 1}</span>
+                  <span className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => move(i, -1)}
+                      aria-label="הזזה למעלה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => move(i, 1)}
+                      aria-label="הזזה למטה"
+                      className="rounded p-1 text-ink-muted hover:bg-surface-alt"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeCard(i)}
+                      aria-label={`מחיקת כרטיסייה ${i + 1}`}
+                      className="rounded p-1 text-error hover:bg-error/10"
+                    >
+                      🗑
+                    </button>
+                  </span>
+                </div>
+
+                <input
+                  className={inputClass}
+                  value={card.title}
+                  placeholder="כותרת הכרטיסייה (לדוגמה: שנה א׳)"
+                  aria-label={`כותרת כרטיסייה ${i + 1}`}
+                  onChange={(e) => updateCard(i, { title: e.target.value })}
+                />
+
+                <textarea
+                  className={textareaClass}
+                  value={card.body ?? ""}
+                  placeholder="טקסט קצר (אופציונלי)"
+                  aria-label={`טקסט כרטיסייה ${i + 1}`}
+                  onChange={(e) => updateCard(i, { body: e.target.value || null })}
+                />
+
+                <MediaPickerField
+                  label="תמונה (אופציונלי)"
+                  value={card.image_media_id}
+                  media={card.image_media_id ? mediaById[card.image_media_id] : null}
+                  onChange={(mediaId) => updateCard(i, { image_media_id: mediaId })}
+                />
+
+                <LinkFields
+                  label="כפתור / קישור"
+                  value={card.link}
+                  onChange={(link) => updateCard(i, { link })}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={addCard}
+          className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+        >
+          + הוספת כרטיסייה
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The five training-page sections (migration 20). Their CONTENT lives on
+ * the `trainings` row and is edited in the training form above — these
+ * forms expose only presentation choices, so each one leads with a note
+ * saying where the actual text is edited. Without that, an editor opening
+ * "הכשרה — סילבוס" and finding just a heading field would reasonably
+ * conclude the syllabus had gone missing.
+ */
+function SectionNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">{children}</p>
+  );
+}
+
+export function TrainingIntroFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as { show_cover?: boolean; show_details?: boolean };
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionNote>
+        הכותרת, התקציר, התמונה והפרטים נערכים בטופס ההכשרה שמעל. כאן ניתן רק לבחור מה יוצג.
+      </SectionNote>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={d.show_cover !== false}
+          onChange={(e) => onChange({ ...d, show_cover: e.target.checked })}
+          className="h-4 w-4 rounded border-border"
+        />
+        הצגת תמונת השער
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={d.show_details !== false}
+          onChange={(e) => onChange({ ...d, show_details: e.target.checked })}
+          className="h-4 w-4 rounded border-border"
+        />
+        הצגת טבלת הפרטים (תאריכים, שעות, מחיר)
+      </label>
+    </div>
+  );
+}
+
+function SectionHeadingFields({
+  data,
+  onChange,
+  note,
+  placeholder,
+  id,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  note: string;
+  placeholder: string;
+  id: string;
+}) {
+  const d = data as { heading: string | null };
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionNote>{note}</SectionNote>
+      <Field label="כותרת האזור" htmlFor={id} hint="ריק = הכותרת המקורית">
+        <input
+          id={id}
+          className={inputClass}
+          value={d.heading ?? ""}
+          placeholder={placeholder}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+    </div>
+  );
+}
+
+export function TrainingBodyFields(props: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  return (
+    <SectionHeadingFields
+      {...props}
+      id="tb-heading"
+      placeholder="ללא כותרת"
+      note="הטקסט עצמו נערך בשדה ״תוכן מלא״ בטופס ההכשרה שמעל."
+    />
+  );
+}
+
+export function TrainingSyllabusFields(props: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  return (
+    <SectionHeadingFields
+      {...props}
+      id="ts-heading"
+      placeholder="תוכנית הלימודים"
+      note="הסילבוס עצמו נערך בשדה ״סילבוס״ בטופס ההכשרה שמעל."
+    />
+  );
+}
+
+export function TrainingInstructorsFields(props: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  return (
+    <SectionHeadingFields
+      {...props}
+      id="ti-heading"
+      placeholder="מרצים ומדריכים"
+      note="רשימת המרצים נערכת בשדה ״מרצים״ בטופס ההכשרה שמעל."
+    />
+  );
+}
+
+export function TrainingRegistrationCtaFields({
+  data,
+  onChange,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+}) {
+  const d = data as { heading: string | null; cta_label: string | null };
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionNote>
+        כתובת ההרשמה נלקחת משדה ״קישור להרשמה״ בטופס ההכשרה. אם הוא ריק, הכפתור פותח את טופס
+        יצירת הקשר באתר.
+      </SectionNote>
+      <Field label="כותרת" htmlFor="trc-heading" hint="ריק = ״מעוניינים להצטרף להכשרה?״">
+        <input
+          id="trc-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+      <Field label="טקסט הכפתור" htmlFor="trc-label" hint="ריק = ״לתיאום שיחת היכרות״">
+        <input
+          id="trc-label"
+          className={inputClass}
+          value={d.cta_label ?? ""}
+          onChange={(e) => onChange({ ...d, cta_label: e.target.value || null })}
+        />
+      </Field>
+    </div>
+  );
+}
+
+/**
  * Reading list (core books / sources). Add/remove/reorder like the other
  * list blocks, but each row also gets its own <MediaPickerField> for the
  * cover — hence the `mediaById` prop, which supplies already-resolved
