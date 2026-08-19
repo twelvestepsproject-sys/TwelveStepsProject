@@ -32,6 +32,9 @@ export function TrainingDetails({ data }: { data: TrainingDetailsData }) {
     { label: "מספר מפגשים", value: data.sessions_count ?? "" },
     { label: "שעות אקדמיות", value: data.academic_hours ?? "" },
     { label: "מספר סמסטרים", value: data.semesters_count ?? "" },
+    { label: "משך המסלול", value: data.duration ?? "" },
+    { label: "מספר מחזור", value: data.cohort_number ?? "" },
+    { label: "מיקום", value: data.location ?? "" },
     { label: "מחיר", value: data.price ?? "" },
   ].filter((row) => row.value.trim() !== "");
 

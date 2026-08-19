@@ -71,6 +71,7 @@ const homepageBlocks: PageBlock[] = [
     block_type: "focus_areas",
     data: {
       heading: "במה אנחנו מתמקדים",
+      subheading: null,
       cards: [
         {
           icon: "🧭",
@@ -149,7 +150,7 @@ const homepageBlocks: PageBlock[] = [
     sort_order: 6,
     is_visible: true,
     block_type: "program_stages",
-    data: { heading: "התהליך שלנו" },
+    data: { heading: "התהליך שלנו", stage_label: null, step_label: null },
   },
   {
     id: "b0000000-0000-4000-8000-000000000006",
@@ -365,7 +366,7 @@ const studiesHubBlocks: PageBlock[] = [
     sort_order: 2,
     is_visible: true,
     block_type: "program_stages",
-    data: { heading: "שלבי התהליך לאורך התוכנית" },
+    data: { heading: "שלבי התהליך לאורך התוכנית", stage_label: null, step_label: null },
   },
   {
     id: "b0000000-0000-4000-8000-000000000203",

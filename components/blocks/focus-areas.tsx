@@ -16,10 +16,16 @@ export function FocusAreas({ data }: { data: FocusAreasData }) {
     <section className="bg-surface px-6 py-16">
       <RevealOnScroll className="mx-auto max-w-6xl">
         {data.heading ? (
-          <h2 className="mb-8 text-center font-display text-2xl font-bold text-ink sm:text-3xl">
+          <h2 className="text-center font-display text-2xl font-bold text-ink sm:text-3xl">
             {data.heading}
           </h2>
         ) : null}
+        {data.subheading ? (
+          <p className="mx-auto mt-3 max-w-3xl text-center whitespace-pre-line text-ink-muted">
+            {data.subheading}
+          </p>
+        ) : null}
+        {data.heading || data.subheading ? <div className="mb-8" /> : null}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {data.cards.map((card, i) => (
             <RevealOnScroll

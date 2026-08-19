@@ -67,7 +67,7 @@ export async function ProgramStagesStepper({ data }: { data: ProgramStagesData }
               >
                 <div className="mb-4 flex items-baseline gap-3">
                   <span className="font-display text-sm font-bold text-accent-text">
-                    שלב {stage.stage_number}
+                    {data.stage_label ?? "שלב"} {stage.stage_number}
                   </span>
                   <h3 className="font-display text-xl font-bold text-ink">{stage.title}</h3>
                 </div>
@@ -81,7 +81,7 @@ export async function ProgramStagesStepper({ data }: { data: ProgramStagesData }
                       className="rounded-md border border-border bg-surface p-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                     >
                       <p className="mb-1 text-xs font-semibold text-ink-muted">
-                        צעד {step.step_number}
+                        {data.step_label ?? "צעד"} {step.step_number}
                       </p>
                       <p className="mb-1 font-display font-bold text-ink">{step.title}</p>
                       <p className="text-sm text-ink-muted">{step.body}</p>

@@ -24,6 +24,7 @@ import {
   CertificatesFields,
   SyllabusDownloadFields,
   SemestersFields,
+  ProgramStagesFields,
   TrainingIntroFields,
   TrainingBodyFields,
   TrainingSyllabusFields,
@@ -473,6 +474,8 @@ export function BlockDataForm({
       return <SyllabusDownloadFields data={data} onChange={onChange} mediaById={mediaById} />;
     case "semesters":
       return <SemestersFields data={data} onChange={onChange} />;
+    case "program_stages":
+      return <ProgramStagesFields data={data} onChange={onChange} />;
     case "training_intro":
       return <TrainingIntroFields data={data} onChange={onChange} />;
     case "training_body":

@@ -62,6 +62,10 @@ export const introMediaBlockDataSchema = z.object({
 // 4. Focus areas
 export const focusAreasBlockDataSchema = z.object({
   heading: z.string().nullable(),
+  // Optional lead-in under the heading. Added because editors were packing
+  // both lines into `heading` (literally typing "כותרת משנה" as a separator),
+  // which rendered as one long bold sentence.
+  subheading: z.string().nullable().default(null),
   cards: z
     .array(
       z.object({
@@ -148,8 +152,13 @@ export const lecturersGridBlockDataSchema = z.object({
 });
 
 // 13. Program stages stepper/accordion
+// The "שלב N" / "צעד N" prefixes were hardcoded in the renderer, so a
+// program that calls its units something else (מפגש, יחידה, פרק) could not
+// be relabelled without a code change. Null keeps the original wording.
 export const programStagesBlockDataSchema = z.object({
   heading: z.string().nullable(),
+  stage_label: z.string().nullable().default(null),
+  step_label: z.string().nullable().default(null),
 });
 
 // 14. Photo gallery
@@ -231,6 +240,12 @@ export const trainingDetailsBlockDataSchema = z.object({
   academic_hours: z.string().nullable(),
   price: z.string().nullable(),
   semesters_count: z.string().nullable(),
+  // Added on client request. Optional like every other field, and free
+  // text for the same reason as `price`: editors write "תל אביב + זום" or
+  // "3 שנים" rather than a value a picker could constrain.
+  location: z.string().nullable().default(null),
+  duration: z.string().nullable().default(null),
+  cohort_number: z.string().nullable().default(null),
   registration_link: linkSchema.nullable(),
 });
 

@@ -62,6 +62,7 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
     intro_media: { heading: "כותרת", video_url: null, thumbnail_media_id: null },
     focus_areas: {
       heading: null,
+      subheading: null,
       cards: [
         { icon: null, title: "כותרת", body: "תיאור קצר." },
         { icon: null, title: "כותרת", body: "תיאור קצר." },
@@ -89,7 +90,7 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
     // Empty selection = show featured/all (legacy behavior) until the
     // editor picks specific lecturers.
     lecturers_grid: { heading: null, all_lecturers_link: null, lecturer_ids: [] },
-    program_stages: { heading: null },
+    program_stages: { heading: null, stage_label: null, step_label: null },
     photo_gallery: { gallery_id: "", heading: null },
     podcast: {
       heading: null,
@@ -136,6 +137,9 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
       academic_hours: null,
       price: null,
       semesters_count: null,
+      location: null,
+      duration: null,
+      cohort_number: null,
       registration_link: null,
     },
     // Starts with three empty rows so the add/remove UI is immediately
@@ -270,4 +274,5 @@ export const BLOCK_TYPES_WITH_CUSTOM_FORM: BlockType[] = [
   "certificates",
   "syllabus_download",
   "semesters",
+  "program_stages",
 ];

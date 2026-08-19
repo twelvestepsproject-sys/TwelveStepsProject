@@ -324,6 +324,9 @@ export function TrainingDetailsFields({ data, onChange }: { data: Record<string,
     academic_hours: string | null;
     price: string | null;
     semesters_count: string | null;
+    location?: string | null;
+    duration?: string | null;
+    cohort_number?: string | null;
     registration_link: { label: string; href: string; open_in_new_tab: boolean } | null;
   };
   return (
@@ -398,6 +401,30 @@ export function TrainingDetailsFields({ data, onChange }: { data: Record<string,
             className={inputClass}
             value={d.semesters_count ?? ""}
             onChange={(e) => onChange({ ...d, semesters_count: e.target.value || null })}
+          />
+        </Field>
+        <Field label="משך המסלול" htmlFor="td-duration" hint="לדוגמה: 3 שנים">
+          <input
+            id="td-duration"
+            className={inputClass}
+            value={d.duration ?? ""}
+            onChange={(e) => onChange({ ...d, duration: e.target.value || null })}
+          />
+        </Field>
+        <Field label="מספר מחזור" htmlFor="td-cohort" hint="לדוגמה: מחזור 5">
+          <input
+            id="td-cohort"
+            className={inputClass}
+            value={d.cohort_number ?? ""}
+            onChange={(e) => onChange({ ...d, cohort_number: e.target.value || null })}
+          />
+        </Field>
+        <Field label="מיקום" htmlFor="td-location" hint="לדוגמה: תל אביב · היברידי">
+          <input
+            id="td-location"
+            className={inputClass}
+            value={d.location ?? ""}
+            onChange={(e) => onChange({ ...d, location: e.target.value || null })}
           />
         </Field>
         <Field label="מחיר" htmlFor="td-price" hint="טקסט חופשי, לדוגמה: 3,500 ₪">
@@ -532,6 +559,54 @@ export function RequirementsFields({ data, onChange }: { data: Record<string, un
           + הוספת דרישה
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Program stages. The stage/step CONTENT lives in the program_stages
+ * tables and is edited at /admin/program-stages — this form only controls
+ * the heading and the two auto-generated prefixes, so the note says where
+ * the rest is edited rather than leaving an editor hunting for it.
+ */
+export function ProgramStagesFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
+  const d = data as {
+    heading: string | null;
+    stage_label?: string | null;
+    step_label?: string | null;
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+        השלבים והצעדים עצמם נערכים במסך ״שלבי התוכנית״ בתפריט הניהול. כאן נקבעים
+        הכותרת והמילים שמופיעות לפני המספרים.
+      </p>
+      <Field label="כותרת" htmlFor="ps-heading" hint="ריק = ללא כותרת">
+        <input
+          id="ps-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+      <Field label="המילה לפני מספר השלב" htmlFor="ps-stage-label" hint="ריק = ״שלב״">
+        <input
+          id="ps-stage-label"
+          className={inputClass}
+          placeholder="שלב"
+          value={d.stage_label ?? ""}
+          onChange={(e) => onChange({ ...d, stage_label: e.target.value || null })}
+        />
+      </Field>
+      <Field label="המילה לפני מספר הצעד" htmlFor="ps-step-label" hint="ריק = ״צעד״">
+        <input
+          id="ps-step-label"
+          className={inputClass}
+          placeholder="צעד"
+          value={d.step_label ?? ""}
+          onChange={(e) => onChange({ ...d, step_label: e.target.value || null })}
+        />
+      </Field>
     </div>
   );
 }
@@ -1804,6 +1879,7 @@ export function LecturersGridFields({
 export function FocusAreasFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
   const d = data as {
     heading: string | null;
+    subheading?: string | null;
     cards: { icon: string | null; title: string; body: string }[];
   };
   function updateCard(i: number, patch: Partial<{ icon: string | null; title: string; body: string }>) {
@@ -1826,6 +1902,14 @@ export function FocusAreasFields({ data, onChange }: { data: Record<string, unkn
           className={inputClass}
           value={d.heading ?? ""}
           onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
+        />
+      </Field>
+      <Field label="כותרת משנה (אופציונלי)" htmlFor="b-fa-subheading" hint="שורת הסבר מתחת לכותרת">
+        <textarea
+          id="b-fa-subheading"
+          className={textareaClass}
+          value={d.subheading ?? ""}
+          onChange={(e) => onChange({ ...d, subheading: e.target.value || null })}
         />
       </Field>
       <p className="text-xs text-ink-muted">3–4 כרטיסים.</p>

@@ -40,7 +40,14 @@ export function Semesters({ data }: { data: SemestersData }) {
           </h2>
         ) : null}
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        {/* A lone semester spans the full width instead of sitting in a
+            half-empty two-column grid — the 12-steps training has exactly
+            one, and a single narrow card beside dead space reads as a bug. */}
+        <div
+          className={`grid grid-cols-1 items-start gap-6 ${
+            semesters.length > 1 ? "lg:grid-cols-2" : ""
+          }`}
+        >
           {semesters.map((semester, si) => {
             const sessions = (semester.sessions ?? []).filter((s) => s.label.trim() !== "");
             return (

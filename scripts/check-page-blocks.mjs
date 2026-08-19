@@ -1105,7 +1105,9 @@ check("renders collapsed by default (no `open` attribute)", () => {
 
 check("side by side on desktop, stacked on mobile", () => {
   const src = readFileSync(new URL("../components/blocks/semesters.tsx", import.meta.url), "utf8");
-  assert(/grid-cols-1[^"]*lg:grid-cols-2/.test(src), "not responsive as specified");
+  assert(src.includes("grid-cols-1"), "not stacked on mobile");
+  assert(src.includes("lg:grid-cols-2"), "not side by side on desktop");
+  assert(/semesters.length > 1/.test(src), "a lone semester would still be half-width");
   // Without items-start, expanding one semester stretches its collapsed
   // sibling to the same height, leaving a tall empty gap.
   assert(src.includes("items-start"), "grid items would stretch to equal height");
@@ -1125,6 +1127,92 @@ check("the page editor dispatches to SemestersFields", () => {
   assert(src.includes('case "semesters"'), "page-editor.tsx has no case");
   assert(src.includes("SemestersFields"), "SemestersFields is not imported/used");
 });
+
+// ---------------------------------------------------------------------
+// 4j. Client feedback round: subheadings, extra detail fields, labels
+// ---------------------------------------------------------------------
+console.log("\n[schema] client feedback fixes");
+
+const { focusAreasBlockDataSchema, programStagesBlockDataSchema } = await import(
+  "../lib/schemas/blocks.ts"
+);
+
+const threeCards = [
+  { icon: null, title: "א", body: "ב" },
+  { icon: null, title: "ג", body: "ד" },
+  { icon: null, title: "ה", body: "ו" },
+];
+
+check("focus_areas accepts a separate subheading", () => {
+  const result = focusAreasBlockDataSchema.safeParse({
+    heading: "למי מיועדת התוכנית?",
+    subheading: "לאנשי מקצוע ולקהל הרחב",
+    cards: threeCards,
+  });
+  assert(result.success, "a block with a subheading was rejected");
+});
+
+check("BACKWARD COMPAT: a focus_areas block with no subheading still parses", () => {
+  const result = focusAreasBlockDataSchema.safeParse({ heading: "כותרת", cards: threeCards });
+  assert(result.success, "an existing block should keep working");
+  assert(result.data.subheading === null, "subheading should default to null");
+});
+
+check("focus_areas renders the subheading under the heading", () => {
+  const src = readFileSync(new URL("../components/blocks/focus-areas.tsx", import.meta.url), "utf8");
+  assert(src.includes("data.subheading"), "the renderer ignores the subheading");
+});
+
+check("training_details has location, duration and cohort fields", () => {
+  const result = trainingDetailsBlockDataSchema.safeParse({
+    ...allNull,
+    location: "תל אביב",
+    duration: "3 שנים",
+    cohort_number: "מחזור 5",
+  });
+  assert(result.success, "the new fields were rejected");
+});
+
+check("BACKWARD COMPAT: a training_details block without the new fields parses", () => {
+  const result = trainingDetailsBlockDataSchema.safeParse(allNull);
+  assert(result.success, "an existing block should keep working");
+  assert(result.data.location === null, "location should default to null");
+});
+
+check("training_details renders the three new rows", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/training-details.tsx", import.meta.url),
+    "utf8",
+  );
+  for (const label of ["משך המסלול", "מספר מחזור", "מיקום"]) {
+    assert(src.includes(label), "missing row: " + label);
+  }
+});
+
+check("program_stages labels are editable, defaulting to the original wording", () => {
+  const result = programStagesBlockDataSchema.safeParse({ heading: null });
+  assert(result.success, "an existing block should keep working");
+  assert(result.data.stage_label === null, "stage_label should default to null");
+  const src = readFileSync(
+    new URL("../components/blocks/program-stages-stepper.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("data.stage_label"), "stage prefix is still hardcoded");
+  assert(src.includes("data.step_label"), "step prefix is still hardcoded");
+});
+
+check("program_stages now has a real admin form, not raw JSON", () => {
+  assert(
+    BLOCK_TYPES_WITH_CUSTOM_FORM.includes("program_stages"),
+    "would fall back to the raw JSON editor",
+  );
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/pages/page-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('case "program_stages"'), "page-editor.tsx has no case");
+});
+
 
 // ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
