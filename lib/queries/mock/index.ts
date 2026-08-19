@@ -19,6 +19,7 @@ import {
   profileSchema,
   type Page,
   type PageBlock,
+  type SharedBlock,
   type PageInput,
   type Post,
   type PostSummary,
@@ -80,6 +81,73 @@ import { studyYears } from "@/lib/mock/fixtures/study-years";
  * 10. Every write is validated via the zod schema before being committed,
  *     so schema drift is caught immediately (not silently written).
  */
+
+
+// ---------------------------------------------------------------------
+// Shared blocks (migration 24)
+// ---------------------------------------------------------------------
+
+/** Mirrors the Supabase implementation: swap every reference row for the
+ * shared block's own type and content, dropping references whose source is
+ * gone. */
+function resolveSharedBlocksMock(blocks: PageBlock[]): PageBlock[] {
+  return blocks
+    .map((b) => {
+      const sharedId = (b as { shared_block_id?: string | null }).shared_block_id;
+      if (!sharedId) return b;
+      const shared = mockDb.sharedBlocks.find((x) => x.id === sharedId);
+      if (!shared) return null;
+      return { ...b, block_type: shared.block_type, data: shared.data } as PageBlock;
+    })
+    .filter((b): b is PageBlock => b !== null);
+}
+
+async function listSharedBlocks(): Promise<SharedBlock[]> {
+  await delay();
+  maybeFail("listSharedBlocks");
+  return [...mockDb.sharedBlocks].sort((a, b) => a.name.localeCompare(b.name, "he"));
+}
+
+async function getSharedBlock(id: string): Promise<SharedBlock | null> {
+  await delay();
+  maybeFail("getSharedBlock");
+  return mockDb.sharedBlocks.find((b) => b.id === id) ?? null;
+}
+
+async function saveSharedBlock(
+  input: Partial<SharedBlock> & { id?: string },
+): Promise<SharedBlock> {
+  await delay();
+  maybeFail("saveSharedBlock");
+  const existing = input.id ? mockDb.sharedBlocks.find((b) => b.id === input.id) : undefined;
+  const merged = {
+    ...(existing ?? ({} as SharedBlock)),
+    ...input,
+    id: existing?.id ?? input.id ?? newId(),
+    created_at: existing?.created_at ?? nowIso(),
+    updated_at: nowIso(),
+  } as SharedBlock;
+  if (existing) {
+    Object.assign(existing, merged);
+  } else {
+    mockDb.sharedBlocks.push(merged);
+  }
+  persist();
+  return merged;
+}
+
+async function deleteSharedBlock(id: string): Promise<void> {
+  await delay();
+  maybeFail("deleteSharedBlock");
+  mockDb.sharedBlocks = mockDb.sharedBlocks.filter((b) => b.id !== id);
+  // The DB cascades this; mirror it so a stale reference can't linger.
+  for (const page of mockDb.pages) {
+    page.blocks = page.blocks.filter(
+      (b) => (b as { shared_block_id?: string | null }).shared_block_id !== id,
+    );
+  }
+  persist();
+}
 
 // ---------------------------------------------------------------------
 // Posts
@@ -1001,10 +1069,12 @@ async function getPage(slug: string): Promise<Page | null> {
   // component to filter/sort (§5.5 rule 3 applies to page_blocks too).
   return {
     ...row,
-    blocks: row.blocks
-      .filter((b) => b.is_visible)
-      .slice()
-      .sort((a, b) => a.sort_order - b.sort_order),
+    blocks: resolveSharedBlocksMock(
+      row.blocks
+        .filter((b) => b.is_visible)
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order),
+    ),
   };
 }
 
@@ -1363,6 +1433,10 @@ export const mockDataSource: DataSource = {
   deleteTraining,
   getTrainingBlocksAdmin,
   saveTrainingBlocks,
+  listSharedBlocks,
+  getSharedBlock,
+  saveSharedBlock,
+  deleteSharedBlock,
 
   listLecturers,
   listLecturersAdmin,

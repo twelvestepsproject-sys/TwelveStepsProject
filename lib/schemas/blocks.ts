@@ -491,6 +491,26 @@ export const blockTypeSchema = z.enum([
 export type BlockType = z.infer<typeof blockTypeSchema>;
 
 /**
+ * A block that lives in its own table and is rendered on several pages,
+ * edited in one place (migration 24).
+ *
+ * `data` is the same per-block-type shape as `page_blocks.data`; it is not
+ * narrowed to the discriminated union here because a shared block is
+ * selected by `block_type` at render time exactly like an inline one, and
+ * duplicating the 30-arm union for this wrapper would buy nothing.
+ */
+export const sharedBlockSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  block_type: blockTypeSchema,
+  data: z.unknown(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type SharedBlock = z.infer<typeof sharedBlockSchema>;
+
+
+/**
  * A block belongs to EITHER a page or a training, never both — mirroring
  * the `page_blocks_single_owner` CHECK added in migration 20. Both are
  * optional here rather than a zod union: the ownership invariant is
@@ -502,6 +522,9 @@ const pageBlockBaseFields = {
   id: uuidSchema,
   page_id: uuidSchema.nullable().optional(),
   training_id: uuidSchema.nullable().optional(),
+  /** Set when this row is a REFERENCE to a shared block (migration 24):
+   * placement lives here, content comes from `shared_blocks`. */
+  shared_block_id: uuidSchema.nullable().optional(),
   sort_order: z.number().int(),
   is_visible: z.boolean(),
 };

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { savePageAction } from "./actions";
+import { savePageAction, createSharedBlockAction, updateSharedBlockAction } from "./actions";
 import { useAutosave } from "@/components/admin/use-autosave";
 import { AutosaveStatus } from "@/components/admin/autosave-status";
 import { Field, inputClass, textareaClass, Checkbox, PrimaryButton, SecondaryButton } from "@/components/admin/fields";
@@ -90,6 +90,7 @@ export function PageEditor({
   canEdit,
   mediaById,
   lecturers = [],
+  sharedBlocks = [],
 }: {
   page?: Page | null;
   canEdit: boolean;
@@ -100,6 +101,8 @@ export function PageEditor({
   /** Visible lecturers, for the lecturers_grid block's selection UI —
    * fetched server-side since this is a client component. */
   lecturers?: { id: string; name: string; role: string }[];
+  /** Shared blocks available to insert (migration 24). */
+  sharedBlocks?: { id: string; name: string; block_type: string }[];
 }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>(() => toFormState(page));
@@ -108,6 +111,7 @@ export function PageEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [addingType, setAddingType] = useState<BlockType>("hero");
+  const [addingSharedId, setAddingSharedId] = useState("");
 
   const { isDirty, isSaving, lastSavedAt, error: autosaveError, markSaved } = useAutosave(
     state,
@@ -173,6 +177,81 @@ export function PageEditor({
       ...s,
       blocks: [...s.blocks, createNewBlock(addingType, page?.id ?? "new", s.blocks.length + 1)],
     }));
+  }
+
+  /** Adds a REFERENCE row.  stays empty and  mirrors the
+   * source so existing renderers need no special case; the server resolves
+   * the content on read. */
+  /**
+   * Promotes an inline block into the shared library and converts this row
+   * into a reference to it, so the content now lives in exactly one place.
+   * Saves immediately rather than waiting for the page save: the shared
+   * block must exist before any other page can point at it.
+   */
+  function shareBlock(block: PageBlock) {
+    const name = prompt("שם לבלוק המשותף (כך הוא יופיע ברשימת הבחירה):", "");
+    if (!name?.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await createSharedBlockAction(name, block.block_type, block.data);
+      if (!result.ok || !result.data) {
+        setError(result.error ?? "יצירת הבלוק המשותף נכשלה.");
+        return;
+      }
+      setState((s) => ({
+        ...s,
+        blocks: s.blocks.map((b) =>
+          b.id === block.id
+            ? ({ ...b, shared_block_id: result.data!.id, data: {} } as unknown as PageBlock)
+            : b,
+        ),
+      }));
+      setNotice("הבלוק נשמר כבלוק משותף. יש לשמור את העמוד כדי לקבע את השינוי.");
+      router.refresh();
+    });
+  }
+
+  /**
+   * Edits to a shared block write to the source, not to this page's row —
+   * that is the whole point of sharing. Debouncing is unnecessary: the page
+   * editor already autosaves, and this fires on an explicit field change.
+   */
+  function updateSharedBlockData(sharedId: string, data: Record<string, unknown>) {
+    startTransition(async () => {
+      const result = await updateSharedBlockAction(sharedId, data);
+      if (!result.ok) setError(result.error ?? "עדכון הבלוק המשותף נכשל.");
+    });
+  }
+
+  /** A block row is a shared reference when it carries a shared_block_id. */
+  function sharedIdOf(b: PageBlock): string | null {
+    return (b as { shared_block_id?: string | null }).shared_block_id ?? null;
+  }
+
+  function sharedNameOf(b: PageBlock): string {
+    const id = sharedIdOf(b);
+    return sharedBlocks.find((sb) => sb.id === id)?.name ?? "";
+  }
+
+  function addSharedBlock() {
+    const shared = sharedBlocks.find((sb) => sb.id === addingSharedId);
+    if (!shared) return;
+    setState((s) => ({
+      ...s,
+      blocks: [
+        ...s.blocks,
+        {
+          id: crypto.randomUUID(),
+          page_id: page?.id ?? "new",
+          shared_block_id: shared.id,
+          block_type: shared.block_type,
+          sort_order: s.blocks.length + 1,
+          is_visible: true,
+          data: {},
+        } as unknown as PageBlock,
+      ],
+    }));
+    setAddingSharedId("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -303,6 +382,31 @@ export function PageEditor({
           </div>
         </div>
 
+        {/* Insert an existing shared block. Placement (order, visibility)
+            belongs to this page; the content stays in the shared source, so
+            editing it anywhere updates every page it appears on. */}
+        {sharedBlocks.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-surface-alt/40 p-3">
+            <span className="text-xs font-semibold text-ink-muted">או הוספת בלוק משותף קיים:</span>
+            <select
+              className={`${inputClass} w-64`}
+              value={addingSharedId}
+              onChange={(e) => setAddingSharedId(e.target.value)}
+              aria-label="בלוק משותף להוספה"
+            >
+              <option value="">— בחרו בלוק —</option>
+              {sharedBlocks.map((sb) => (
+                <option key={sb.id} value={sb.id}>
+                  {sb.name} ({BLOCK_TYPE_LABELS[sb.block_type as BlockType]})
+                </option>
+              ))}
+            </select>
+            <SecondaryButton type="button" onClick={addSharedBlock}>
+              + הוספה לעמוד
+            </SecondaryButton>
+          </div>
+        ) : null}
+
         {state.blocks.length === 0 ? (
           <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-ink-muted">
             אין עדיין בלוקים בעמוד זה. הוסיפו בלוק ראשון למעלה.
@@ -326,7 +430,12 @@ export function PageEditor({
                         {isCollapsed ? "▸" : "▾"}
                       </button>
                       <span className="font-semibold text-ink">{BLOCK_TYPE_LABELS[block.block_type]}</span>
-                      {!hasCustomForm ? (
+                      {sharedIdOf(block) ? (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                          משותף · {sharedNameOf(block)}
+                        </span>
+                      ) : null}
+                      {!hasCustomForm && !sharedIdOf(block) ? (
                         <span className="rounded-full bg-surface-alt px-2 py-0.5 text-xs text-ink-muted">
                           JSON גולמי
                         </span>
@@ -377,12 +486,36 @@ export function PageEditor({
                   </div>
                   {!isCollapsed ? (
                     <div className="border-t border-border p-4">
+                      {sharedIdOf(block) ? (
+                        <p className="mb-3 rounded bg-primary/5 px-2 py-1.5 text-xs text-ink-muted">
+                          זהו בלוק משותף. עריכה כאן תעדכן אותו בכל העמודים שבהם הוא מופיע.
+                        </p>
+                      ) : null}
                       <BlockDataForm
                         block={block}
                         mediaById={mediaById}
                         lecturers={lecturers}
-                        onChange={(data) => updateBlockData(block.id, data)}
+                        onChange={(data) => {
+                          const sharedId = sharedIdOf(block);
+                          if (sharedId) {
+                            // Keep the form responsive locally, but persist to
+                            // the shared source so every placement updates.
+                            updateBlockData(block.id, data);
+                            updateSharedBlockData(sharedId, data);
+                          } else {
+                            updateBlockData(block.id, data);
+                          }
+                        }}
                       />
+                      {!sharedIdOf(block) && canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => shareBlock(block)}
+                          className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                        >
+                          ♻ שמירה כבלוק משותף (לשימוש בעמודים נוספים)
+                        </button>
+                      ) : null}
                     </div>
                   ) : null}
                 </li>

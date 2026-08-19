@@ -42,16 +42,19 @@ export function TrainingBlocksEditor({
   canEdit,
   mediaById,
   lecturers,
+  sharedBlocks = [],
 }: {
   trainingId: string;
   initialBlocks: PageBlock[];
   canEdit: boolean;
   mediaById: Record<string, Media>;
   lecturers: { id: string; name: string; role: string }[];
+  sharedBlocks?: { id: string; name: string; block_type: string }[];
 }) {
   const router = useRouter();
   const [blocks, setBlocks] = useState<PageBlock[]>(initialBlocks);
   const [addingType, setAddingType] = useState<BlockType>("training_intro");
+  const [addingSharedId, setAddingSharedId] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +63,26 @@ export function TrainingBlocksEditor({
   function addBlock() {
     setBlocks((b) => [...b, createNewBlock(addingType, trainingId, b.length + 1)]);
     setNotice(null);
+  }
+
+  /** Reference row: content resolves from the shared source on read. */
+  function addSharedBlock() {
+    const shared = sharedBlocks.find((sb) => sb.id === addingSharedId);
+    if (!shared) return;
+    setBlocks((b) => [
+      ...b,
+      {
+        id: crypto.randomUUID(),
+        training_id: trainingId,
+        page_id: null,
+        shared_block_id: shared.id,
+        block_type: shared.block_type,
+        sort_order: b.length + 1,
+        is_visible: true,
+        data: {},
+      } as unknown as PageBlock,
+    ]);
+    setAddingSharedId("");
   }
 
   function removeBlock(id: string) {
@@ -136,6 +159,28 @@ export function TrainingBlocksEditor({
         </div>
       </div>
 
+      {sharedBlocks.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-surface-alt/40 p-3">
+          <span className="text-xs font-semibold text-ink-muted">או הוספת בלוק משותף קיים:</span>
+          <select
+            className={`${inputClass} w-64`}
+            value={addingSharedId}
+            onChange={(e) => setAddingSharedId(e.target.value)}
+            aria-label="בלוק משותף להוספה"
+          >
+            <option value="">— בחרו בלוק —</option>
+            {sharedBlocks.map((sb) => (
+              <option key={sb.id} value={sb.id}>
+                {sb.name} ({BLOCK_TYPE_LABELS[sb.block_type as BlockType]})
+              </option>
+            ))}
+          </select>
+          <SecondaryButton type="button" onClick={addSharedBlock}>
+            + הוספה לעמוד
+          </SecondaryButton>
+        </div>
+      ) : null}
+
       {blocks.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-ink-muted">
           אין בלוקים מוגדרים — העמוד מוצג במבנה ברירת המחדל (כותרת ופרטים, תוכן, סילבוס, מרצים,
@@ -163,6 +208,11 @@ export function TrainingBlocksEditor({
                     <span className="font-semibold text-ink">
                       {BLOCK_TYPE_LABELS[block.block_type]}
                     </span>
+                    {(block as { shared_block_id?: string | null }).shared_block_id ? (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                        משותף
+                      </span>
+                    ) : null}
                     {isSection ? (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
                         תוכן מטופס ההכשרה

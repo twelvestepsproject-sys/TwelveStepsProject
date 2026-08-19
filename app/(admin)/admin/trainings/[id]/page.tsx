@@ -29,11 +29,12 @@ export default async function EditTrainingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [admin, lecturers, session, blocks] = await Promise.all([
+  const [admin, lecturers, session, blocks, sharedBlocks] = await Promise.all([
     db.listTrainingsAdmin({ perPage: 500 }),
     db.listLecturers(),
     getDevSession(),
     db.getTrainingBlocksAdmin(id),
+    db.listSharedBlocks(),
   ]);
   const training = admin.items.find((t) => t.id === id);
   if (!training) notFound();
@@ -41,8 +42,17 @@ export default async function EditTrainingPage({
   const canEdit = session?.role === "admin" || session?.role === "editor";
   const coverImage = training.cover_image_id ? await db.getMedia(training.cover_image_id) : null;
 
+  // Reference rows store empty data on purpose; hydrate from the source so
+  // the edit form is not blank.
+  const sharedById = new Map(sharedBlocks.map((sb) => [sb.id, sb]));
+  const blocksForEditor = blocks.map((b) => {
+    const sharedId = (b as { shared_block_id?: string | null }).shared_block_id;
+    const shared = sharedId ? sharedById.get(sharedId) : undefined;
+    return shared ? ({ ...b, block_type: shared.block_type, data: shared.data } as typeof b) : b;
+  });
+
   const mediaIds = new Set<string>();
-  blocks.forEach((b) => collectMediaIds(b.data, mediaIds));
+  blocksForEditor.forEach((b) => collectMediaIds(b.data, mediaIds));
   const mediaEntries = await Promise.all(
     Array.from(mediaIds).map(async (mid) => [mid, await db.getMedia(mid)] as const),
   );
@@ -61,10 +71,11 @@ export default async function EditTrainingPage({
       <TrainingForm training={training} lecturers={lecturers} canEdit={canEdit} coverImage={coverImage} />
       <TrainingBlocksEditor
         trainingId={training.id}
-        initialBlocks={blocks}
+        initialBlocks={blocksForEditor}
         canEdit={canEdit}
         mediaById={mediaById}
         lecturers={visibleLecturers}
+        sharedBlocks={sharedBlocks.map((sb) => ({ id: sb.id, name: sb.name, block_type: sb.block_type }))}
       />
     </div>
   );

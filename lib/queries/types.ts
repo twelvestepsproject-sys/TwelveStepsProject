@@ -1,6 +1,7 @@
 import type {
   Page,
   PageBlock,
+  SharedBlock,
   PageInput,
   PostSummary,
   Post,
@@ -120,6 +121,14 @@ export interface DataSource {
    * blocks too; `getTraining` already nests the visible ones for the site. */
   getTrainingBlocksAdmin(trainingId: string): Promise<PageBlock[]>;
   saveTrainingBlocks(trainingId: string, blocks: PageBlock[]): Promise<void>;
+  // ---- Shared blocks (migration 24) ----
+  /** Blocks stored once and rendered on several pages. `listSharedBlocks`
+   * powers the "insert existing block" picker; the rest are plain CRUD. */
+  listSharedBlocks(): Promise<SharedBlock[]>;
+  getSharedBlock(id: string): Promise<SharedBlock | null>;
+  saveSharedBlock(input: Partial<SharedBlock> & { id?: string }): Promise<SharedBlock>;
+  deleteSharedBlock(id: string): Promise<void>;
+
 
   // ---- Lecturers ----
   listLecturers(opts?: { visibleOnly?: boolean }): Promise<Lecturer[]>;

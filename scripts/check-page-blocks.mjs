@@ -1215,6 +1215,96 @@ check("program_stages now has a real admin form, not raw JSON", () => {
 
 
 // ---------------------------------------------------------------------
+// 4k. Shared blocks (migration 24)
+// ---------------------------------------------------------------------
+console.log("\n[schema] shared blocks");
+
+const { sharedBlockSchema } = await import("../lib/schemas/blocks.ts");
+
+check("sharedBlockSchema accepts a named block with content", () => {
+  const result = sharedBlockSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    name: "הספרייה של הנני",
+    block_type: "reading_list",
+    data: { heading: "ספרים", intro: null, items: [] },
+    created_at: "2026-08-19T00:00:00Z",
+    updated_at: "2026-08-19T00:00:00Z",
+  });
+  assert(result.success, "a valid shared block was rejected");
+});
+
+check("a page_blocks row may carry shared_block_id", () => {
+  const result = pageBlockSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    page_id: "00000000-0000-4000-8000-000000000002",
+    shared_block_id: "00000000-0000-4000-8000-000000000003",
+    sort_order: 1,
+    is_visible: true,
+    block_type: "reading_list",
+    data: { heading: "x", intro: null, items: [] },
+  });
+  assert(result.success, "a reference row was rejected");
+});
+
+check("BACKWARD COMPAT: rows without shared_block_id still parse", () => {
+  const result = pageBlockSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    page_id: "00000000-0000-4000-8000-000000000002",
+    sort_order: 1,
+    is_visible: true,
+    block_type: "faq",
+    data: { heading: "שאלות", intro: null, items: [] },
+  });
+  assert(result.success, "an ordinary inline block should be unaffected");
+});
+
+check("the DataSource exposes shared-block CRUD", () => {
+  const src = readFileSync(new URL("../lib/queries/types.ts", import.meta.url), "utf8");
+  for (const m of ["listSharedBlocks", "getSharedBlock", "saveSharedBlock", "deleteSharedBlock"]) {
+    assert(src.includes(m), "missing DataSource method: " + m);
+  }
+});
+
+check("both data sources implement the shared-block methods", () => {
+  for (const f of ["../lib/queries/supabase/index.ts", "../lib/queries/mock/index.ts"]) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    assert(src.includes("listSharedBlocks"), f + " does not implement listSharedBlocks");
+    assert(src.includes("saveSharedBlock"), f + " does not implement saveSharedBlock");
+  }
+});
+
+check("reads resolve references to the shared source", () => {
+  const src = readFileSync(new URL("../lib/queries/supabase/index.ts", import.meta.url), "utf8");
+  assert(src.includes("resolveSharedBlocks"), "no resolution helper");
+  // Both public read paths must resolve, or a shared block renders empty.
+  assert(
+    (src.match(/await resolveSharedBlocks\(/g) || []).length >= 2,
+    "getPage and getTraining must both resolve shared references",
+  );
+});
+
+check("a reference row stores no content of its own", () => {
+  const src = readFileSync(new URL("../lib/queries/supabase/index.ts", import.meta.url), "utf8");
+  // Duplicating content into the placement row is what would let the copies
+  // drift apart — the exact thing sharing exists to prevent.
+  assert(
+    (src.match(/data: sharedId \? \{\} : b\.data/g) || []).length >= 2,
+    "savePage and saveTrainingBlocks must blank a reference's own data",
+  );
+});
+
+check("the page editor can insert and promote shared blocks", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/pages/page-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("addSharedBlock"), "no insert-existing-block control");
+  assert(src.includes("shareBlock"), "no promote-to-shared control");
+  assert(src.includes("updateSharedBlockData"), "edits would not reach the shared source");
+});
+
+
+// ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------
 console.log("\n[database] block_type enum");

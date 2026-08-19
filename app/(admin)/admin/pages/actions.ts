@@ -100,3 +100,57 @@ export async function createPageAndRedirect(formData: FormData) {
   revalidatePath("/admin/pages");
   redirect(`/admin/pages/${saved.id}`);
 }
+
+/**
+ * Shared blocks (migration 24). Two operations the page editor needs:
+ * promote an inline block into the shared library, and update a shared
+ * block's content from wherever it is placed.
+ *
+ * Both revalidate every path, because a shared block by definition appears
+ * on pages this action knows nothing about — narrowing that would leave
+ * stale copies on the other placements.
+ */
+export async function createSharedBlockAction(
+  name: string,
+  blockType: string,
+  data: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    await requireContentRole();
+    if (!name.trim()) return { ok: false, error: "יש לתת שם לבלוק המשותף." };
+    const saved = await db.saveSharedBlock({
+      name: name.trim(),
+      block_type: blockType as never,
+      data,
+    } as never);
+    revalidatePath("/", "layout");
+    return { ok: true, data: { id: saved.id } };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}
+
+export async function updateSharedBlockAction(
+  id: string,
+  data: unknown,
+): Promise<ActionResult<null>> {
+  try {
+    await requireContentRole();
+    await db.saveSharedBlock({ id, data } as never);
+    revalidatePath("/", "layout");
+    return { ok: true, data: null };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}
+
+export async function deleteSharedBlockAction(id: string): Promise<ActionResult<null>> {
+  try {
+    await requireContentRole();
+    await db.deleteSharedBlock(id);
+    revalidatePath("/", "layout");
+    return { ok: true, data: null };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}

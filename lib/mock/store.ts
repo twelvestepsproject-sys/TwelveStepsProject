@@ -21,6 +21,7 @@ import type {
   ContactMessage,
   Redirect,
   Profile,
+  SharedBlock,
 } from "@/lib/schemas";
 
 import { pages } from "@/lib/mock/fixtures/pages";
@@ -67,6 +68,8 @@ export interface Galleries {
 
 export interface MockDb {
   pages: Page[];
+  /** Shared blocks (migration 24) — content rendered on several pages. */
+  sharedBlocks: SharedBlock[];
   posts: Post[];
   categories: Category[];
   trainings: Training[];
@@ -117,6 +120,9 @@ function reindexProgramStages(db: MockDb): void {
 function seed(): MockDb {
   const db: MockDb = {
     pages: clone(pages),
+    // No shared-block fixtures: the feature is editor-created content, and
+    // an empty list is the honest starting state.
+    sharedBlocks: [],
     posts: clone(posts),
     categories: clone(categories),
     trainings: clone(trainings),

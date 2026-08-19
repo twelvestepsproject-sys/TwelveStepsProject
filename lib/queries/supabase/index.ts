@@ -3,6 +3,7 @@ import type {
   Page,
   PageInput,
   PageBlock,
+  SharedBlock,
   PostSummary,
   Post,
   Training,
@@ -86,6 +87,7 @@ function rowToPageBlock(row: {
   id: string;
   page_id?: string | null;
   training_id?: string | null;
+  shared_block_id?: string | null;
   block_type: string;
   sort_order: number;
   is_visible: boolean;
@@ -95,6 +97,7 @@ function rowToPageBlock(row: {
     id: row.id,
     page_id: row.page_id ?? null,
     training_id: row.training_id ?? null,
+    shared_block_id: row.shared_block_id ?? null,
     sort_order: row.sort_order,
     is_visible: row.is_visible,
     block_type: row.block_type,
@@ -123,7 +126,7 @@ async function getPage(slug: string): Promise<Page | null> {
 
   return {
     ...page,
-    blocks: (blocks ?? []).map(rowToPageBlock),
+    blocks: await resolveSharedBlocks((blocks ?? []).map(rowToPageBlock)),
   } as Page;
 }
 
@@ -186,13 +189,19 @@ async function savePage(input: PageInput): Promise<Page> {
   throwIfError(deleteError, "savePage delete blocks");
 
   if (blocks && blocks.length > 0) {
-    const blockRows = blocks.map((b) => ({
-      page_id: pageId,
-      block_type: b.block_type,
-      sort_order: b.sort_order,
-      is_visible: b.is_visible,
-      data: b.data,
-    }));
+    const blockRows = blocks.map((b) => {
+      const sharedId = (b as { shared_block_id?: string | null }).shared_block_id ?? null;
+      return {
+        page_id: pageId,
+        shared_block_id: sharedId,
+        block_type: b.block_type,
+        sort_order: b.sort_order,
+        is_visible: b.is_visible,
+        // A reference stores no content of its own — the source is the
+        // single copy, so there is nothing here to drift out of sync.
+        data: sharedId ? {} : b.data,
+      };
+    });
     const { error: insertError } = await supabase.from("page_blocks").insert(blockRows);
     throwIfError(insertError, "savePage insert blocks");
   }
@@ -217,6 +226,79 @@ async function deletePage(id: string): Promise<void> {
   const { error } = await supabase.from("pages").delete().eq("id", id);
   throwIfError(error, "deletePage");
 }
+
+// ---------------------------------------------------------------------
+// Shared blocks (migration 24)
+// ---------------------------------------------------------------------
+
+/**
+ * Replaces every reference row with the shared block's own content, so
+ * callers downstream (renderers, the page editor) never need to know a
+ * block was shared. One query for all referenced ids, not one per row.
+ *
+ * A reference whose source was deleted is dropped rather than rendered
+ * empty — the FK cascades on delete, so this only guards against a race.
+ */
+async function resolveSharedBlocks(blocks: PageBlock[]): Promise<PageBlock[]> {
+  const ids = blocks
+    .map((b) => (b as { shared_block_id?: string | null }).shared_block_id)
+    .filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return blocks;
+
+  const supabase = await getClient();
+  const { data, error } = await supabase.from("shared_blocks").select("*").in("id", ids);
+  throwIfError(error, "resolveSharedBlocks");
+
+  const byId = new Map((data ?? []).map((r) => [r.id, r]));
+  return blocks
+    .map((b) => {
+      const sharedId = (b as { shared_block_id?: string | null }).shared_block_id;
+      if (!sharedId) return b;
+      const shared = byId.get(sharedId);
+      if (!shared) return null;
+      // Placement (sort_order, is_visible, owner) stays with the reference;
+      // type and content come from the source.
+      return { ...b, block_type: shared.block_type, data: shared.data } as PageBlock;
+    })
+    .filter((b): b is PageBlock => b !== null);
+}
+
+async function listSharedBlocks(): Promise<SharedBlock[]> {
+  const supabase = await getClient();
+  const { data, error } = await supabase
+    .from("shared_blocks")
+    .select("*")
+    .order("name", { ascending: true });
+  throwIfError(error, "listSharedBlocks");
+  return (data ?? []) as SharedBlock[];
+}
+
+async function getSharedBlock(id: string): Promise<SharedBlock | null> {
+  const supabase = await getClient();
+  const { data, error } = await supabase.from("shared_blocks").select("*").eq("id", id).maybeSingle();
+  throwIfError(error, "getSharedBlock");
+  return (data as SharedBlock | null) ?? null;
+}
+
+async function saveSharedBlock(
+  input: Partial<SharedBlock> & { id?: string },
+): Promise<SharedBlock> {
+  const supabase = await getClient();
+  const { id, created_at, updated_at, ...fields } = input as Record<string, unknown> & { id?: string };
+  const query = id
+    ? supabase.from("shared_blocks").update(fields).eq("id", id).select().single()
+    : supabase.from("shared_blocks").insert(fields).select().single();
+  const { data, error } = await query;
+  throwIfError(error, "saveSharedBlock");
+  return data as SharedBlock;
+}
+
+async function deleteSharedBlock(id: string): Promise<void> {
+  const supabase = await getClient();
+  const { error } = await supabase.from("shared_blocks").delete().eq("id", id);
+  throwIfError(error, "deleteSharedBlock");
+}
+
 
 // ---------------------------------------------------------------------
 // Posts
@@ -445,7 +527,10 @@ async function getTraining(slug: string): Promise<Training | null> {
     .order("sort_order", { ascending: true });
   throwIfError(blocksError, "getTraining blocks");
 
-  return rowToTraining({ ...data, blocks: (blocks ?? []).map(rowToPageBlock) });
+  return rowToTraining({
+    ...data,
+    blocks: await resolveSharedBlocks((blocks ?? []).map(rowToPageBlock)),
+  });
 }
 
 /** Admin variant: every block regardless of `is_visible`, so the editor can
@@ -471,14 +556,18 @@ async function saveTrainingBlocks(trainingId: string, blocks: PageBlock[]): Prom
   throwIfError(deleteError, "saveTrainingBlocks delete");
 
   if (blocks.length > 0) {
-    const rows = blocks.map((b, i) => ({
-      training_id: trainingId,
-      page_id: null,
-      block_type: b.block_type,
-      sort_order: i + 1,
-      is_visible: b.is_visible,
-      data: b.data,
-    }));
+    const rows = blocks.map((b, i) => {
+      const sharedId = (b as { shared_block_id?: string | null }).shared_block_id ?? null;
+      return {
+        training_id: trainingId,
+        page_id: null,
+        shared_block_id: sharedId,
+        block_type: b.block_type,
+        sort_order: i + 1,
+        is_visible: b.is_visible,
+        data: sharedId ? {} : b.data,
+      };
+    });
     const { error: insertError } = await supabase.from("page_blocks").insert(rows);
     throwIfError(insertError, "saveTrainingBlocks insert");
   }
@@ -1410,6 +1499,10 @@ export const supabaseDataSource: DataSource = {
   deleteTraining,
   getTrainingBlocksAdmin,
   saveTrainingBlocks,
+  listSharedBlocks,
+  getSharedBlock,
+  saveSharedBlock,
+  deleteSharedBlock,
 
   listLecturers,
   listLecturersAdmin,

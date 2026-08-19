@@ -27,18 +27,27 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
   // Lecturers are fetched here (server) and passed down because the block
   // editor is a client component: the lecturers_grid form needs the full
   // visible roster to render its selection checkboxes.
-  const [all, session, lecturers] = await Promise.all([
+  const [all, session, lecturers, sharedBlocks] = await Promise.all([
     db.listPages({ perPage: 500, includeDrafts: true }),
     getDevSession(),
     db.listLecturers({ visibleOnly: true }),
+    db.listSharedBlocks(),
   ]);
   const page = all.items.find((p) => p.id === id);
   if (!page) notFound();
 
   const canEdit = session?.role === "admin" || session?.role === "editor";
 
+  const sharedById = new Map(sharedBlocks.map((sb) => [sb.id, sb]));
+  const blocksForEditor = page.blocks.map((b) => {
+    const sharedId = (b as { shared_block_id?: string | null }).shared_block_id;
+    const shared = sharedId ? sharedById.get(sharedId) : undefined;
+    return shared ? { ...b, block_type: shared.block_type, data: shared.data } : b;
+  });
+  const pageForEditor = { ...page, blocks: blocksForEditor } as typeof page;
+
   const mediaIds = new Set<string>();
-  page.blocks.forEach((b) => collectMediaIds(b.data, mediaIds));
+  blocksForEditor.forEach((b) => collectMediaIds(b.data, mediaIds));
   const mediaEntries = await Promise.all(
     Array.from(mediaIds).map(async (mid) => [mid, await db.getMedia(mid)] as const),
   );
@@ -51,10 +60,11 @@ export default async function EditPagePage({ params }: { params: Promise<{ id: s
     <div className="flex flex-col gap-4">
       <h1 className="font-display text-2xl font-bold text-ink">עריכת עמוד: {page.title}</h1>
       <PageEditor
-        page={page}
+        page={pageForEditor}
         canEdit={canEdit}
         mediaById={mediaById}
         lecturers={lecturers.map((l) => ({ id: l.id, name: l.name, role: l.role }))}
+        sharedBlocks={sharedBlocks.map((sb) => ({ id: sb.id, name: sb.name, block_type: sb.block_type }))}
       />
     </div>
   );
