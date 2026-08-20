@@ -77,7 +77,13 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
       body: "טקסט המסר.",
       link: null,
     },
-    trainings_carousel: { heading: "הכשרות קרובות", intro: null, featured_only: true, all_trainings_link: null },
+    trainings_carousel: {
+      heading: "הכשרות קרובות",
+      intro: null,
+      featured_only: true,
+      layout: "carousel",
+      all_trainings_link: null,
+    },
     about: { icon: null, heading: "אודות", subheading: null, body: "טקסט אודות.", cta: null },
     video_testimonials: { heading: null, videos: [] },
     newsletter_signup: {

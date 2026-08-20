@@ -1,4 +1,5 @@
 import { RegistrationModal } from "./registration-modal";
+import { db } from "@/lib/queries";
 import { CookieConsentBanner } from "./cookie-consent-banner";
 import { AccessibilityToolbar } from "./accessibility-toolbar";
 
@@ -49,10 +50,16 @@ import { AccessibilityToolbar } from "./accessibility-toolbar";
  * these toggles is added, this is the file that would read it (no `db`
  * call is made here today since nothing yet needs one).
  */
-export function GlobalOverlays() {
+export async function GlobalOverlays() {
+  // The registration modal offers the current tracks so a lead records which
+  // one the person asked about. Published-only: an unpublished training must
+  // not be advertised in a form.
+  const trainings = await db.listTrainings();
+  const trainingOptions = trainings.map((t) => t.title);
+
   return (
     <>
-      <RegistrationModal />
+      <RegistrationModal trainings={trainingOptions} />
       <CookieConsentBanner />
       <AccessibilityToolbar />
     </>

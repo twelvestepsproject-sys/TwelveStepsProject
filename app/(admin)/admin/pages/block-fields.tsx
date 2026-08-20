@@ -216,6 +216,7 @@ export function TrainingsCarouselFields({ data, onChange }: { data: Record<strin
     heading: string;
     intro: string | null;
     featured_only: boolean;
+    layout?: string;
     all_trainings_link: { label: string; href: string; open_in_new_tab: boolean } | null;
   };
   return (
@@ -245,6 +246,21 @@ export function TrainingsCarouselFields({ data, onChange }: { data: Record<strin
         />
         הצגת הכשרות מומלצות בלבד (במקום כל ההכשרות)
       </label>
+      <Field
+        label="סגנון תצוגה"
+        htmlFor="tc-layout"
+        hint="״רשת מסודרת״ מתאים כשיש מעט הכשרות — הכרטיסים לא נמתחים."
+      >
+        <select
+          id="tc-layout"
+          className={inputClass}
+          value={d.layout ?? "carousel"}
+          onChange={(e) => onChange({ ...d, layout: e.target.value })}
+        >
+          <option value="carousel">קרוסלה (גלילה לצדדים)</option>
+          <option value="grid">רשת מסודרת</option>
+        </select>
+      </Field>
       <LinkFields
         label='קישור "כל ההכשרות"'
         value={d.all_trainings_link}

@@ -46,7 +46,7 @@ export function openRegistrationModal() {
   }
 }
 
-export function RegistrationModal() {
+export function RegistrationModal({ trainings = [] }: { trainings?: string[] }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState(submitRegistrationAction, initialState);
   const pathname = usePathname();
@@ -206,6 +206,25 @@ export function RegistrationModal() {
                 className="rounded-md border border-border bg-bg px-3 py-2 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               />
             </div>
+            {trainings.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="reg-interest" className="text-sm font-semibold text-ink">
+                  באיזה מסלול מעוניינים?
+                </label>
+                <select
+                  id="reg-interest"
+                  name="interest"
+                  className="rounded-md border border-border bg-bg px-3 py-2 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <option value="">עדיין לא בטוח/ה</option>
+                  {trainings.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <label className="flex items-start gap-2 text-sm text-ink-muted">
               <input type="checkbox" name="consent" required className="mt-1" />
               <span>

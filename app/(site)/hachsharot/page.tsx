@@ -33,19 +33,31 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TrainingsIndexPage() {
-  const trainings = await db.listTrainings();
+  // Heading/intro come from an optional `hachsharot` CMS page so an editor
+  // can change them; the grid below stays code-driven because it renders
+  // live `trainings` rows, not authored blocks. Falls back to the original
+  // wording when no such page exists, so nothing breaks if it is deleted.
+  const [trainings, headerPage] = await Promise.all([
+    db.listTrainings(),
+    db.getPage("hachsharot"),
+  ]);
 
   const covers = await Promise.all(
     trainings.map((t) => (t.cover_image_id ? db.getMedia(t.cover_image_id) : Promise.resolve(null))),
   );
 
+  // A `hero` block on the CMS page supplies the wording when present.
+  const heroBlock = headerPage?.blocks.find((b) => b.block_type === "hero");
+  const heroData = heroBlock?.data as { heading?: string; intro?: string } | undefined;
+  const pageHeading = heroData?.heading || "הכשרות";
+  const pageIntro =
+    heroData?.intro || "מגוון מסלולים — מסדנת היכרות קצרה ועד תוכנית העומק הרב-שנתית.";
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-16">
       <header className="mb-10 text-center">
-        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">הכשרות</h1>
-        <p className="mt-2 text-ink-muted">
-          מגוון מסלולים — מסדנת היכרות קצרה ועד תוכנית העומק הרב-שנתית.
-        </p>
+        <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">{pageHeading}</h1>
+        <p className="mt-2 whitespace-pre-line text-ink-muted">{pageIntro}</p>
       </header>
 
       {trainings.length === 0 ? (

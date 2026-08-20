@@ -97,6 +97,11 @@ export const trainingsCarouselBlockDataSchema = z.object({
   heading: z.string(),
   intro: z.string().nullable(),
   featured_only: z.boolean().default(true),
+  /** "carousel" is the horizontal scroll strip; "grid" is the tidy
+   * three-column layout /hachsharot uses. With only a couple of trainings
+   * the strip stretches its cards and reads as sparse, so editors can pick.
+   * Defaults to the strip, which is what every existing block already is. */
+  layout: z.enum(["carousel", "grid"]).default("carousel"),
   all_trainings_link: linkSchema.nullable(),
 });
 

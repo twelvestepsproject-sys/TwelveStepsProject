@@ -42,6 +42,42 @@ export async function TrainingsCarousel({ data }: { data: TrainingsCarouselData 
           </h2>
           {data.intro ? <p className="text-ink-muted">{data.intro}</p> : null}
         </div>
+        {data.layout === "grid" ? (
+          // Same three-column grid as /hachsharot, so a page with only a
+          // couple of trainings reads as a deliberate set rather than a
+          // half-empty scroll strip.
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {trainings.map((training, i) => {
+              const cover = covers[i];
+              return (
+                <RevealOnScroll key={training.id} delayMs={i * 100}>
+                  <article className="flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
+                    {cover ? (
+                      <Image
+                        src={mediaUrlFor(cover)}
+                        alt={cover.alt_he}
+                        width={cover.width}
+                        height={cover.height}
+                        className="h-40 w-full rounded-md object-cover"
+                      />
+                    ) : null}
+                    <h3 className="font-display text-lg font-bold text-ink">{training.title}</h3>
+                    <p className="text-sm text-ink-muted">{training.excerpt}</p>
+                    {training.starts_on ? (
+                      <p className="text-xs text-ink-muted">מחזור הבא: {training.starts_on}</p>
+                    ) : null}
+                    <a
+                      href={`/hachsharot/${training.slug}`}
+                      className="mt-auto font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      לפרטים נוספים
+                    </a>
+                  </article>
+                </RevealOnScroll>
+              );
+            })}
+          </div>
+        ) : (
         <TrainingsCarouselControls heading={data.heading}>
           {trainings.map((training, i) => {
             const cover = covers[i];
@@ -77,6 +113,7 @@ export async function TrainingsCarousel({ data }: { data: TrainingsCarouselData 
             );
           })}
         </TrainingsCarouselControls>
+        )}
         {data.all_trainings_link ? (
           <div className="mt-8 text-center">
             <a

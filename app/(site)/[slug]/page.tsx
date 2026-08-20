@@ -39,7 +39,7 @@ interface PageProps {
 }
 
 /** Slugs owned by a bespoke route in this segment — see header comment. */
-const RESERVED_SLUGS = new Set(["home", "odot", "tochnit-halimudim"]);
+const RESERVED_SLUGS = new Set(["home", "odot", "tochnit-halimudim", "hachsharot"]);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug: rawSlug } = await params;

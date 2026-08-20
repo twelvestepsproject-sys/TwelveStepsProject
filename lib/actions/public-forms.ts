@@ -108,6 +108,7 @@ export async function submitRegistrationAction(
       last_name: String(formData.get("last_name") ?? ""),
       email: String(formData.get("email") ?? ""),
       phone: String(formData.get("phone") ?? ""),
+      interest: formData.get("interest") ? String(formData.get("interest")) : null,
       source_page: formData.get("source_page") ? String(formData.get("source_page")) : null,
       utm: null,
       consent_at: new Date().toISOString(),

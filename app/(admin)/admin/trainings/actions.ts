@@ -68,11 +68,14 @@ export async function saveTrainingAction(formData: FormData): Promise<ActionResu
       is_featured: formData.get("is_featured") === "on",
       status: (formData.get("status") as Training["status"]) ?? "draft",
       sort_order: Number(formData.get("sort_order") ?? 0),
-      seo_title: null,
-      seo_description: null,
-      seo_canonical: null,
+      // The trainings table has carried these columns all along, but the
+      // form never exposed them and this action hardcoded null — so every
+      // save silently wiped whatever was there. Now read from the form.
+      seo_title: (formData.get("seo_title") as string) || null,
+      seo_description: (formData.get("seo_description") as string) || null,
+      seo_canonical: (formData.get("seo_canonical") as string) || null,
       seo_og_image_id: null,
-      seo_noindex: false,
+      seo_noindex: formData.get("seo_noindex") === "on",
     };
 
     const saved = await db.saveTraining(input);

@@ -29,6 +29,10 @@ interface FormState {
   status: "draft" | "published";
   sort_order: string;
   instructor_ids: string[];
+  seo_title: string;
+  seo_description: string;
+  seo_canonical: string;
+  seo_noindex: boolean;
 }
 
 function toFormState(t?: Training | null): FormState {
@@ -51,6 +55,10 @@ function toFormState(t?: Training | null): FormState {
     status: t?.status ?? "draft",
     sort_order: String(t?.sort_order ?? 0),
     instructor_ids: (t?.instructors ?? []).map((i) => i.id),
+    seo_title: t?.seo_title ?? "",
+    seo_description: t?.seo_description ?? "",
+    seo_canonical: t?.seo_canonical ?? "",
+    seo_noindex: t?.seo_noindex ?? false,
   };
 }
 
@@ -74,6 +82,10 @@ function toFormData(state: FormState, id?: string): FormData {
   if (state.is_featured) fd.set("is_featured", "on");
   fd.set("status", state.status);
   fd.set("sort_order", state.sort_order);
+  fd.set("seo_title", state.seo_title);
+  fd.set("seo_description", state.seo_description);
+  fd.set("seo_canonical", state.seo_canonical);
+  if (state.seo_noindex) fd.set("seo_noindex", "on");
   for (const id_ of state.instructor_ids) fd.append("instructor_ids", id_);
   return fd;
 }
@@ -319,6 +331,59 @@ export function TrainingForm({
           />
           <span>הכשרה מומלצת (מוצגת בעמוד הבית)</span>
         </label>
+
+        {/* SEO — these columns already existed on `trainings`; the form
+            simply never exposed them, so they could not be filled in. */}
+        <details className="rounded-md border border-border p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-ink">
+            קידום במנועי חיפוש (SEO)
+          </summary>
+          <div className="mt-3 flex flex-col gap-4">
+            <Field
+              label="כותרת SEO"
+              htmlFor="seo_title"
+              hint="ריק = כותרת ההכשרה תשמש כברירת מחדל"
+            >
+              <input
+                id="seo_title"
+                className={inputClass}
+                value={state.seo_title}
+                onChange={(e) => update("seo_title", e.target.value)}
+              />
+            </Field>
+            <Field
+              label="תיאור SEO"
+              htmlFor="seo_description"
+              hint="ריק = התקציר ישמש כברירת מחדל"
+            >
+              <textarea
+                id="seo_description"
+                className={textareaClass}
+                value={state.seo_description}
+                onChange={(e) => update("seo_description", e.target.value)}
+              />
+            </Field>
+            <Field label="כתובת קנונית" htmlFor="seo_canonical" hint="אופציונלי">
+              <input
+                id="seo_canonical"
+                className={inputClass}
+                dir="ltr"
+                value={state.seo_canonical}
+                onChange={(e) => update("seo_canonical", e.target.value)}
+              />
+            </Field>
+            <label htmlFor="seo_noindex" className="flex items-start gap-2 text-sm text-ink">
+              <input
+                id="seo_noindex"
+                type="checkbox"
+                checked={state.seo_noindex}
+                onChange={(e) => update("seo_noindex", e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span>הסתרה ממנועי חיפוש (noindex)</span>
+            </label>
+          </div>
+        </details>
 
         <Field label="סטטוס" htmlFor="status">
           <select

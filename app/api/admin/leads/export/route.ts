@@ -20,12 +20,13 @@ export async function GET() {
 
   const { items } = await db.listLeadsAdmin({ perPage: 10_000 });
   const csv = toCsv(
-    ["שם פרטי", "שם משפחה", "אימייל", "טלפון", "עמוד מקור", "סטטוס", "הערות", "תאריך יצירה"],
+    ["שם פרטי", "שם משפחה", "אימייל", "טלפון", "מסלול מבוקש", "עמוד מקור", "סטטוס", "הערות", "תאריך יצירה"],
     items.map((l) => [
       l.first_name,
       l.last_name,
       l.email,
       l.phone,
+      l.interest ?? "",
       l.source_page ?? "",
       l.status,
       l.notes ?? "",

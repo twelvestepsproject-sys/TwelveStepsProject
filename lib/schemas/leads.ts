@@ -12,6 +12,10 @@ export const leadSchema = z.object({
   last_name: z.string(),
   email: z.email(),
   phone: z.string(),
+  /** Which track the person asked about. Free text — a lead records what
+   * someone said they wanted, so the label they saw is frozen even if the
+   * training is later renamed or removed. */
+  interest: z.string().nullable().default(null),
   source_page: z.string().nullable(),
   utm: z.record(z.string(), z.string()).nullable(),
   consent_at: timestampSchema,

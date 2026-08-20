@@ -1305,6 +1305,127 @@ check("the page editor can insert and promote shared blocks", () => {
 
 
 // ---------------------------------------------------------------------
+// 4l. Second client feedback round
+// ---------------------------------------------------------------------
+console.log("\n[schema] second feedback round");
+
+const { trainingsCarouselBlockDataSchema } = await import("../lib/schemas/blocks.ts");
+const { leadSchema } = await import("../lib/schemas/leads.ts");
+
+check("BUG FIX: the trainings editor can promote a block to shared", () => {
+  const src = readFileSync(
+    new URL("../app/(admin)/admin/trainings/training-blocks-editor.tsx", import.meta.url),
+    "utf8",
+  );
+  // This was the reported bug: the editor could insert an existing shared
+  // block but had no way to create one, so sharing worked from a page and
+  // not from a training.
+  assert(src.includes("shareBlock"), "no promote-to-shared control");
+  assert(src.includes("createSharedBlockAction"), "promote action not imported");
+  assert(src.includes("updateSharedBlockData"), "edits would not reach the shared source");
+});
+
+check("trainings_carousel offers a grid layout", () => {
+  const result = trainingsCarouselBlockDataSchema.safeParse({
+    heading: "מסלולים",
+    intro: null,
+    featured_only: true,
+    layout: "grid",
+    all_trainings_link: null,
+  });
+  assert(result.success, "grid layout was rejected");
+});
+
+check("BACKWARD COMPAT: a carousel block without `layout` still parses", () => {
+  const result = trainingsCarouselBlockDataSchema.safeParse({
+    heading: "מסלולים",
+    intro: null,
+    featured_only: true,
+    all_trainings_link: null,
+  });
+  assert(result.success, "an existing block should keep working");
+  assert(result.data.layout === "carousel", "layout should default to the scroll strip");
+});
+
+check("the carousel renderer implements both layouts", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/trainings-carousel.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('data.layout === "grid"'), "grid branch missing");
+  assert(src.includes("TrainingsCarouselControls"), "scroll-strip branch missing");
+});
+
+check("leads carry which track the person asked about", () => {
+  const result = leadSchema.safeParse({
+    id: "00000000-0000-4000-8000-000000000001",
+    first_name: "א", last_name: "ב",
+    email: "a@example.com", phone: "0500000000",
+    interest: "הכשרת 12 הצעדים",
+    source_page: "/", utm: null,
+    consent_at: "2026-08-20T00:00:00Z",
+    status: "new", notes: null,
+    created_at: "2026-08-20T00:00:00Z",
+    updated_at: "2026-08-20T00:00:00Z",
+  });
+  assert(result.success, "a lead with an interest was rejected");
+});
+
+check("the registration form collects and submits the interest", () => {
+  const modal = readFileSync(
+    new URL("../components/layout/registration-modal.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(modal.includes('name="interest"'), "no interest field in the form");
+  const action = readFileSync(
+    new URL("../lib/actions/public-forms.ts", import.meta.url),
+    "utf8",
+  );
+  assert(action.includes('formData.get("interest")'), "the action ignores the field");
+});
+
+check("the interest reaches the admin and the CSV export", () => {
+  const drawer = readFileSync(
+    new URL("../app/(admin)/admin/leads/detail-drawer.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(drawer.includes("lead.interest"), "not shown in the lead detail");
+  const csv = readFileSync(
+    new URL("../app/api/admin/leads/export/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert(csv.includes("l.interest"), "missing from the CSV export");
+});
+
+check("/hachsharot takes its heading from an editable page", () => {
+  const src = readFileSync(
+    new URL("../app/(site)/hachsharot/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes('db.getPage("hachsharot")'), "heading is still hardcoded");
+  // The fallback keeps the page working if that CMS page is ever deleted.
+  assert(src.includes('|| "הכשרות"'), "no fallback wording");
+});
+
+check("trainings expose their SEO fields in the admin form", () => {
+  const form = readFileSync(
+    new URL("../app/(admin)/admin/trainings/training-form.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(form.includes("seo_title"), "SEO fields still missing from the form");
+  const action = readFileSync(
+    new URL("../app/(admin)/admin/trainings/actions.ts", import.meta.url),
+    "utf8",
+  );
+  // Previously hardcoded null, which silently wiped the columns on save.
+  assert(
+    action.includes('formData.get("seo_title")'),
+    "the save action would still discard SEO values",
+  );
+});
+
+
+// ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------
 console.log("\n[database] block_type enum");

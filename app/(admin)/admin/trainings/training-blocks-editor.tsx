@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveTrainingBlocksAction } from "./actions";
+import {
+  createSharedBlockAction,
+  updateSharedBlockAction,
+} from "../pages/actions";
 import { inputClass, PrimaryButton, SecondaryButton } from "@/components/admin/fields";
 import { BLOCK_TYPE_LABELS, BLOCK_TYPES_WITH_CUSTOM_FORM, createNewBlock } from "@/lib/admin/block-registry";
 import { BlockDataForm } from "../pages/page-editor";
@@ -63,6 +67,51 @@ export function TrainingBlocksEditor({
   function addBlock() {
     setBlocks((b) => [...b, createNewBlock(addingType, trainingId, b.length + 1)]);
     setNotice(null);
+  }
+
+  /** A block row is a shared reference when it carries a shared_block_id. */
+  function sharedIdOf(b: PageBlock): string | null {
+    return (b as { shared_block_id?: string | null }).shared_block_id ?? null;
+  }
+
+  function sharedNameOf(b: PageBlock): string {
+    const id = sharedIdOf(b);
+    return sharedBlocks.find((sb) => sb.id === id)?.name ?? "";
+  }
+
+  /**
+   * Promotes an inline block into the shared library and turns this row into
+   * a reference. Mirrors the pages editor: this was missing here, which is
+   * why a block could be shared from a page but not from a training.
+   */
+  function shareBlock(block: PageBlock) {
+    const name = prompt("שם לבלוק המשותף (כך הוא יופיע ברשימת הבחירה):", "");
+    if (!name?.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await createSharedBlockAction(name, block.block_type, block.data);
+      if (!result.ok || !result.data) {
+        setError(result.error ?? "יצירת הבלוק המשותף נכשלה.");
+        return;
+      }
+      setBlocks((b) =>
+        b.map((x) =>
+          x.id === block.id
+            ? ({ ...x, shared_block_id: result.data!.id, data: {} } as unknown as PageBlock)
+            : x,
+        ),
+      );
+      setNotice("הבלוק נשמר כבלוק משותף. יש ללחוץ ״שמירת מבנה העמוד״ כדי לקבע את השינוי.");
+      router.refresh();
+    });
+  }
+
+  /** Edits to a shared block write to the source, so every placement updates. */
+  function updateSharedBlockData(sharedId: string, data: Record<string, unknown>) {
+    startTransition(async () => {
+      const result = await updateSharedBlockAction(sharedId, data);
+      if (!result.ok) setError(result.error ?? "עדכון הבלוק המשותף נכשל.");
+    });
   }
 
   /** Reference row: content resolves from the shared source on read. */
@@ -210,7 +259,7 @@ export function TrainingBlocksEditor({
                     </span>
                     {(block as { shared_block_id?: string | null }).shared_block_id ? (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                        משותף
+                        משותף · {sharedNameOf(block)}
                       </span>
                     ) : null}
                     {isSection ? (
@@ -269,12 +318,30 @@ export function TrainingBlocksEditor({
                 </div>
                 {!isCollapsed ? (
                   <div className="border-t border-border p-4">
+                    {sharedIdOf(block) ? (
+                      <p className="mb-3 rounded bg-primary/5 px-2 py-1.5 text-xs text-ink-muted">
+                        זהו בלוק משותף. עריכה כאן תעדכן אותו בכל העמודים שבהם הוא מופיע.
+                      </p>
+                    ) : null}
                     <BlockDataForm
                       block={block}
                       mediaById={mediaById}
                       lecturers={lecturers}
-                      onChange={(data) => updateBlockData(block.id, data)}
+                      onChange={(data) => {
+                        const sharedId = sharedIdOf(block);
+                        updateBlockData(block.id, data);
+                        if (sharedId) updateSharedBlockData(sharedId, data);
+                      }}
                     />
+                    {!sharedIdOf(block) && !isSection && canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() => shareBlock(block)}
+                        className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                      >
+                        ♻ שמירה כבלוק משותף (לשימוש בעמודים נוספים)
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </li>

@@ -142,6 +142,7 @@ function LeadDetail({
       <DetailRow label="שם מלא" value={`${lead.first_name} ${lead.last_name}`} />
       <DetailRow label="אימייל" value={lead.email} />
       <DetailRow label="טלפון" value={lead.phone} />
+      <DetailRow label="מסלול מבוקש" value={lead.interest ?? "—"} />
       <DetailRow label="עמוד מקור" value={lead.source_page ?? ""} />
       <DetailRow label="תאריך הסכמה" value={new Date(lead.consent_at).toLocaleString("he-IL")} />
       <DetailRow label="נוצר בתאריך" value={new Date(lead.created_at).toLocaleString("he-IL")} />
