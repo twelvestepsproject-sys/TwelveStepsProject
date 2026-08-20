@@ -59,33 +59,33 @@ export function TrainingIntro({
       <p className="mt-4 text-lg text-ink-muted">{training.excerpt}</p>
 
       {showDetails ? (
-        <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-5 text-sm sm:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface p-5 text-sm min-[420px]:grid-cols-2 sm:grid-cols-4">
           {training.starts_on ? (
             <div>
               <dt className="font-semibold text-ink">תאריך התחלה</dt>
-              <dd className="text-ink-muted">{training.starts_on}</dd>
+              <dd className="break-words text-ink-muted">{training.starts_on}</dd>
             </div>
           ) : null}
           {training.meeting_day ? (
             <div>
               <dt className="font-semibold text-ink">ימי מפגש</dt>
-              <dd className="text-ink-muted">{training.meeting_day}</dd>
+              <dd className="break-words text-ink-muted">{training.meeting_day}</dd>
             </div>
           ) : null}
           {training.meeting_time ? (
             <div>
               <dt className="font-semibold text-ink">שעות מפגש</dt>
-              <dd className="text-ink-muted">{training.meeting_time}</dd>
+              <dd className="break-words text-ink-muted">{training.meeting_time}</dd>
             </div>
           ) : null}
           <div>
             <dt className="font-semibold text-ink">היקף</dt>
-            <dd className="text-ink-muted">{formatHours(training.academic_hours)}</dd>
+            <dd className="break-words text-ink-muted">{formatHours(training.academic_hours)}</dd>
           </div>
           {price ? (
             <div>
               <dt className="font-semibold text-ink">מחיר</dt>
-              <dd className="text-ink-muted">{price}</dd>
+              <dd className="break-words text-ink-muted">{price}</dd>
             </div>
           ) : null}
         </dl>

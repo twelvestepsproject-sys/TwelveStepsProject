@@ -22,29 +22,56 @@ const DEFAULT_TRAINING_LAYOUT: BlockType[] = [
 ];
 
 /**
- * Training-owned blocks come in two kinds:
- *  - the five `training_*` sections, which read from the `training` row
- *    (their values are still edited in /admin/trainings, not in the block);
- *  - any ordinary content block (faq, requirements, reading_list, …),
- *    which renders through the shared registry exactly as on a page.
+ * The five `training_*` sections were written for a narrow, padded column
+ * (they emit bare headings and lists, no section chrome of their own).
+ * Every other block type is a full-bleed page section that supplies its own
+ * `px-6` and background — nesting those inside a padded `max-w-3xl` wrapper
+ * double-padded them and boxed their backgrounds into a narrow strip, which
+ * is what broke this page on mobile once it started using content blocks.
+ *
+ * So the wrapper moves from the page onto the training sections only.
  */
 function renderTrainingBlock(block: PageBlock, training: Training, cover: Media | null) {
   switch (block.block_type) {
     case "training_intro":
       return (
-        <TrainingIntro key={block.id} data={block.data} training={training} cover={cover} />
+        <NarrowSection key={block.id}>
+          <TrainingIntro data={block.data} training={training} cover={cover} />
+        </NarrowSection>
       );
     case "training_body":
-      return <TrainingBody key={block.id} data={block.data} training={training} />;
+      return (
+        <NarrowSection key={block.id}>
+          <TrainingBody data={block.data} training={training} />
+        </NarrowSection>
+      );
     case "training_syllabus":
-      return <TrainingSyllabus key={block.id} data={block.data} training={training} />;
+      return (
+        <NarrowSection key={block.id}>
+          <TrainingSyllabus data={block.data} training={training} />
+        </NarrowSection>
+      );
     case "training_instructors":
-      return <TrainingInstructors key={block.id} data={block.data} training={training} />;
+      return (
+        <NarrowSection key={block.id}>
+          <TrainingInstructors data={block.data} training={training} />
+        </NarrowSection>
+      );
     case "training_registration_cta":
-      return <TrainingRegistrationCta key={block.id} data={block.data} training={training} />;
+      return (
+        <NarrowSection key={block.id}>
+          <TrainingRegistrationCta data={block.data} training={training} />
+        </NarrowSection>
+      );
     default:
+      // Full-bleed: the block brings its own padding, width and background.
       return renderBlock(block);
   }
+}
+
+/** The column the training sections were designed for. */
+function NarrowSection({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto max-w-3xl px-6">{children}</div>;
 }
 
 /**
@@ -130,7 +157,7 @@ export default async function SingleTrainingPage({ params }: PageProps) {
         })) as unknown as PageBlock[]);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main className="py-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {layout.map((block) => renderTrainingBlock(block, training, cover))}

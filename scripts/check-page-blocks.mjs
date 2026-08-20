@@ -1425,6 +1425,43 @@ check("trainings expose their SEO fields in the admin form", () => {
 });
 
 
+check("training pages do not double-pad their content blocks", () => {
+  const src = readFileSync(
+    new URL("../app/(site)/hachsharot/[slug]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  // The bug: <main> was `max-w-3xl px-6`, so full-bleed content blocks
+  // (which bring their own px-6 and background) were nested inside a narrow
+  // padded box — backgrounds got boxed in and content overflowed on mobile.
+  assert(
+    !/<main className="mx-auto max-w-3xl px-6/.test(src),
+    "main must not constrain full-bleed blocks",
+  );
+  // The five training_* sections still need that column, applied per-section.
+  assert(src.includes("NarrowSection"), "training sections lost their column");
+  assert(
+    (src.match(/<NarrowSection key=/g) || []).length === 5,
+    "all five training sections must be wrapped",
+  );
+});
+
+check("the training details table fits a narrow phone", () => {
+  for (const f of [
+    "../components/blocks/training-details.tsx",
+    "../components/blocks/training-sections.tsx",
+  ]) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    // Nine filled fields at two columns pushed long values (a full street
+    // address) past the screen edge.
+    assert(
+      src.includes("grid-cols-1 gap-4 rounded-lg"),
+      f + ": details table must start at one column",
+    );
+    assert(src.includes("break-words text-ink-muted"), f + ": long values must wrap");
+  }
+});
+
+
 // ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------

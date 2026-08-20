@@ -53,11 +53,11 @@ export function TrainingDetails({ data }: { data: TrainingDetailsData }) {
         ) : null}
 
         {rows.length > 0 ? (
-          <dl className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-5 text-sm sm:grid-cols-4">
+          <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface p-5 text-sm min-[420px]:grid-cols-2 sm:grid-cols-4">
             {rows.map((row) => (
               <div key={row.label}>
                 <dt className="font-semibold text-ink">{row.label}</dt>
-                <dd className="text-ink-muted">{row.value}</dd>
+                <dd className="break-words text-ink-muted">{row.value}</dd>
               </div>
             ))}
           </dl>
