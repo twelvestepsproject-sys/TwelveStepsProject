@@ -83,6 +83,16 @@ interface FormState {
   font_display: FontFamilyOption;
   font_body: FontFamilyOption;
   radius_scale: RadiusScale;
+  contact_phone: string;
+  contact_email: string;
+  contact_address: string;
+  /** Kept as an ordered array in the form so rows can be added, renamed and
+   * removed; converted back to the stored record on save. An object would
+   * lose ordering and make an empty new row impossible to represent. */
+  social_links: { platform: string; url: string }[];
+  community_url: string;
+  donation_url: string;
+  footer_credits: string;
 }
 
 function toFormState(s: SiteSettings): FormState {
@@ -103,6 +113,16 @@ function toFormState(s: SiteSettings): FormState {
     font_display: s.font_display ?? "Heebo",
     font_body: s.font_body ?? "Assistant",
     radius_scale: s.radius_scale,
+    contact_phone: s.contact_phone ?? "",
+    contact_email: s.contact_email ?? "",
+    contact_address: s.contact_address ?? "",
+    social_links: Object.entries(s.social_links ?? {}).map(([platform, url]) => ({
+      platform,
+      url,
+    })),
+    community_url: s.community_url ?? "",
+    donation_url: s.donation_url ?? "",
+    footer_credits: s.footer_credits ?? "",
   };
 }
 
@@ -112,6 +132,39 @@ function toFormState(s: SiteSettings): FormState {
  * file's comment for why). */
 function effective(theme: ThemeOverrides, key: string): string {
   return theme[key as keyof ThemeOverrides] || THEME_DEFAULTS[key] || FALLBACK_COLOR;
+}
+
+/**
+ * The form keeps social links as an ordered array so rows can be added and
+ * renamed; the stored shape is a record. Blank rows are dropped rather than
+ * saved as empty keys, so a half-typed row never reaches the footer.
+ */
+function toPayload(data: FormState): BrandingPayload {
+  const social_links: Record<string, string> = {};
+  for (const { platform, url } of data.social_links) {
+    const key = platform.trim();
+    const value = url.trim();
+    if (key && value) social_links[key] = value;
+  }
+  return {
+    site_name: data.site_name,
+    tagline: data.tagline,
+    logo_id: data.logo_id,
+    logo_dark_id: data.logo_dark_id,
+    favicon_id: data.favicon_id,
+    og_default_image_id: data.og_default_image_id,
+    theme: data.theme,
+    font_display: data.font_display,
+    font_body: data.font_body,
+    radius_scale: data.radius_scale,
+    contact_phone: data.contact_phone.trim() || null,
+    contact_email: data.contact_email.trim() || null,
+    contact_address: data.contact_address.trim() || null,
+    social_links,
+    community_url: data.community_url.trim() || null,
+    donation_url: data.donation_url.trim() || null,
+    footer_credits: data.footer_credits.trim() || null,
+  };
 }
 
 export function BrandingForm({
@@ -139,7 +192,7 @@ export function BrandingForm({
     state,
     async (data) => {
       if (!canEdit) return;
-      const result = await saveBrandingAction(data as BrandingPayload);
+      const result = await saveBrandingAction(toPayload(data));
       if (!result.ok) throw new Error(result.error);
     },
   );
@@ -179,7 +232,7 @@ export function BrandingForm({
     setError(null);
     setNotice(null);
     startTransition(async () => {
-      const result = await saveBrandingAction(state as BrandingPayload);
+      const result = await saveBrandingAction(toPayload(state));
       if (!result.ok) {
         setError(result.error ?? "שמירה נכשלה.");
         return;
@@ -402,6 +455,150 @@ export function BrandingForm({
             </PrimaryButton>
           </div>
         ) : null}
+        <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+          <div>
+            <h2 className="font-display text-lg font-bold text-ink">פרטי קשר ורשתות</h2>
+            <p className="mt-1 text-xs text-ink-muted">
+              הפרטים האלה מוצגים בתחתית כל עמוד באתר (Footer).
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="טלפון" htmlFor="br-phone">
+              <input
+                id="br-phone"
+                className={inputClass}
+                dir="ltr"
+                placeholder="03-1234567"
+                value={state.contact_phone}
+                onChange={(e) => update("contact_phone", e.target.value)}
+              />
+            </Field>
+            <Field label="אימייל" htmlFor="br-email">
+              <input
+                id="br-email"
+                className={inputClass}
+                dir="ltr"
+                type="email"
+                placeholder="info@example.co.il"
+                value={state.contact_email}
+                onChange={(e) => update("contact_email", e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <Field label="כתובת" htmlFor="br-address">
+            <input
+              id="br-address"
+              className={inputClass}
+              value={state.contact_address}
+              onChange={(e) => update("contact_address", e.target.value)}
+            />
+          </Field>
+
+          <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+            <p className="text-xs font-semibold text-ink-muted">רשתות חברתיות</p>
+            {state.social_links.length === 0 ? (
+              <p className="rounded bg-surface-alt px-2 py-1.5 text-xs text-ink-muted">
+                אין רשתות. לחצו ״הוספת רשת״ כדי להתחיל.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {state.social_links.map((row, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-2">
+                    <input
+                      className={`${inputClass} w-36`}
+                      placeholder="facebook"
+                      dir="ltr"
+                      aria-label={`שם רשת ${i + 1}`}
+                      value={row.platform}
+                      onChange={(e) =>
+                        update(
+                          "social_links",
+                          state.social_links.map((r, j) =>
+                            j === i ? { ...r, platform: e.target.value } : r,
+                          ),
+                        )
+                      }
+                    />
+                    <input
+                      className={`${inputClass} flex-1`}
+                      placeholder="https://facebook.com/..."
+                      dir="ltr"
+                      aria-label={`כתובת רשת ${i + 1}`}
+                      value={row.url}
+                      onChange={(e) =>
+                        update(
+                          "social_links",
+                          state.social_links.map((r, j) =>
+                            j === i ? { ...r, url: e.target.value } : r,
+                          ),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      aria-label={`מחיקת רשת ${i + 1}`}
+                      onClick={() =>
+                        update(
+                          "social_links",
+                          state.social_links.filter((_, j) => j !== i),
+                        )
+                      }
+                      className="rounded p-1 text-error hover:bg-error/10"
+                    >
+                      🗑
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                update("social_links", [...state.social_links, { platform: "", url: "" }])
+              }
+              className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+            >
+              + הוספת רשת
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="קישור לקבוצת קהילה" htmlFor="br-community" hint="וואטסאפ / טלגרם">
+              <input
+                id="br-community"
+                className={inputClass}
+                dir="ltr"
+                placeholder="https://chat.whatsapp.com/..."
+                value={state.community_url}
+                onChange={(e) => update("community_url", e.target.value)}
+              />
+            </Field>
+            <Field label="קישור לתרומות" htmlFor="br-donation" hint="אופציונלי">
+              <input
+                id="br-donation"
+                className={inputClass}
+                dir="ltr"
+                value={state.donation_url}
+                onChange={(e) => update("donation_url", e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <Field
+            label="שורת זכויות יוצרים"
+            htmlFor="br-credits"
+            hint="השורה בתחתית האתר"
+          >
+            <input
+              id="br-credits"
+              className={inputClass}
+              value={state.footer_credits}
+              onChange={(e) => update("footer_credits", e.target.value)}
+            />
+          </Field>
+        </div>
       </fieldset>
     </form>
   );

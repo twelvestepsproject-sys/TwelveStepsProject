@@ -29,6 +29,16 @@ export interface BrandingPayload {
   font_display: FontFamilyOption;
   font_body: FontFamilyOption;
   radius_scale: RadiusScale;
+  // Contact + links: these columns existed on site_settings and the footer
+  // already rendered them, but no screen edited them — so the shipped
+  // placeholder phone/email/social URLs were unreachable.
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_address: string | null;
+  social_links: Record<string, string>;
+  community_url: string | null;
+  donation_url: string | null;
+  footer_credits: string | null;
 }
 
 export async function saveBrandingAction(payload: BrandingPayload): Promise<ActionResult> {

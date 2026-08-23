@@ -1518,6 +1518,49 @@ check("the renderer omits the headline when there is no heading", () => {
 });
 
 
+check("the branding screen edits contact details and social links", () => {
+  const action = readFileSync(
+    new URL("../app/(admin)/admin/branding/actions.ts", import.meta.url),
+    "utf8",
+  );
+  // These columns existed and the footer rendered them, but no screen wrote
+  // them — so the shipped placeholder phone/email/socials were unreachable.
+  for (const f of ["contact_phone", "contact_email", "social_links", "footer_credits"]) {
+    assert(action.includes(f), "BrandingPayload is missing " + f);
+  }
+  const form = readFileSync(
+    new URL("../app/(admin)/admin/branding/branding-form.tsx", import.meta.url),
+    "utf8",
+  );
+  // Flexible list, not fixed platform fields: the stored shape is a record,
+  // so an editor must be able to add a network we never hardcoded.
+  assert(form.includes("+ הוספת רשת"), "no way to add a social network");
+  assert(form.includes("toPayload"), "form state is not converted to the stored shape");
+});
+
+check("blank social rows are dropped rather than saved", () => {
+  const form = readFileSync(
+    new URL("../app/(admin)/admin/branding/branding-form.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(
+    form.includes("if (key && value) social_links[key] = value;"),
+    "a half-typed row would reach the footer",
+  );
+});
+
+check("the trainings grid centres when it is not full", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/trainings-carousel.tsx", import.meta.url),
+    "utf8",
+  );
+  // Two published trainings in a 3-column grid left the third column empty,
+  // which in RTL pushed the pair to the right edge.
+  assert(src.includes("flex flex-wrap justify-center"), "grid would not centre");
+  assert(src.includes("lg:w-[calc(33.333%-1rem)]"), "cards lost their three-across rhythm");
+});
+
+
 // ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------

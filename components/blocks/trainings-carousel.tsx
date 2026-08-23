@@ -46,11 +46,20 @@ export async function TrainingsCarousel({ data }: { data: TrainingsCarouselData 
           // Same three-column grid as /hachsharot, so a page with only a
           // couple of trainings reads as a deliberate set rather than a
           // half-empty scroll strip.
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          /* Centred rather than a plain 3-column grid: with only two
+             published trainings the third column stays empty, which in RTL
+             pushes the pair to the right edge. A centred flex row with a
+             per-card basis keeps the three-across rhythm when full and
+             centres whatever is there when it is not. */
+          <div className="flex flex-wrap justify-center gap-6">
             {trainings.map((training, i) => {
               const cover = covers[i];
               return (
-                <RevealOnScroll key={training.id} delayMs={i * 100}>
+                <RevealOnScroll
+                  key={training.id}
+                  delayMs={i * 100}
+                  className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]"
+                >
                   <article className="flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
                     {cover ? (
                       <Image
