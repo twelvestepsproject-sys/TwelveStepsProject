@@ -76,12 +76,18 @@ export async function Hero({ data }: { data: HeroData }) {
           <p className="text-base text-primary-fg/90 sm:text-lg">{data.intro}</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             {data.primary_cta_label ? (
-              <button
-                type="button"
+              // BUG FIX: this was a bare <button> with no handler and no href,
+              // so the hero CTA did nothing while the header CTA worked. The
+              // registration modal opens on clicks to an
+              // <a href="#registration-modal"> (see registration-modal.tsx),
+              // which is exactly what the header uses — so match it rather
+              // than wiring a second, parallel mechanism.
+              <a
+                href="#registration-modal"
                 className="rounded-full bg-accent px-6 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {data.primary_cta_label}
-              </button>
+              </a>
             ) : null}
             {data.phone_cta ? (
               <a

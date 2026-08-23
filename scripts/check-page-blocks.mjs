@@ -1462,6 +1462,26 @@ check("the training details table fits a narrow phone", () => {
 });
 
 
+check("the hero CTA actually opens the registration modal", () => {
+  const src = readFileSync(new URL("../components/blocks/hero.tsx", import.meta.url), "utf8");
+  // The bug: the hero rendered a bare <button> with no handler and no href,
+  // so it looked identical to the working header CTA but did nothing. The
+  // modal opens on clicks to <a href="#registration-modal">.
+  assert(
+    src.includes('href="#registration-modal"'),
+    "the hero CTA must link to the registration modal",
+  );
+  const header = readFileSync(
+    new URL("../components/layout/site-header.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(
+    header.includes('href="#registration-modal"'),
+    "the header CTA is the reference implementation and must still match",
+  );
+});
+
+
 // ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------
