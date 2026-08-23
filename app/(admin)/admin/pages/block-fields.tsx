@@ -170,7 +170,7 @@ export function LeaderMessageFields({
   const d = data as {
     portrait_media_id: string | null;
     video_url: string | null;
-    heading: string;
+    heading: string | null;
     body: string;
     link: { label: string; href: string; open_in_new_tab: boolean } | null;
   };
@@ -190,12 +190,16 @@ export function LeaderMessageFields({
           onChange={(e) => onChange({ ...d, video_url: e.target.value || null })}
         />
       </Field>
-      <Field label="כותרת" htmlFor="b-heading" required>
+      <Field
+        label="כותרת"
+        htmlFor="b-heading"
+        hint="ריק = המסר יוצג כפסקה אחת רציפה, בלי כותרת נפרדת"
+      >
         <input
           id="b-heading"
           className={inputClass}
-          value={d.heading}
-          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value || null })}
         />
       </Field>
       <Field label="תוכן המסר" htmlFor="b-body" required>

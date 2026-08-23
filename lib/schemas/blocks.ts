@@ -84,10 +84,14 @@ export const pullQuoteBlockDataSchema = z.object({
 });
 
 // 6. Leader message (repeatable — one row per leader, per §5 #6)
+// `heading` is optional: editors were splitting a single continuous
+// sentence across heading and body because both were required, which
+// rendered the first half as a large bold headline and the rest as muted
+// body text. Leaving it empty renders the message as one plain paragraph.
 export const leaderMessageBlockDataSchema = z.object({
   portrait_media_id: uuidSchema.nullable(),
   video_url: z.string().nullable(),
-  heading: z.string(),
+  heading: z.string().nullable().default(null),
   body: z.string(),
   link: linkSchema.nullable(),
 });

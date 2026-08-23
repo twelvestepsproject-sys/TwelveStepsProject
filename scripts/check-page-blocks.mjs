@@ -1482,6 +1482,42 @@ check("the hero CTA actually opens the registration modal", () => {
 });
 
 
+const { leaderMessageBlockDataSchema } = await import("../lib/schemas/blocks.ts");
+
+check("leader_message heading is optional", () => {
+  // Editors were splitting one continuous sentence across heading and body
+  // because both were required, which rendered the first half as a bold
+  // headline mid-sentence.
+  const result = leaderMessageBlockDataSchema.safeParse({
+    portrait_media_id: null,
+    video_url: null,
+    body: "פסקה אחת רציפה בלי כותרת.",
+    link: null,
+  });
+  assert(result.success, "a message without a heading was rejected");
+  assert(result.data.heading === null, "heading should default to null");
+});
+
+check("BACKWARD COMPAT: a leader_message with a heading still parses", () => {
+  const result = leaderMessageBlockDataSchema.safeParse({
+    portrait_media_id: null,
+    video_url: null,
+    heading: "כותרת",
+    body: "טקסט",
+    link: null,
+  });
+  assert(result.success, "an existing block should keep working");
+});
+
+check("the renderer omits the headline when there is no heading", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/leader-message.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(src.includes("{data.heading ? ("), "the <h2> would render empty");
+});
+
+
 // ---------------------------------------------------------------------
 // 5. Live Postgres enum (only meaningful against the real DB)
 // ---------------------------------------------------------------------

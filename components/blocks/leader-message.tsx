@@ -45,10 +45,14 @@ export async function LeaderMessage({ data }: { data: LeaderMessageData }) {
             </div>
           </div>
         ) : null}
-        <h2 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-          {data.heading}
-        </h2>
-        <p className="text-ink-muted">{data.body}</p>
+        {data.heading ? (
+          <h2 className="font-display text-2xl font-bold text-ink sm:text-3xl">
+            {data.heading}
+          </h2>
+        ) : null}
+        <p className={data.heading ? "text-ink-muted" : "text-lg text-ink-muted"}>
+          {data.body}
+        </p>
         {data.link ? (
           <a
             href={data.link.href}
