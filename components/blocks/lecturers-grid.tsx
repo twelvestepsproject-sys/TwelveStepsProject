@@ -77,22 +77,24 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                   <Image
                     src={mediaUrlFor(photo)}
                     alt={photo.alt_he}
-                    width={220}
-                    height={220}
-                    // object-cover with a fixed frame and top-biased focal
-                    // point: the uploaded photos vary from 0.51 to 1.0 aspect
-                    // ratio, and centring a tall portrait crops the face out.
-                    // A tinted panel behind it means a pre-cut cutout (some
-                    // photos arrive already circle-cropped on white) sits on
-                    // the same ground as a full-bleed one.
-                    className="h-44 w-full rounded-md bg-surface-alt object-cover object-top"
+                    width={600}
+                    height={800}
+                    // Portrait 3:4 — the natural shape for a head-and-
+                    // shoulders photo, and closest to what the uploaded images
+                    // already are. aspect-ratio rather than a fixed height so
+                    // the frame keeps its proportions at every breakpoint.
+                    // object-top because centring a tall portrait crops the
+                    // face; the tinted ground means a photo that arrives
+                    // already cut out on white sits on the same base as a
+                    // full-bleed one.
+                    className="aspect-[3/4] w-full rounded-md bg-surface-alt object-cover object-top"
                   />
                 ) : (
                   // No photo on file — a plain tinted panel rather than a
                   // broken <img> or an invented stand-in portrait. Same
                   // footprint as a real photo so the grid stays even.
                   <div
-                    className="flex h-44 w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
+                    className="flex aspect-[3/4] w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
                     role="img"
                     aria-label={lecturer.name}
                   >
