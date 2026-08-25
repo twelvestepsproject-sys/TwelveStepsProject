@@ -1,4 +1,4 @@
-// One command to get a working local stack: `pnpm setup:local`
+// One command to get a working local stack: `npm run setup:local`
 //
 // Starts Postgres, waits for it, applies the schema, and imports content
 // and media. Every step is idempotent, so re-running is safe and will
@@ -80,4 +80,7 @@ if (await hasSupabaseCreds()) {
   console.log("  The schema is ready; the database is empty.");
 }
 
-console.log("\nDone. Start the site with:  pnpm dev\n");
+// npm_execpath names the package manager that actually invoked this, so
+// the closing hint matches what the reader just typed.
+const runner = (process.env.npm_execpath ?? "").includes("pnpm") ? "pnpm" : "npm run";
+console.log(`\nDone. Start the site with:  ${runner} dev\n`);

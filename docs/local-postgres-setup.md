@@ -7,8 +7,8 @@
 ## התחלה מהירה
 
 ```bash
-pnpm setup:local
-pnpm dev
+npm run setup:local
+npm run dev
 ```
 
 זהו. הפקודה הראשונה מרימה Postgres, יוצרת את הסכימה ומייבאת את כל התוכן
@@ -18,7 +18,7 @@ pnpm dev
 
 ---
 
-## מה `pnpm setup:local` עושה
+## מה `npm run setup:local` עושה
 
 | שלב | פעולה |
 |---|---|
@@ -39,13 +39,13 @@ pnpm dev
 
 | פקודה | מה היא עושה |
 |---|---|
-| `pnpm setup:local` | הקמה מלאה מאפס |
-| `pnpm db:up` | הפעלת Postgres |
-| `pnpm db:down` | עצירה (הנתונים נשמרים) |
-| `pnpm db:reset` | ⚠️ **מחיקת הכל** ובנייה מחדש של הסכימה |
-| `pnpm db:migrate` | הרצת מיגרציות חדשות בלבד |
-| `pnpm db:import` | ייבוא תוכן ותמונות מחדש |
-| `pnpm db:psql` | פתיחת psql על המסד |
+| `npm run setup:local` | הקמה מלאה מאפס |
+| `npm run db:up` | הפעלת Postgres |
+| `npm run db:down` | עצירה (הנתונים נשמרים) |
+| `npm run db:reset` | ⚠️ **מחיקת הכל** ובנייה מחדש של הסכימה |
+| `npm run db:migrate` | הרצת מיגרציות חדשות בלבד |
+| `npm run db:import` | ייבוא תוכן ותמונות מחדש |
+| `npm run db:psql` | פתיחת psql על המסד |
 
 ---
 
@@ -88,7 +88,7 @@ docker start twelvesteps-postgres
 ## הצצה בנתונים
 
 ```bash
-pnpm db:psql
+npm run db:psql
 ```
 
 ```sql
@@ -112,7 +112,7 @@ docker compose logs postgres
 לרוב: פורט 5432 תפוס על ידי Postgres אחר במחשב.
 
 **האתר עולה אבל בלי תוכן**
-הייבוא לא רץ. הרץ `pnpm db:import`.
+הייבוא לא רץ. הרץ `npm run db:import`.
 
 **התמונות שבורות**
 צפוי בשלב זה — הגשת הקבצים מהדיסק עדיין לא הוטמעה. הקבצים כבר
