@@ -15,7 +15,14 @@
     "mock:reset": "node scripts/mock-reset.mjs",
     "supabase:seed": "tsx supabase/seed/seed.mjs",
     "supabase:create-first-admin": "tsx scripts/create-first-admin.mjs",
-    "supabase:rls-proof": "tsx supabase/tests/rls-anon-proof.mjs"
+    "supabase:rls-proof": "tsx supabase/tests/rls-anon-proof.mjs",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d && node scripts/wait-for-db.mjs && node scripts/pg-migrate.mjs",
+    "db:migrate": "node scripts/pg-migrate.mjs",
+    "db:import": "node scripts/pg-import-content.mjs && node scripts/pg-import-storage.mjs",
+    "db:psql": "docker exec -it twelvesteps-postgres psql -U postgres -d twelvesteps",
+    "setup:local": "node scripts/setup-local.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
