@@ -1,0 +1,30 @@
+# Local Postgres for development.
+#
+# Mirrors what will run on the server, so a schema that works here works
+# there. Only the port is published, and only to localhost — the database
+# is never reachable from the network, which is what lets authorization
+# live in the application layer.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: twelvesteps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-twelvesteps}
+    ports:
+      # 127.0.0.1 prefix matters: without it Docker publishes on 0.0.0.0
+      # and the database is exposed to the local network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-twelvesteps}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

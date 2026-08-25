@@ -49,3 +49,7 @@ next-env.d.ts
 
 # Office temp/lock files
 ~$*
+
+# Migrated media files — content, not source. Fetched with
+# scripts/pg-import-storage.mjs and served from disk in self-hosted mode.
+/storage/
