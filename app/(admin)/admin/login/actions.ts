@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signInWithPassword } from "@/lib/auth/server";
 
 /**
  * PHASE 5 REPLACEMENT (§16 pre-flagged exception — this file, and
@@ -12,6 +13,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * `devLogin` is gone — there is no role to "pick" anymore; the role comes
  * from `profiles.role` once authenticated (see lib/admin/dev-session.ts's
  * supabase-mode branch).
+ *
+ * DATA_SOURCE=postgres (self-hosted): the same form posts here, but
+ * credentials are checked against `auth.users` by lib/auth/server.ts and
+ * the session is a signed cookie rather than a Supabase JWT. MFA is not
+ * part of that path — see the note on the MFA block below.
  *
  * TOTP MFA (§7 "for admin if available" — confirmed available on this
  * project, see final report): after a successful password sign-in, if the
@@ -37,6 +43,17 @@ export async function loginWithPassword(formData: FormData): Promise<void> {
 
   if (!parsed.success) {
     redirect("/admin/login?error=invalid");
+  }
+
+  if (process.env.DATA_SOURCE === "postgres") {
+    // Self-hosted: verify against auth.users and set the signed session
+    // cookie. No MFA step — dropped deliberately during the migration, so
+    // a successful password check is the whole flow.
+    const user = await signInWithPassword(parsed.data.email, parsed.data.password);
+    if (!user) {
+      redirect("/admin/login?error=invalid");
+    }
+    redirect(dest);
   }
 
   const supabase = await createSupabaseServerClient();

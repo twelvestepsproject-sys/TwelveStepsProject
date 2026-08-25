@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEV_SESSION_COOKIE_NAME } from "@/lib/admin/dev-session";
 import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
 
 /**
  * §7: "Middleware guards /admin/**."
@@ -11,6 +11,11 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
  *    in Phase 4 (see lib/admin/dev-session.ts's mock-mode branch). Keeps
  *    the mock path working exactly as before (verification requirement:
  *    "confirm DATA_SOURCE=mock still works").
+ *  - DATA_SOURCE=postgres: verifies the HMAC signature on the session
+ *    cookie set by lib/auth/server.ts. Signature-only, no database round
+ *    trip — middleware runs on every /admin request, and the role check
+ *    that does hit the database happens once per action in
+ *    requireContentRole(). An unsigned or expired cookie is rejected here.
  *  - DATA_SOURCE=supabase: checks a REAL Supabase Auth session via
  *    @supabase/ssr's middleware client, which also transparently refreshes
  *    the session cookie (standard @supabase/ssr middleware recipe) so a
@@ -26,6 +31,11 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware";
  * follow-up rather than an in-scope Phase 5 change (Phase 5's scope is the
  * DB/auth swap, not new middleware features).
  */
+// Inlined rather than imported from lib/admin/dev-session.ts: that module
+// now reaches node:crypto and the pg driver through lib/auth/server.ts,
+// neither of which can be bundled for the Edge runtime this file targets.
+const DEV_SESSION_COOKIE_NAME = "dev_session_role";
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -43,6 +53,19 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-pathname", pathname);
 
   if (pathname.startsWith("/admin/login")) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  if (process.env.DATA_SOURCE === "postgres") {
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const payload = token ? await verifySessionToken(token) : null;
+
+    if (!payload) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 

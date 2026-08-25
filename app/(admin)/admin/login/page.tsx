@@ -4,7 +4,8 @@ import { db } from "@/lib/queries";
 
 /**
  * PHASE 5 REPLACEMENT (§16 pre-flagged exception — see actions.ts's header
- * comment). Real email + password form calling Supabase Auth.
+ * comment). Real email + password form calling Supabase Auth, or the
+ * self-hosted equivalent in lib/auth/server.ts when DATA_SOURCE=postgres.
  *
  * Branches on DATA_SOURCE so the mock-mode dev role-picker (§16 Phase 4's
  * "auth stubbed with a dev role switcher") keeps working exactly as before
@@ -26,7 +27,11 @@ export default async function AdminLoginPage({
   // needed to read it), so this fetch is safe on an unauthenticated page.
   const settings = await db.getSiteSettings();
 
-  if (process.env.DATA_SOURCE !== "supabase") {
+  // Real-credentials modes are supabase AND postgres; only mock gets the
+  // role-picker. Testing `!== "supabase"` would have shown the passwordless
+  // dev picker on the self-hosted stack — an unauthenticated way into
+  // /admin — so this asks for the mock mode explicitly instead.
+  if (process.env.DATA_SOURCE !== "supabase" && process.env.DATA_SOURCE !== "postgres") {
     const roles: { value: "admin" | "editor" | "viewer"; label: string; desc: string }[] = [
       { value: "admin", label: "מנהל/ת מערכת", desc: "גישה מלאה — תוכן, מיתוג, הגדרות ומשתמשים." },
       { value: "editor", label: "עורך/ת תוכן", desc: "יצירה ועריכה של תוכן — ללא הגדרות מערכת." },

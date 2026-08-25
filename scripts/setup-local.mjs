@@ -9,6 +9,7 @@
 // script says so rather than failing silently.
 
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -45,6 +46,11 @@ async function ensureEnv() {
   }
   if (!/^DATA_SOURCE=/m.test(text)) {
     additions.push("DATA_SOURCE=postgres");
+  }
+  if (!/^SESSION_SECRET=/m.test(text)) {
+    // Signs the admin session cookie. Generated per-machine: a shared or
+    // committed secret would let anyone mint an admin session.
+    additions.push(`SESSION_SECRET=${randomBytes(32).toString("hex")}`);
   }
 
   if (additions.length) {

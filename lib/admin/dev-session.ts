@@ -2,6 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { roleSchema, type Role } from "@/lib/schemas";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, signOut as pgSignOut } from "@/lib/auth/server";
+import { query as pgQuery } from "@/lib/pg/client";
 
 /**
  * lib/admin/dev-session.ts (Phase 5 update, §16).
@@ -22,6 +24,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  *    fully working when running on mocks. Neither of those two files is
  *    the pre-flagged /admin/login exception, so they must keep working
  *    unmodified — this branch is how.
+ *  - DATA_SOURCE=postgres: reads the signed session cookie set by
+ *    lib/auth/server.ts and resolves the role from `profiles`. Same
+ *    `{ full_name, role }` shape, same "role is read fresh from the
+ *    database every request" guarantee as the supabase branch below.
  *  - DATA_SOURCE=supabase: reads the REAL Supabase Auth session via
  *    @supabase/ssr's server client, resolves the caller's role from
  *    `profiles` (RLS-safe: a user can always read their own profiles row,
@@ -52,6 +58,37 @@ const ROLE_DISPLAY_NAMES: Record<Role, string> = {
 
 function isSupabaseMode(): boolean {
   return process.env.DATA_SOURCE === "supabase";
+}
+
+function isPostgresMode(): boolean {
+  return process.env.DATA_SOURCE === "postgres";
+}
+
+/** DATA_SOURCE=postgres path — signed session cookie + role from `profiles`.
+ *
+ * Same contract as the supabase branch: identity comes from the session,
+ * role comes from the database on every call (never from the cookie), so a
+ * demoted or deactivated user loses access on their next request. */
+async function getPostgresDevSession(): Promise<DevSession | null> {
+  const user = await getAuthUser();
+  if (!user) return null;
+
+  const { rows } = await pgQuery<{
+    role: string;
+    full_name: string | null;
+    is_active: boolean;
+  }>(
+    `select role::text as role, full_name, is_active from public.profiles where id = $1`,
+    [user.id],
+  );
+
+  const profile = rows[0];
+  if (!profile || !profile.is_active) return null;
+
+  const parsedRole = roleSchema.safeParse(profile.role);
+  if (!parsedRole.success) return null;
+
+  return { full_name: profile.full_name || user.email, role: parsedRole.data };
 }
 
 /** DATA_SOURCE=mock path — byte-identical to the Phase 4 implementation. */
@@ -94,6 +131,7 @@ async function getSupabaseDevSession(): Promise<DevSession | null> {
  * no session (caller decides whether that means "redirect to /admin/login"
  * — middleware already does this for `/admin/**`). */
 export async function getDevSession(): Promise<DevSession | null> {
+  if (isPostgresMode()) return getPostgresDevSession();
   return isSupabaseMode() ? getSupabaseDevSession() : getMockDevSession();
 }
 
@@ -119,7 +157,7 @@ export async function getDevSession(): Promise<DevSession | null> {
  * here is what keeps it harmless rather than something to silently patch.
  */
 export async function setDevRole(role: Role, fullName?: string): Promise<void> {
-  if (isSupabaseMode()) {
+  if (isSupabaseMode() || isPostgresMode()) {
     return; // no-op — see doc comment above
   }
   const store = await cookies();
@@ -141,6 +179,10 @@ export async function setDevRole(role: Role, fullName?: string): Promise<void> {
  * out. Not currently called from any /app file (no logout button existed
  * pre-Phase-5), kept for parity/future use. */
 export async function clearDevSession(): Promise<void> {
+  if (isPostgresMode()) {
+    await pgSignOut();
+    return;
+  }
   if (isSupabaseMode()) {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();

@@ -22,7 +22,8 @@
     "db:migrate": "node scripts/pg-migrate.mjs",
     "db:import": "node scripts/pg-import-content.mjs && node scripts/pg-import-storage.mjs",
     "db:psql": "docker exec -it twelvesteps-postgres psql -U postgres -d twelvesteps",
-    "setup:local": "node scripts/setup-local.mjs"
+    "setup:local": "node scripts/setup-local.mjs",
+    "db:set-password": "node scripts/pg-set-password.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

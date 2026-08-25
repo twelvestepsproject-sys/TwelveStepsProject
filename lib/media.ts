@@ -11,12 +11,20 @@ import type { Media } from "@/lib/schemas";
  * ("images/<file>"), served by the `/api/mock-media/[...path]` route
  * handler (see that file for why).
  *
+ * DATA_SOURCE=postgres: `storage_path` is relative to the storage root on
+ * disk (STORAGE_DIR, default ./storage/media), served by the
+ * `/api/media/[...path]` route handler. Same shape as the Supabase bucket
+ * path, so the `media` rows did not need rewriting during the migration.
+ *
  * DATA_SOURCE=supabase: `storage_path` is a `media`-bucket-relative path
  * (the bucket is public per supabase/migrations/00000000000013_storage.sql),
  * so it resolves to the public Storage URL directly — this is the ONE
  * place that builds it, no component touches this logic directly.
  */
 export function mediaUrl(storagePath: string): string {
+  if (process.env.DATA_SOURCE === "postgres") {
+    return `/api/media/${storagePath}`;
+  }
   if (process.env.DATA_SOURCE === "supabase") {
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\/$/, "");
     return `${base}/storage/v1/object/public/media/${storagePath}`;

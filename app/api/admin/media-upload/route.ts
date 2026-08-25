@@ -6,6 +6,7 @@ import { requireContentRole, AdminAuthError } from "@/lib/admin/role-check";
 import { toFriendlyMessage } from "@/lib/admin/friendly-error";
 import { sanitizeSvg } from "@/lib/admin/sanitize-svg";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { storageRoot } from "@/lib/storage/paths";
 
 /**
  * Media Library upload (§8: "drag-drop upload... mandatory Hebrew alt
@@ -15,6 +16,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * the request-scoped, RLS-respecting client (supabase/migrations/
  * 00000000000013_storage.sql — editor+ write policy), never the
  * service-role client.
+ *
+ * DATA_SOURCE=postgres: writes into STORAGE_DIR (default ./storage/media)
+ * under the same "uploads/<file>" prefix Supabase Storage used, so the
+ * read side (lib/media.ts -> /api/media/[...path]) resolves migrated and
+ * newly-uploaded files identically.
  *
  * DATA_SOURCE=mock: unchanged mock-phase path — writes the file straight
  * into `lib/mock/fixtures/images/` (the same directory the read-side
@@ -144,7 +150,18 @@ export async function POST(req: Request) {
     }
 
     let storagePath: string;
-    if (process.env.DATA_SOURCE === "supabase") {
+    if (process.env.DATA_SOURCE === "postgres") {
+      storagePath = `uploads/${fileName}`;
+      const uploadsRoot = path.join(storageRoot(), "uploads");
+      const filePath = path.join(uploadsRoot, fileName);
+      // fileName is built from safeBaseName() + a timestamp, so it cannot
+      // contain a separator — this asserts that rather than trusting it.
+      if (!filePath.startsWith(uploadsRoot + path.sep)) {
+        return NextResponse.json({ ok: false, error: "שם קובץ לא תקין." }, { status: 400 });
+      }
+      await fs.mkdir(uploadsRoot, { recursive: true });
+      await fs.writeFile(filePath, bytesToWrite);
+    } else if (process.env.DATA_SOURCE === "supabase") {
       storagePath = `uploads/${fileName}`;
       const supabase = await createSupabaseServerClient();
       const { error: uploadError } = await supabase.storage
