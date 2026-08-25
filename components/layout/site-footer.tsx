@@ -3,6 +3,8 @@ import Image from "next/image";
 import { db } from "@/lib/queries";
 import { mediaUrlFor } from "@/lib/media";
 import { NewsletterSignup } from "@/components/blocks/newsletter-signup";
+import { SocialIcon } from "./social-icon";
+import type { Media } from "@/lib/schemas";
 
 /**
  * §5 block 19 — Footer (logo, email, phone, social/community buttons,
@@ -44,6 +46,16 @@ export async function SiteFooter() {
   ]);
   const logo = settings.logo_id ? await db.getMedia(settings.logo_id) : null;
 
+  // Uploaded per-platform icons, if the client set any. Missing entries
+  // fall back to a built-in SVG inside <SocialIcon>.
+  const socialIconIds = settings.social_icons ?? {};
+  const socialIcons: Record<string, Media | null> = {};
+  await Promise.all(
+    Object.entries(socialIconIds).map(async ([platform, mediaId]) => {
+      socialIcons[platform] = mediaId ? await db.getMedia(mediaId) : null;
+    }),
+  );
+
   return (
     <footer className="border-t border-border bg-surface-alt">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -80,8 +92,9 @@ export async function SiteFooter() {
                     target="_blank"
                     rel="noreferrer"
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-sm font-semibold text-ink-muted transition-colors hover:bg-primary hover:text-primary-fg"
+                    aria-label={platform}
                   >
-                    {platform.slice(0, 1).toUpperCase()}
+                    <SocialIcon platform={platform} icon={socialIcons[platform] ?? null} />
                   </a>
                 ))}
                 {settings.community_url ? (

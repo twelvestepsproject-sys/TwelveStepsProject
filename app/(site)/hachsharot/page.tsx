@@ -63,14 +63,17 @@ export default async function TrainingsIndexPage() {
       {trainings.length === 0 ? (
         <p className="text-center text-ink-muted">אין כרגע הכשרות פעילות להצגה.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        /* Centred like the homepage carousel: with two published
+           trainings a 3-column grid leaves the third column empty, which in
+           RTL pushes the pair to the right edge. */
+        <div className="flex flex-wrap justify-center gap-6">
           {trainings.map((training, i) => {
             const cover = covers[i];
             const price = formatPrice(training.price);
             return (
               <article
                 key={training.id}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                className="flex w-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]"
               >
                 {cover ? (
                   <Image

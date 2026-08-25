@@ -39,6 +39,12 @@ export type FontFamilyOption = z.infer<typeof fontFamilyOptionSchema>;
 export const radiusScaleSchema = z.enum(["sharp", "soft", "round"]);
 export type RadiusScale = z.infer<typeof radiusScaleSchema>;
 
+/** How heavy the site's regular body text renders. Colour was already
+ * adjustable via the `color-ink-muted` theme token; weight was not, so
+ * "the text looks faint" had no fix short of a code change. */
+export const bodyTextWeightSchema = z.enum(["normal", "medium", "semibold"]);
+export type BodyTextWeight = z.infer<typeof bodyTextWeightSchema>;
+
 /**
  * §6 site_settings — singleton. §3.5 acceptance criterion: the root
  * layout's token injection depends on `getSiteSettings()` returning the
@@ -65,6 +71,7 @@ export const siteSettingsSchema = z.object({
   font_display: fontFamilyOptionSchema.nullable(),
   font_body: fontFamilyOptionSchema.nullable(),
   radius_scale: radiusScaleSchema,
+  body_text_weight: bodyTextWeightSchema.default("normal"),
 
   // Contact
   contact_phone: z.string().nullable(),
@@ -72,7 +79,13 @@ export const siteSettingsSchema = z.object({
   contact_address: z.string().nullable(),
 
   // Links
+  /** platform -> URL. Kept for backward compatibility; `social_icons`
+   * optionally attaches an uploaded image to the same platform key. */
   social_links: z.record(z.string(), z.string()),
+  /** platform -> media id. A platform with no entry falls back to a
+   * built-in icon, and then to its first letter, so the footer always
+   * renders something. */
+  social_icons: z.record(z.string(), z.string()).default({}),
   community_url: z.string().nullable(),
   donation_url: z.string().nullable(),
 

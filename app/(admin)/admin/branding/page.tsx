@@ -2,6 +2,7 @@ import { db } from "@/lib/queries";
 import { getDevSession } from "@/lib/admin/dev-session";
 import { BrandingForm } from "./branding-form";
 import { AdminErrorState } from "@/components/admin/states";
+import type { Media } from "@/lib/schemas";
 
 /** §3.5 / §8 Branding screen — admin-only (checked again inside the
  * Server Action; this page-level check is a UX nicety so a non-admin
@@ -18,6 +19,17 @@ export default async function BrandingPage() {
     settings.og_default_image_id ? db.getMedia(settings.og_default_image_id) : null,
   ]);
 
+  // Custom social icons, resolved here so each picker row can render a
+  // thumbnail without fetching from the client.
+  const socialIconsById: Record<string, Media> = {};
+  await Promise.all(
+    Object.values(settings.social_icons ?? {}).map(async (mediaId) => {
+      if (!mediaId) return;
+      const m = await db.getMedia(mediaId);
+      if (m) socialIconsById[mediaId] = m;
+    }),
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="font-display text-2xl font-bold text-ink">מיתוג</h1>
@@ -31,6 +43,7 @@ export default async function BrandingPage() {
         logoDark={logoDark}
         favicon={favicon}
         ogImage={ogImage}
+        socialIconsById={socialIconsById}
       />
     </div>
   );

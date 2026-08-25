@@ -31,6 +31,7 @@ export const siteSettings = {
   font_display: null,
   font_body: null,
   radius_scale: "soft",
+  body_text_weight: "normal",
 
   contact_phone: "03-000-0000",
   contact_email: "info@example-eshed-placeholder.co.il",
@@ -40,6 +41,7 @@ export const siteSettings = {
     facebook: "https://facebook.com/example-eshed-placeholder",
     instagram: "https://instagram.com/example-eshed-placeholder",
   },
+  social_icons: {},
   community_url: "https://chat.whatsapp.com/example-eshed-placeholder",
   donation_url: null,
 

@@ -44,6 +44,8 @@
   /* text */
   --color-ink: #221f1a;
   --color-ink-muted: #5c564c;
+  /* Overridable from /admin/branding — see lib/admin/theme-style.ts. */
+  --body-text-weight: 400;
 
   /* semantic — not admin-editable, hex unchanged by this pass */
   --color-success: #2e7d5b;
@@ -255,4 +257,11 @@ html.a11y-high-contrast {
   --color-surface: #ffffff;
   --color-surface-alt: #f0f0f0;
   --color-border: #000000;
+}
+
+/* Muted body copy honours the admin's weight choice. Scoped to this one
+   utility because it is what the site uses for ordinary paragraph text;
+   headings and buttons set their own weight explicitly. */
+.text-ink-muted {
+  font-weight: var(--body-text-weight, 400);
 }

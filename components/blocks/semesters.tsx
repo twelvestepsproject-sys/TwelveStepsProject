@@ -62,12 +62,17 @@ export function Semesters({ data }: { data: SemestersData }) {
                         <span className="text-sm text-ink-muted">{semester.subtitle}</span>
                       ) : null}
                     </span>
-                    {/* aria-hidden: <details> already announces its state. */}
+                    {/* aria-hidden: <details> already announces open/closed,
+                        so this pair is decoration. The word is there because a
+                        bare + did not read as clickable. */}
                     <span
                       aria-hidden="true"
-                      className="shrink-0 text-2xl leading-none text-primary transition-transform duration-200 group-open:rotate-45"
+                      className="flex shrink-0 items-center gap-1.5 text-primary"
                     >
-                      +
+                      <span className="text-sm font-semibold">לפרטים</span>
+                      <span className="text-2xl leading-none transition-transform duration-200 group-open:rotate-45">
+                        +
+                      </span>
                     </span>
                   </summary>
 

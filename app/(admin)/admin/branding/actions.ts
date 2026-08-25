@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/queries";
 import { requireAdminRole } from "@/lib/admin/role-check";
 import { toFriendlyMessage, type ActionResult } from "@/lib/admin/friendly-error";
-import type { SiteSettings, ThemeOverrides, FontFamilyOption, RadiusScale } from "@/lib/schemas";
+import type { SiteSettings, ThemeOverrides, FontFamilyOption, RadiusScale, BodyTextWeight } from "@/lib/schemas";
 
 /**
  * §3.5 Branding screen — admin-only (§7: "editor: ...no settings/
@@ -29,6 +29,7 @@ export interface BrandingPayload {
   font_display: FontFamilyOption;
   font_body: FontFamilyOption;
   radius_scale: RadiusScale;
+  body_text_weight: BodyTextWeight;
   // Contact + links: these columns existed on site_settings and the footer
   // already rendered them, but no screen edited them — so the shipped
   // placeholder phone/email/social URLs were unreachable.
@@ -36,6 +37,7 @@ export interface BrandingPayload {
   contact_email: string | null;
   contact_address: string | null;
   social_links: Record<string, string>;
+  social_icons: Record<string, string>;
   community_url: string | null;
   donation_url: string | null;
   footer_credits: string | null;

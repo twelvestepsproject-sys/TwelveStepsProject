@@ -10,7 +10,7 @@ import { MediaPickerField } from "@/components/admin/media-picker";
 import { THEME_PRESETS, THEME_DEFAULTS, FALLBACK_COLOR } from "@/lib/admin/theme-presets";
 import { CONTRAST_PAIRS_TO_CHECK, contrastRatio, aaLevel } from "@/lib/admin/contrast";
 import { FONT_FAMILY_CSS } from "@/lib/fonts";
-import type { FontFamilyOption, Media, RadiusScale, SiteSettings, ThemeOverrides } from "@/lib/schemas";
+import type { BodyTextWeight, FontFamilyOption, Media, RadiusScale, SiteSettings, ThemeOverrides } from "@/lib/schemas";
 
 /**
  * §3.5 Branding screen, the full spec: logo/logo_dark/favicon/OG image
@@ -59,6 +59,12 @@ const TOKEN_LABELS: Record<string, string> = {
   "color-ink-muted": "טקסט מושתק",
 };
 
+const BODY_WEIGHT_OPTIONS: { value: BodyTextWeight; label: string }[] = [
+  { value: "normal", label: "רגיל" },
+  { value: "medium", label: "בינוני" },
+  { value: "semibold", label: "מודגש" },
+];
+
 const FONT_OPTIONS: { value: FontFamilyOption; label: string; selfHosted: boolean }[] = [
   { value: "Heebo", label: "Heebo", selfHosted: true },
   { value: "Assistant", label: "Assistant", selfHosted: true },
@@ -83,13 +89,14 @@ interface FormState {
   font_display: FontFamilyOption;
   font_body: FontFamilyOption;
   radius_scale: RadiusScale;
+  body_text_weight: BodyTextWeight;
   contact_phone: string;
   contact_email: string;
   contact_address: string;
   /** Kept as an ordered array in the form so rows can be added, renamed and
    * removed; converted back to the stored record on save. An object would
    * lose ordering and make an empty new row impossible to represent. */
-  social_links: { platform: string; url: string }[];
+  social_links: { platform: string; url: string; icon_id: string | null }[];
   community_url: string;
   donation_url: string;
   footer_credits: string;
@@ -113,12 +120,14 @@ function toFormState(s: SiteSettings): FormState {
     font_display: s.font_display ?? "Heebo",
     font_body: s.font_body ?? "Assistant",
     radius_scale: s.radius_scale,
+    body_text_weight: s.body_text_weight ?? "normal",
     contact_phone: s.contact_phone ?? "",
     contact_email: s.contact_email ?? "",
     contact_address: s.contact_address ?? "",
     social_links: Object.entries(s.social_links ?? {}).map(([platform, url]) => ({
       platform,
       url,
+      icon_id: (s.social_icons ?? {})[platform] ?? null,
     })),
     community_url: s.community_url ?? "",
     donation_url: s.donation_url ?? "",
@@ -141,10 +150,15 @@ function effective(theme: ThemeOverrides, key: string): string {
  */
 function toPayload(data: FormState): BrandingPayload {
   const social_links: Record<string, string> = {};
-  for (const { platform, url } of data.social_links) {
+  const social_icons: Record<string, string> = {};
+  for (const { platform, url, icon_id } of data.social_links) {
     const key = platform.trim();
     const value = url.trim();
-    if (key && value) social_links[key] = value;
+    if (!key || !value) continue;
+    social_links[key] = value;
+    // Only store an icon for a row that survived — otherwise a deleted row
+    // would leave an orphaned icon entry behind.
+    if (icon_id) social_icons[key] = icon_id;
   }
   return {
     site_name: data.site_name,
@@ -157,10 +171,12 @@ function toPayload(data: FormState): BrandingPayload {
     font_display: data.font_display,
     font_body: data.font_body,
     radius_scale: data.radius_scale,
+    body_text_weight: data.body_text_weight,
     contact_phone: data.contact_phone.trim() || null,
     contact_email: data.contact_email.trim() || null,
     contact_address: data.contact_address.trim() || null,
     social_links,
+    social_icons,
     community_url: data.community_url.trim() || null,
     donation_url: data.donation_url.trim() || null,
     footer_credits: data.footer_credits.trim() || null,
@@ -174,6 +190,7 @@ export function BrandingForm({
   logoDark,
   favicon,
   ogImage,
+  socialIconsById = {},
 }: {
   settings: SiteSettings;
   canEdit: boolean;
@@ -181,6 +198,9 @@ export function BrandingForm({
   logoDark: Media | null;
   favicon: Media | null;
   ogImage: Media | null;
+  /** Resolved media for any custom social icons, so the picker can show a
+   * thumbnail without a client fetch per row. */
+  socialIconsById?: Record<string, Media>;
 }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>(() => toFormState(settings));
@@ -433,6 +453,30 @@ export function BrandingForm({
               ))}
             </div>
           </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-ink">עובי הטקסט הרגיל</p>
+            <p className="text-xs text-ink-muted">
+              משפיע על כל טקסט הגוף באתר. לצבע הטקסט יש שליטה נפרדת למעלה
+              (״טקסט מושתק״ תחת צבעים).
+            </p>
+            <div className="flex gap-2">
+              {BODY_WEIGHT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => update("body_text_weight", opt.value)}
+                  aria-pressed={state.body_text_weight === opt.value}
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                    state.body_text_weight === opt.value
+                      ? "border-primary bg-primary text-primary-fg"
+                      : "border-border bg-surface text-ink hover:bg-surface-alt"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <LivePreview state={state} />
@@ -549,6 +593,22 @@ export function BrandingForm({
                     >
                       🗑
                     </button>
+                    <div className="w-full">
+                      <MediaPickerField
+                        label={`אייקון מותאם — ${row.platform || `רשת ${i + 1}`}`}
+                        hint="אופציונלי. ריק = אייקון מובנה לרשתות מוכרות (פייסבוק, אינסטגרם, יוטיוב, וואטסאפ, טלגרם, טיקטוק, לינקדאין, X)."
+                        value={row.icon_id}
+                        media={row.icon_id ? socialIconsById[row.icon_id] ?? null : null}
+                        onChange={(mediaId) =>
+                          update(
+                            "social_links",
+                            state.social_links.map((r, j) =>
+                              j === i ? { ...r, icon_id: mediaId } : r,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -556,7 +616,7 @@ export function BrandingForm({
             <button
               type="button"
               onClick={() =>
-                update("social_links", [...state.social_links, { platform: "", url: "" }])
+                update("social_links", [...state.social_links, { platform: "", url: "", icon_id: null }])
               }
               className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
             >

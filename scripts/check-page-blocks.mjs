@@ -1544,7 +1544,7 @@ check("blank social rows are dropped rather than saved", () => {
     "utf8",
   );
   assert(
-    form.includes("if (key && value) social_links[key] = value;"),
+    form.includes("if (!key || !value) continue;"),
     "a half-typed row would reach the footer",
   );
 });
@@ -1556,6 +1556,86 @@ check("the trainings grid centres when it is not full", () => {
   );
   // Two published trainings in a 3-column grid left the third column empty,
   // which in RTL pushed the pair to the right edge.
+  assert(src.includes("flex flex-wrap justify-center"), "grid would not centre");
+  assert(src.includes("lg:w-[calc(33.333%-1rem)]"), "cards lost their three-across rhythm");
+});
+
+
+check("social links render icons, not the first letter", () => {
+  const footer = readFileSync(
+    new URL("../components/layout/site-footer.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(footer.includes("<SocialIcon"), "the footer still renders a bare letter");
+  assert(!footer.includes("platform.slice(0, 1).toUpperCase()"), "letter fallback still inline");
+
+  const icon = readFileSync(
+    new URL("../components/layout/social-icon.tsx", import.meta.url),
+    "utf8",
+  );
+  // Three tiers: uploaded image, built-in SVG, then the letter — the last
+  // matters because the platform key is free text the client types.
+  assert(icon.includes("mediaUrlFor"), "an uploaded icon would be ignored");
+  assert(icon.includes("BUILT_IN"), "no built-in icons");
+  assert(icon.includes("platform.slice(0, 1)"), "an unknown network would render nothing");
+});
+
+check("a custom social icon can be uploaded per network", () => {
+  const settings = readFileSync(
+    new URL("../lib/schemas/site-settings.ts", import.meta.url),
+    "utf8",
+  );
+  assert(settings.includes("social_icons"), "no place to store a custom icon");
+  const form = readFileSync(
+    new URL("../app/(admin)/admin/branding/branding-form.tsx", import.meta.url),
+    "utf8",
+  );
+  assert(form.includes("icon_id"), "the branding form cannot set an icon");
+  // A deleted row must not leave its icon behind.
+  assert(
+    form.includes("if (icon_id) social_icons[key] = icon_id;"),
+    "orphaned icon entries would accumulate",
+  );
+});
+
+check("body text weight is admin-controlled", () => {
+  const settings = readFileSync(
+    new URL("../lib/schemas/site-settings.ts", import.meta.url),
+    "utf8",
+  );
+  assert(settings.includes("bodyTextWeightSchema"), "weight is not a setting");
+  const style = readFileSync(
+    new URL("../lib/admin/theme-style.ts", import.meta.url),
+    "utf8",
+  );
+  assert(style.includes("body-text-weight"), "the setting never reaches the page");
+  const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert(css.includes("var(--body-text-weight"), "no rule consumes the variable");
+});
+
+check("lecturer cards are squares with room for a bio", () => {
+  const src = readFileSync(
+    new URL("../components/blocks/lecturers-grid.tsx", import.meta.url),
+    "utf8",
+  );
+  // The bio field always existed on the lecturer record; the grid just
+  // never displayed it, which is why there was nowhere to write detail.
+  assert(src.includes("lecturer.bio"), "the bio is still not shown");
+  assert(!src.includes("h-20 w-20 rounded-full"), "photos are still small circles");
+  assert(src.includes("h-40 w-full rounded-md"), "photos are not square cards");
+});
+
+check("the syllabus toggle says what it does", () => {
+  const src = readFileSync(new URL("../components/blocks/semesters.tsx", import.meta.url), "utf8");
+  // A bare + did not read as clickable.
+  assert(src.includes("לפרטים"), "the + sign is unlabelled");
+});
+
+check("the /hachsharot grid centres when it is not full", () => {
+  const src = readFileSync(
+    new URL("../app/(site)/hachsharot/page.tsx", import.meta.url),
+    "utf8",
+  );
   assert(src.includes("flex flex-wrap justify-center"), "grid would not centre");
   assert(src.includes("lg:w-[calc(33.333%-1rem)]"), "cards lost their three-across rhythm");
 });

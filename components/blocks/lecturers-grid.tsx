@@ -64,36 +64,42 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
             {data.heading}
           </h2>
         ) : null}
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {shown.map((lecturer, i) => {
             const photo = photos[i];
             return (
               <RevealOnScroll
                 key={lecturer.id}
                 delayMs={i * 80}
-                className="flex flex-col items-center gap-2 text-center transition-transform duration-300 hover:-translate-y-1"
+                className="flex h-full flex-col items-center gap-3 rounded-lg border border-border bg-bg p-5 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 {photo ? (
                   <Image
                     src={mediaUrlFor(photo)}
                     alt={photo.alt_he}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 rounded-full object-cover ring-2 ring-border transition-shadow duration-300"
+                    width={220}
+                    height={220}
+                    className="h-40 w-full rounded-md object-cover"
                   />
                 ) : (
-                  // No photo on file (fixture gap, not a rendering bug) —
-                  // an empty circle stands in rather than a broken <img>
-                  // or a fabricated placeholder photo. Same ring treatment
-                  // as a real photo, for visual consistency across the grid.
+                  // No photo on file — a plain tinted panel rather than a
+                  // broken <img> or an invented stand-in portrait. Same
+                  // footprint as a real photo so the grid stays even.
                   <div
-                    className="h-20 w-20 rounded-full bg-surface-alt ring-2 ring-border"
+                    className="flex h-40 w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
                     role="img"
                     aria-label={lecturer.name}
-                  />
+                  >
+                    {lecturer.name.slice(0, 1)}
+                  </div>
                 )}
-                <p className="font-display font-bold text-ink">{lecturer.name}</p>
-                <p className="text-xs text-ink-muted">{lecturer.role}</p>
+                <p className="font-display text-lg font-bold text-ink">{lecturer.name}</p>
+                {lecturer.role ? (
+                  <p className="text-sm text-ink-muted">{lecturer.role}</p>
+                ) : null}
+                {lecturer.bio ? (
+                  <p className="whitespace-pre-line text-sm text-ink-muted">{lecturer.bio}</p>
+                ) : null}
               </RevealOnScroll>
             );
           })}
