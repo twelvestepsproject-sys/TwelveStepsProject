@@ -1651,9 +1651,47 @@ console.log("\n[database] block_type enum");
 
 const dataSource = process.env.DATA_SOURCE ?? "mock";
 
-if (dataSource !== "supabase") {
-  console.log("  – DATA_SOURCE is not 'supabase' — skipping the live enum check.");
-  console.log("    (Run with DATA_SOURCE=supabase to verify the migration was applied.)");
+if (dataSource === "postgres") {
+  // Same guarantee as the Supabase branch below, against the local
+  // database: every block type the code can produce must exist in the
+  // enum, or saving that block fails at runtime while every TypeScript
+  // layer still typechecks clean.
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    failures += 1;
+    console.error("  ✗ DATA_SOURCE=postgres but DATABASE_URL is not set — failing closed.");
+  } else {
+    const pg = (await import("pg")).default;
+    const client = new pg.Client({ connectionString });
+    try {
+      await client.connect();
+      const { rows } = await client.query(
+        `select enumlabel from pg_enum e
+         join pg_type t on t.oid = e.enumtypid
+         where t.typname = 'block_type'`,
+      );
+      const labels = rows.map((r) => r.enumlabel);
+      for (const value of ALL_BLOCK_TYPES) {
+        checks += 1;
+        if (labels.includes(value)) {
+          console.log(`  ✓ local block_type enum contains '${value}'`);
+        } else {
+          failures += 1;
+          console.error(`  ✗ local block_type enum is MISSING '${value}'`);
+          console.error("      Run: pnpm db:migrate");
+        }
+      }
+    } catch (err) {
+      failures += 1;
+      console.error(`  ✗ could not reach Postgres: ${err.message}`);
+      console.error("      Is it running? Try: pnpm db:up");
+    } finally {
+      await client.end().catch(() => {});
+    }
+  }
+} else if (dataSource !== "supabase") {
+  console.log("  – DATA_SOURCE is mock — skipping the live enum check.");
+  console.log("    (Use DATA_SOURCE=postgres or supabase to verify the migration.)");
 } else {
   const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const token = process.env.SUPABASE_ACCESS_TOKEN;
