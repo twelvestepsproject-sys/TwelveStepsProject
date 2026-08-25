@@ -79,14 +79,20 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                     alt={photo.alt_he}
                     width={220}
                     height={220}
-                    className="h-40 w-full rounded-md object-cover"
+                    // object-cover with a fixed frame and top-biased focal
+                    // point: the uploaded photos vary from 0.51 to 1.0 aspect
+                    // ratio, and centring a tall portrait crops the face out.
+                    // A tinted panel behind it means a pre-cut cutout (some
+                    // photos arrive already circle-cropped on white) sits on
+                    // the same ground as a full-bleed one.
+                    className="h-44 w-full rounded-md bg-surface-alt object-cover object-top"
                   />
                 ) : (
                   // No photo on file — a plain tinted panel rather than a
                   // broken <img> or an invented stand-in portrait. Same
                   // footprint as a real photo so the grid stays even.
                   <div
-                    className="flex h-40 w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
+                    className="flex h-44 w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
                     role="img"
                     aria-label={lecturer.name}
                   >
@@ -98,7 +104,17 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                   <p className="text-sm text-ink-muted">{lecturer.role}</p>
                 ) : null}
                 {lecturer.bio ? (
-                  <p className="whitespace-pre-line text-sm text-ink-muted">{lecturer.bio}</p>
+                  // Capped at three lines so one long biography cannot stretch
+                  // its card far past its neighbours — bios in the data range
+                  // from 25 to 800+ characters. The full text stays in the DOM
+                  // (line-clamp only hides the overflow visually) and shows on
+                  // hover via the title attribute.
+                  <p
+                    className="line-clamp-3 whitespace-pre-line text-sm text-ink-muted"
+                    title={lecturer.bio}
+                  >
+                    {lecturer.bio}
+                  </p>
                 ) : null}
               </RevealOnScroll>
             );
