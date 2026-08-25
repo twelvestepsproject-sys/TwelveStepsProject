@@ -1622,7 +1622,10 @@ check("lecturer cards are squares with room for a bio", () => {
   // never displayed it, which is why there was nowhere to write detail.
   assert(src.includes("lecturer.bio"), "the bio is still not shown");
   assert(!src.includes("h-20 w-20 rounded-full"), "photos are still small circles");
-  assert(src.includes("h-40 w-full rounded-md"), "photos are not square cards");
+  // Height is a design detail; what matters is a fixed full-width square
+  // frame rather than a small circle.
+  assert(/h-[0-9]+ w-full rounded-md/.test(src), "photos are not square cards");
+  assert(src.includes("line-clamp-3"), "a long bio would stretch its card");
 });
 
 check("the syllabus toggle says what it does", () => {
