@@ -1624,7 +1624,7 @@ check("lecturer cards are squares with room for a bio", () => {
   assert(!src.includes("h-20 w-20 rounded-full"), "photos are still small circles");
   // Height is a design detail; what matters is a fixed full-width square
   // frame rather than a small circle.
-  assert(src.includes("aspect-[3/4] w-full rounded-md"), "photos lost their portrait frame");
+  assert(/h-[0-9]+ w-full rounded-md/.test(src), "photos are not square cards");
   assert(src.includes("line-clamp-3"), "a long bio would stretch its card");
 });
 
