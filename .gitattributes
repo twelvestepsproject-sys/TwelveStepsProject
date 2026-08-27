@@ -1,0 +1,10 @@
+# Files that run on the Linux server must keep LF endings regardless of
+# what the checkout does on Windows. A shell script committed with CRLF
+# fails there with "bad interpreter: /usr/bin/env bash^M", and Docker
+# treats a CRLF line in a Dockerfile the same way.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.conf          text eol=lf
+.env.*.example  text eol=lf

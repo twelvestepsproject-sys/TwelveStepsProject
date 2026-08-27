@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+# Template for the server's .env — placeholders only, no real values. The
+# .env created from it on the server stays ignored by the rule above.
+!.env.production.example
 
 # mock write-store (Phase 4) — persisted CMS edits, never committed
 .mock-db.json

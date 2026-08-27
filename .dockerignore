@@ -1,0 +1,26 @@
+# Keeps the build context small and, more importantly, keeps secrets and
+# uploaded files out of the image.
+
+node_modules
+.next
+.git
+.github
+
+# Never bake real credentials into an image. The server supplies them at
+# runtime from its own .env file.
+.env
+.env.local
+.env.*.local
+
+# Uploaded media lives on a host volume, not in the image.
+storage
+
+# Local-only and generated
+*.log
+.DS_Store
+Thumbs.db
+test-results
+playwright-report
+coverage
+.vscode
+.idea

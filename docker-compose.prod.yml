@@ -1,0 +1,102 @@
+# Production stack for the Contabo VPS: app + database + reverse proxy.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Reads its configuration from .env in this directory (see .env.production.example).
+# Nothing here carries a default password — the stack refuses to start
+# without the real values rather than quietly running on "postgres".
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: twelvesteps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      # Postgres only applies its own locale settings at initdb time.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Backups are written here so they land on the host, where the backup
+      # script can ship them off the machine.
+      - ./backups:/backups
+    # NO `ports:` — deliberately. The database is reachable only from other
+    # containers on this network, never from the internet. Exposing 5432 on
+    # a public VPS gets it scanned within hours. To connect from the host:
+    #   docker compose -f docker-compose.prod.yml exec postgres psql -U <user> -d <db>
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: twelvesteps-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATA_SOURCE: postgres
+      # Host is the service name: containers resolve each other by name on
+      # the shared network, so this never leaves the machine.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      # Matches the volume mount below, not a host path — this value is
+      # read inside the container.
+      STORAGE_DIR: /data/media
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL in .env}
+    volumes:
+      # Uploads survive redeploys because they live on the host, outside
+      # the image. This is the single most important line in the file.
+      - ${STORAGE_DIR_HOST:-/var/lib/twelvesteps/media}:/data/media
+    # Also no `ports:` — nginx is the only way in.
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: twelvesteps-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    # Picks up renewed certificates without a restart: certbot rewrites the
+    # files on disk, and nginx only re-reads them on reload.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    networks:
+      - internal
+
+  # Runs on demand, not as a long-lived service:
+  #   docker compose -f docker-compose.prod.yml run --rm certbot ...
+  certbot:
+    image: certbot/certbot:latest
+    container_name: twelvesteps-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
+    driver: bridge

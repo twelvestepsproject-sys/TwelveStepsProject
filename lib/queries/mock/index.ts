@@ -344,7 +344,13 @@ async function getTraining(slug: string): Promise<Training | null> {
   if (!row) return null;
   // instructors are already nested/resolved at fixture-build time and kept
   // in sync via saveTraining below — no join left to the caller.
-  return row;
+  //
+  // `blocks` is normalised because the fixtures predate migration 20 and
+  // some omit the field entirely, while the schema declares it
+  // `.default([])` and every caller reads `training.blocks.length`
+  // unguarded. Returning the raw row let `undefined` through and crashed
+  // the training page during a mock-mode build.
+  return { ...row, blocks: row.blocks ?? [] };
 }
 
 async function saveTraining(input: Partial<Training> & { id?: string }): Promise<Training> {
