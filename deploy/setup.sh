@@ -11,9 +11,17 @@ set -euo pipefail
 DOMAIN="${1:-}"
 EMAIL="${2:-}"
 
-if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
+# No domain yet is a normal state — a server can be bought and set up
+# before DNS exists. In that mode everything is installed and the site runs
+# over plain HTTP on the server's IP; re-running this script later with a
+# real domain adds nginx and TLS on top without touching data.
+NO_DOMAIN=0
+if [ "$DOMAIN" = "--no-domain" ] || [ -z "$DOMAIN" ]; then
+  NO_DOMAIN=1
+  DOMAIN=""
+elif [ -z "$EMAIL" ]; then
   echo "Usage: sudo bash deploy/setup.sh <domain> <email>"
-  echo "Example: sudo bash deploy/setup.sh hineni.co.il admin@hineni.co.il"
+  echo "   or: sudo bash deploy/setup.sh --no-domain    (HTTP on the IP, add TLS later)"
   exit 1
 fi
 
@@ -66,12 +74,17 @@ echo "  $STORAGE_HOST"
 
 mkdir -p backups certbot/conf certbot/www
 
-echo "=== 5/7  nginx config for $DOMAIN ==="
-if grep -q "DOMAIN_PLACEHOLDER" nginx/conf.d/site.conf; then
-  sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/site.conf
-  echo "  written"
+if [ "$NO_DOMAIN" -eq 1 ]; then
+  echo "=== 5/7  nginx config — skipped (no domain yet) ==="
+  echo "  the app will serve plain HTTP on this server's IP"
 else
-  echo "  already configured, leaving as is"
+  echo "=== 5/7  nginx config for $DOMAIN ==="
+  if grep -q "DOMAIN_PLACEHOLDER" nginx/conf.d/site.conf; then
+    sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/site.conf
+    echo "  written"
+  else
+    echo "  already configured, leaving as is"
+  fi
 fi
 
 echo "=== 6/7  .env ==="
@@ -97,6 +110,23 @@ done
 echo "  present and filled"
 
 echo "=== 7/7  TLS certificate ==="
+if [ "$NO_DOMAIN" -eq 1 ]; then
+  echo "  skipped — no domain yet"
+  IP="$(curl -s --max-time 5 ifconfig.me || echo YOUR_SERVER_IP)"
+  echo
+  echo "Setup complete (HTTP only). Start the site with:"
+  echo "    bash deploy/deploy.sh --no-domain"
+  echo
+  echo "It will be reachable at:  http://$IP"
+  echo
+  echo "When DNS is ready, point the domain here and run:"
+  echo "    sudo bash deploy/setup.sh yourdomain.com you@example.com"
+  echo "    bash deploy/deploy.sh"
+  echo "Content and uploads are untouched by that."
+  echo
+  exit 0
+fi
+
 if [ -d "certbot/conf/live/$DOMAIN" ]; then
   echo "  already issued, skipping"
 else

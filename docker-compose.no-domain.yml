@@ -1,0 +1,16 @@
+# Overlay for running before a domain exists.
+#
+#   bash deploy/deploy.sh --no-domain
+#
+# Publishes the app directly on port 80 so the site is reachable at
+# http://<server-ip>, and leaves nginx out — it cannot start without a
+# certificate, and there is no domain to get one for yet.
+#
+# Everything else is identical to docker-compose.prod.yml, so adding the
+# domain later is a restart, not a rebuild: the database volume and the
+# uploads directory are the same ones.
+
+services:
+  app:
+    ports:
+      - "80:3000"
