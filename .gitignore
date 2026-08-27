@@ -56,3 +56,13 @@ next-env.d.ts
 # Migrated media files — content, not source. Fetched with
 # scripts/pg-import-storage.mjs and served from disk in self-hosted mode.
 /storage/
+
+# Database dumps taken for a deploy — content, sometimes large, and never
+# something to version alongside the code.
+/dump.sql
+/dump.sql.gz
+/backups/
+
+# This project uses pnpm. A stray npm lockfile would make the Dockerfile
+# choose `npm ci` over `pnpm install --frozen-lockfile`.
+package-lock.json

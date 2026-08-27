@@ -43,13 +43,19 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# The build runs pages that call into the data layer. DATA_SOURCE=postgres
-# would make it try to reach a database that is not running during `docker
-# build`, so the build uses the mock source and the real value is supplied
-# at runtime instead. Pages that read the database are rendered on demand
-# anyway (they show as `ƒ` in the build output).
+# Several public pages are prerendered at build time — `/`, `/hachsharot`,
+# `/odot` and the `●` routes in the build output — so whatever data source
+# the BUILD sees is baked into their HTML. Building against mocks therefore
+# ships fixture content ("מכללת אשד") no matter what the running container
+# is configured to read, which is exactly what happened the first time.
+#
+# So the build needs the real database. DATABASE_URL is passed as a build
+# argument, and docker-compose.prod.yml points it at the postgres service.
+ARG DATA_SOURCE=postgres
+ARG DATABASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATA_SOURCE=mock
+ENV DATA_SOURCE=${DATA_SOURCE}
+ENV DATABASE_URL=${DATABASE_URL}
 
 RUN if [ -f pnpm-lock.yaml ]; then pnpm build; else npm run build; fi
 

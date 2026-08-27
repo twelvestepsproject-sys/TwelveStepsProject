@@ -1,0 +1,13 @@
+# Publishes the database on localhost for the duration of a build.
+#
+# Used only by deploy/deploy.sh, which applies it before `build` and removes
+# it immediately after. BuildKit cannot join a custom docker network, so a
+# build that needs real content (the app prerenders public pages) has to
+# reach postgres through the host.
+#
+# Bound to 127.0.0.1 — never reachable from outside the machine.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${BUILD_DB_PORT:-55432}:5432"
