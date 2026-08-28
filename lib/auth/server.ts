@@ -4,7 +4,7 @@ import { query } from "@/lib/pg/client";
 import { verifyPassword } from "./password";
 import {
   SESSION_COOKIE_NAME,
-  SESSION_COOKIE_OPTIONS,
+  sessionCookieOptions,
   createSessionToken,
   verifySessionToken,
 } from "./session";
@@ -64,7 +64,7 @@ export async function signInWithPassword(
   if (user.is_active !== true) return null;
 
   const store = await cookies();
-  store.set(SESSION_COOKIE_NAME, await createSessionToken(user.id), SESSION_COOKIE_OPTIONS);
+  store.set(SESSION_COOKIE_NAME, await createSessionToken(user.id), sessionCookieOptions());
 
   await query(`update auth.users set last_sign_in_at = now() where id = $1`, [user.id]);
 

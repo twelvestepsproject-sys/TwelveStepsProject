@@ -104,14 +104,39 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   }
 }
 
-export const SESSION_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  path: "/",
-  maxAge: MAX_AGE_SECONDS,
-  // Plain HTTP on localhost must still work in development; production is
-  // HTTPS behind the Contabo reverse proxy.
-  secure: process.env.NODE_ENV === "production",
-} as const;
+/**
+ * `secure` follows the site's actual protocol, not NODE_ENV.
+ *
+ * A secure cookie is only ever sent back over HTTPS. Keying that off
+ * NODE_ENV=production broke every production deployment served over plain
+ * HTTP — sign-in appeared to succeed, the browser then withheld the cookie,
+ * and the next action bounced back to the login screen. That is exactly
+ * what a server running on a bare IP before its domain exists looks like.
+ *
+ * NEXT_PUBLIC_SITE_URL is the site's own address, so it answers the real
+ * question: will the browser be talking HTTPS? Once the domain and
+ * certificate are in place the URL becomes https:// and the flag turns
+ * itself on.
+ */
+function isHttpsSite(): boolean {
+  const url = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!url) return false;
+  return url.trim().toLowerCase().startsWith("https://");
+}
+
+// A function, not a const: a module-level object would be evaluated during
+// the build, freezing whatever NEXT_PUBLIC_SITE_URL the build container
+// happened to have. Reading it per call means the running container's value
+// decides, which is what matters — and it means adding a domain later takes
+// effect on restart rather than needing a rebuild.
+export function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: MAX_AGE_SECONDS,
+    secure: isHttpsSite(),
+  } as const;
+}
 
 export const SESSION_MAX_AGE_SECONDS = MAX_AGE_SECONDS;
