@@ -31,6 +31,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  async headers() {
+    return [
+      {
+        // Next serves the favicon with `max-age=0, must-revalidate`, so the
+        // browser re-requested it on every single page load — a round trip
+        // to the server before the tab icon could paint. It changes about
+        // never, so it is cached for a day; a rename is how it would be
+        // busted if it ever did change.
+        source: "/favicon.ico",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
