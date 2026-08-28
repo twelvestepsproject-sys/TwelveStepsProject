@@ -85,11 +85,17 @@ echo "  closing the temporary database port"
 $COMPOSE up -d --force-recreate postgres
 
 echo "=== 5/6  start ==="
+# --force-recreate on app is required, not defensive: compose compares the
+# service definition, not the image contents, so after a rebuild it decides
+# nothing changed and leaves the OLD container running. A deploy then
+# reported success while still serving the previous build.
 if [ "$NO_DOMAIN" -eq 1 ]; then
   # Only these two: `up -d` with no arguments would also try to start nginx.
-  $COMPOSE up -d postgres app
+  $COMPOSE up -d postgres
+  $COMPOSE up -d --force-recreate app
 else
   $COMPOSE up -d
+  $COMPOSE up -d --force-recreate app
 fi
 
 echo "=== 6/6  apply migrations (post-build) ==="
@@ -100,6 +106,27 @@ for i in $(seq 1 30); do
   sleep 2
 done
 $COMPOSE exec -T app node scripts/pg-migrate.mjs
+
+# A deploy that silently kept the old container is the failure this script
+# already shipped once, so it is now checked rather than assumed: the
+# running container must be newer than the commit being deployed.
+echo
+echo "=== verifying the running container is the one just built ==="
+IMAGE_CREATED="$($COMPOSE ps -q app 2>/dev/null | head -1 | xargs -r docker inspect --format '{{.Created}}' 2>/dev/null || echo "")"
+if [ -n "$IMAGE_CREATED" ]; then
+  echo "  container started: $IMAGE_CREATED"
+  COMMIT_EPOCH="$(git log -1 --format=%ct 2>/dev/null || echo 0)"
+  CONTAINER_EPOCH="$(date -d "$IMAGE_CREATED" +%s 2>/dev/null || echo 0)"
+  if [ "$COMMIT_EPOCH" -gt 0 ] && [ "$CONTAINER_EPOCH" -gt 0 ] && [ "$CONTAINER_EPOCH" -lt "$COMMIT_EPOCH" ]; then
+    echo
+    echo "  WARNING: the running container predates the current commit."
+    echo "  The old build is still being served. Force a clean rebuild:"
+    echo "     docker compose -f docker-compose.prod.yml -f docker-compose.build.yml build --no-cache app"
+    echo "     docker compose -f docker-compose.prod.yml up -d --force-recreate app"
+  else
+    echo "  ok — newer than the current commit"
+  fi
+fi
 
 echo
 echo "=== status ==="
