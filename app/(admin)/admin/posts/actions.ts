@@ -61,6 +61,11 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
 
     const saved = await db.savePost(input);
     revalidatePath("/admin/posts");
+    // The public pages, not just the admin list: without these a published
+    // post would not appear until the cache expired on its own.
+    revalidatePath("/blog");
+    revalidatePath(`/blog/${saved.slug}`);
+    revalidatePath("/rss.xml");
     return { ok: true, data: { id: saved.id } };
   } catch (err) {
     return { ok: false, error: toFriendlyMessage(err) };
@@ -71,12 +76,18 @@ export async function deletePostAction(id: string): Promise<void> {
   await requireContentRole();
   await db.deletePost(id);
   revalidatePath("/admin/posts");
+  revalidatePath("/blog");
+  revalidatePath("/rss.xml");
 }
 
 export async function togglePostPublishAction(id: string, nextStatus: "draft" | "published"): Promise<void> {
   await requireContentRole();
-  await db.savePost({ id, status: nextStatus });
+  const saved = await db.savePost({ id, status: nextStatus });
   revalidatePath("/admin/posts");
+  // Publishing and unpublishing are exactly when the public list changes.
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${saved.slug}`);
+  revalidatePath("/rss.xml");
 }
 
 export async function createPostAndRedirect(formData: FormData) {

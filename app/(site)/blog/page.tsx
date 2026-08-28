@@ -16,7 +16,16 @@ import { formatReadingTime } from "@/lib/format";
  * state, keeping this a plain Server Component with no "use client"
  * needed, and letting each page number be a real, linkable, cacheable URL
  * (consistent with §10's static-by-default posture).
+ *
+ * Cached rather than rendered per request: this page queries posts and
+ * categories on every hit, which on the VPS cost roughly half a second of
+ * server time for content that changes when an editor publishes, not when
+ * a visitor arrives. `savePostAction`, `deletePostAction` and
+ * `togglePostPublishAction` all call `revalidatePath("/blog")`, so a
+ * published post still appears immediately; the window below is only the
+ * ceiling for changes made outside the admin UI.
  */
+export const revalidate = 3600;
 // BUG FIX: was a static `export const metadata` with the org name
 // hardcoded.
 export async function generateMetadata(): Promise<Metadata> {

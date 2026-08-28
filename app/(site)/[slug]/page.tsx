@@ -34,6 +34,23 @@ import { renderBlock } from "@/components/blocks";
  * no redeploy" requirement (§3.5 / §10) that `savePageAction`'s
  * `revalidatePath` already targets.
  */
+/**
+ * Cached, but still not build-time enumerated.
+ *
+ * Skipping `generateStaticParams` (see above) is right — these pages are
+ * created after a deploy and must not 404 until the next one. But it left
+ * every request re-rendering from scratch: a 13-block page measured
+ * 0.6–2.5s server-side on the VPS, against 0.25s for a cached route.
+ *
+ * `revalidate` keeps both properties. A new page is rendered on first
+ * request and served from cache after that, so it still appears without a
+ * redeploy. Edits do not wait out the window either — `savePageAction`
+ * already calls `revalidatePath('/<slug>')`, which drops the entry
+ * immediately. The hour is only the ceiling for changes made outside the
+ * admin UI, such as a direct database edit.
+ */
+export const revalidate = 3600;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
