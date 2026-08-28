@@ -69,6 +69,10 @@ services:
       # Uploads survive redeploys because they live on the host, outside
       # the image. This is the single most important line in the file.
       - ${STORAGE_DIR_HOST:-/var/lib/twelvesteps/media}:/data/media
+      # Optimized images are expensive to produce on a small VPS and are
+      # written under .next/cache, which a redeploy would otherwise discard
+      # — making every image pay for resizing again after each deploy.
+      - image_cache:/app/.next/cache
     # Also no `ports:` — nginx is the only way in.
     networks:
       - internal
@@ -106,6 +110,7 @@ services:
 
 volumes:
   postgres_data:
+  image_cache:
 
 networks:
   internal:

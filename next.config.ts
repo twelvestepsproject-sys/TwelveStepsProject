@@ -8,6 +8,21 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   images: {
+    // Next's default deviceSizes go up to 3840 (4K). On a 4-core VPS that
+    // meant a page with 16 images asking sharp for six 4K resizes at once,
+    // which took ~15s wall-clock — the images, not the HTML, were the slow
+    // part of a page load. Nothing here is displayed above ~1600 CSS px,
+    // so the larger entries only ever cost CPU.
+    deviceSizes: [640, 828, 1080, 1200, 1920],
+    imageSizes: [32, 48, 64, 96, 128, 256, 384],
+
+    // Optimized variants are immutable once produced (the source path
+    // carries a timestamp), so they can be cached for a year instead of
+    // Next's 60-second default, which made the work repeat all day.
+    minimumCacheTTL: 31536000,
+
+    formats: ["image/webp"],
+
     remotePatterns: [
       {
         protocol: "https",

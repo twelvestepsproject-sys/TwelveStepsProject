@@ -112,6 +112,12 @@ ENV NODE_PATH=/opt/scripts-deps/node_modules
 # before the host volume is mounted over it.
 RUN mkdir -p /data/media && chown -R nextjs:nodejs /data
 
+# The optimized-image cache is a named volume in production. Docker seeds a
+# fresh volume from the image, so the directory has to exist and be owned by
+# the runtime user here — otherwise the non-root process cannot write to it
+# and every image is re-optimized on every request.
+RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next
+
 USER nextjs
 EXPOSE 3000
 
