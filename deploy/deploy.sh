@@ -35,6 +35,30 @@ if [ "$NO_DOMAIN" -eq 0 ] && grep -q "DOMAIN_PLACEHOLDER" nginx/conf.d/site.conf
   exit 1
 fi
 
+# This script builds from the working tree, never from the remote — it does
+# not pull. Forgetting `git pull` first therefore rebuilds the SAME code and
+# reports success, which has now happened twice: a deploy looked clean while
+# the fix was still sitting on the remote. Checked here rather than after
+# the build, so it costs seconds instead of a full rebuild.
+#
+# Only a warning when the remote cannot be reached (offline, no credentials)
+# — that must not block a deploy that is otherwise fine.
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+if [ -n "$BRANCH" ] && git fetch --quiet origin "$BRANCH" 2>/dev/null; then
+  LOCAL="$(git rev-parse HEAD 2>/dev/null || echo "")"
+  REMOTE="$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo "")"
+  if [ -n "$LOCAL" ] && [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ] &&
+     git merge-base --is-ancestor "$LOCAL" "$REMOTE" 2>/dev/null; then
+    echo "This checkout is behind origin/$BRANCH — the build would not include"
+    echo "the newer commits:"
+    echo
+    git --no-pager log --oneline "$LOCAL..$REMOTE" | sed 's/^/    /'
+    echo
+    echo "Run:  git pull && bash $0 ${1:-}"
+    exit 1
+  fi
+fi
+
 echo
 echo "=== 1/6  back up the database ==="
 # Before, not after: if a migration goes wrong this is what you restore.
