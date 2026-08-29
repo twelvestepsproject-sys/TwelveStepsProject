@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { z } from "zod";
 import type { heroBlockDataSchema } from "@/lib/schemas";
 import { db } from "@/lib/queries";
@@ -40,15 +41,41 @@ export async function Hero({ data }: { data: HeroData }) {
           the DEFAULT stacking order (no z-index at all) as plain absolutely
           positioned elements painted in DOM order, with the actual content
           getting `relative z-10` to guarantee it's still on top. */}
+      {/* PERF FIX: this was a CSS `background-image`, which meant the photo
+          never reached next/image and was served at its original size — the
+          hero on the three year pages is a 1.6MB PNG that took ~15s to
+          transfer on the VPS, as the FIRST thing the page paints. A CSS
+          background cannot be optimized, responsive, or format-negotiated,
+          because the browser resolves the URL itself.
+
+          `fill` reproduces what `absolute inset-0` + `bg-cover` + `bg-center`
+          did (object-cover/center below), so the visual result is unchanged
+          — but the same image now goes through the optimizer: 1,644,107
+          bytes -> 24,348 as WebP at 1920w, verified against the live server.
+
+          The transform stays on the wrapper rather than the image so the
+          parallax variable keeps applying to the whole layer, and the
+          stacking order is still plain DOM order — see the bug note above,
+          which this must not regress. */}
       {background ? (
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center will-change-transform"
-          style={{
-            backgroundImage: `url(${mediaUrlFor(background)})`,
-            transform: "translateY(var(--hero-parallax-y, 0px)) scale(1.08)",
-          }}
-        />
+          className="absolute inset-0 will-change-transform"
+          style={{ transform: "translateY(var(--hero-parallax-y, 0px)) scale(1.08)" }}
+        >
+          <Image
+            src={mediaUrlFor(background)}
+            alt=""
+            fill
+            // Full-bleed at every breakpoint, so the optimizer picks by
+            // viewport width rather than defaulting to the largest variant.
+            sizes="100vw"
+            // Above the fold and LCP-relevant (see the motion note above):
+            // it must not be lazy-loaded.
+            priority
+            className="object-cover object-center"
+          />
+        </div>
       ) : null}
       {/* Opacity overlay so white text stays readable over any photo —
           resolves through the existing --color-primary token (an
