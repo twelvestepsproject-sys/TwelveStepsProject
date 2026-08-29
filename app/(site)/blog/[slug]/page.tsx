@@ -89,6 +89,10 @@ export default async function SingleArticlePage({ params }: PageProps) {
           width={cover.width}
           height={cover.height}
           priority
+          // Full-bleed inside the article column, which is capped well
+          // below the file's own width — without this the srcset targets
+          // that width and the optimizer returns the original unconverted.
+          sizes="(min-width: 768px) 768px, 100vw"
           className="my-6 h-64 w-full rounded-lg object-cover sm:h-80"
         />
       ) : null}

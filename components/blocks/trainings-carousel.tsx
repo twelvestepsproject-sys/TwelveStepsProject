@@ -67,6 +67,12 @@ export async function TrainingsCarousel({ data }: { data: TrainingsCarouselData 
                         alt={cover.alt_he}
                         width={cover.width}
                         height={cover.height}
+                        // Same as link-cards: the declared width is the
+                        // file's own, so without `sizes` the srcset targets
+                        // it and requests w=1920 for a 160px-tall card.
+                        // Matches the wrapper's own breakpoints above:
+                        // full width, then 50%, then a third.
+                        sizes="(min-width: 1024px) 384px, (min-width: 640px) 50vw, 100vw"
                         className="h-40 w-full rounded-md object-cover"
                       />
                     ) : null}
@@ -103,6 +109,11 @@ export async function TrainingsCarousel({ data }: { data: TrainingsCarouselData 
                       alt={cover.alt_he}
                       width={cover.width}
                       height={cover.height}
+                      // Carousel variant: fixed-width cards, so the size is
+                      // known outright. Without this the srcset is built
+                      // from the file's own width — see the grid variant
+                      // above for what that costs.
+                      sizes="(min-width: 640px) 320px, 280px"
                       className="h-40 w-full rounded-md object-cover"
                     />
                   ) : null}

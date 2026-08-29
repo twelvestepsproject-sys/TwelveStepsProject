@@ -58,6 +58,12 @@ export async function Certificates({ data }: { data: CertificatesData }) {
                 alt={m!.alt_he}
                 width={m!.width}
                 height={m!.height}
+                // The declared width is the FILE's, so without `sizes` the
+                // srcset is built for that and asks for w=1920 — but the
+                // figure is capped at max-w-xs (320px). Past an image's
+                // natural width the optimizer returns the original file
+                // unconverted, which is how a 1254px PNG shipped as 1.8MB.
+                sizes="320px"
                 className="h-auto max-h-[26rem] w-auto rounded-md object-contain shadow-md"
               />
               {item.caption ? (

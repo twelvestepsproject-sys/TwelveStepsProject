@@ -81,6 +81,12 @@ export default async function TrainingsIndexPage() {
                     alt={cover.alt_he}
                     width={cover.width}
                     height={cover.height}
+                    // Without `sizes` the srcset is built from the file's
+                    // own width and asks for w=1920 for a 160px-tall card;
+                    // past an image's natural width the optimizer returns
+                    // the original unconverted. Matches the article's own
+                    // breakpoints above: full, then half, then a third.
+                    sizes="(min-width: 1024px) 384px, (min-width: 640px) 50vw, 100vw"
                     className="h-40 w-full rounded-md object-cover"
                   />
                 ) : null}

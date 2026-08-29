@@ -83,6 +83,18 @@ export async function LinkCards({ data }: { data: LinkCardsData }) {
                       alt={image.alt_he}
                       width={image.width}
                       height={image.height}
+                      // Without `sizes`, next/image sizes the srcset from the
+                      // declared width (here the file's own, e.g. 1254) and
+                      // requests w=1920 for a card that is 176px tall in a
+                      // three-column grid. That costs more than the wasted
+                      // pixels: above an image's natural width the optimizer
+                      // stops resizing and returns the ORIGINAL file
+                      // untouched — so a 1254px PNG came back as 1,882,461
+                      // bytes of PNG instead of 74,382 as WebP at w=1200.
+                      //
+                      // These are the real widths: one column, two from `sm`,
+                      // three from `lg`, inside a max-w-6xl (1152px) wrapper.
+                      sizes="(min-width: 1024px) 384px, (min-width: 640px) 50vw, 100vw"
                       className="h-44 w-full object-cover"
                     />
                   ) : null}
