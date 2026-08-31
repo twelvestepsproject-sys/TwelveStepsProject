@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
-import { mediaUrlFor } from "@/lib/media";
+import { ogImageFor } from "@/lib/media";
 import { renderBlock } from "@/components/blocks";
 
 /**
@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description: page.seo_description ?? undefined,
-      images: logo ? [mediaUrlFor(logo)] : undefined,
+      images: logo ? [ogImageFor(logo)] : undefined,
     },
     alternates: page.seo_canonical ? { canonical: page.seo_canonical } : undefined,
     robots: page.seo_noindex ? { index: false, follow: false } : undefined,

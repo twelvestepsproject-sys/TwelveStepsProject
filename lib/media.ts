@@ -36,3 +36,30 @@ export function mediaUrl(storagePath: string): string {
 export function mediaUrlFor(media: Pick<Media, "storage_path">): string {
   return mediaUrl(media.storage_path);
 }
+
+/** Width the social-preview image is generated at. 1200 is the size the
+ *  major scrapers expect, and it keeps the file small enough for them. */
+export const OG_IMAGE_WIDTH = 1200;
+
+/**
+ * A share-preview URL for a media row, routed through the image optimizer.
+ *
+ * Pointing og:image straight at the upload does not work in practice: the
+ * site's logo is a 1.27MB PNG, and WhatsApp drops preview images well below
+ * that size — the tag resolved and the file fetched fine, but no preview
+ * ever appeared. The same image at w=1200 comes back around 101KB.
+ *
+ * Returns the size actually served alongside the URL, since og:image:width
+ * and :height must describe what the scraper receives rather than the
+ * source file.
+ */
+export function ogImageFor(
+  media: Pick<Media, "storage_path" | "width" | "height">,
+): { url: string; width: number; height: number } {
+  const src = mediaUrl(media.storage_path);
+  return {
+    url: `/_next/image?url=${encodeURIComponent(src)}&w=${OG_IMAGE_WIDTH}&q=75`,
+    width: OG_IMAGE_WIDTH,
+    height: Math.round((media.height / media.width) * OG_IMAGE_WIDTH),
+  };
+}

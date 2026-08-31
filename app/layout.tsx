@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { fontDisplay, fontBody, fontRubik, fontNotoSansHebrew, fontFredoka } from "@/lib/fonts";
 import { db } from "@/lib/queries";
-import { mediaUrlFor } from "@/lib/media";
+import { mediaUrlFor, ogImageFor } from "@/lib/media";
 import { renderThemeStyleTag, fontFamilyVars } from "@/lib/admin/theme-style";
 import "./globals.css";
 
@@ -29,15 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
   // like the header. `metadataBase` is what turns the relative
   // /api/media/... path into the absolute URL these scrapers require.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  // Through the optimizer, not the raw upload — see ogImageFor for why the
+  // original file produced no preview at all.
   const ogImages = logo
-    ? [
-        {
-          url: mediaUrlFor(logo),
-          width: logo.width,
-          height: logo.height,
-          alt: logo.alt_he || settings.site_name,
-        },
-      ]
+    ? [{ ...ogImageFor(logo), alt: logo.alt_he || settings.site_name }]
     : undefined;
 
   return {
@@ -70,9 +66,10 @@ export async function generateMetadata(): Promise<Metadata> {
       images: ogImages,
     },
     twitter: {
-      // summary_large_image needs a wide image to look right; the logo is
-      // square or portrait, so the compact card is the honest choice.
-      card: "summary",
+      // The logo is a wide wordmark (2.64:1), which the large card frames
+      // properly — `summary` would crop it to a small square and lose the
+      // text. Was chosen when the uploaded logo was still portrait.
+      card: "summary_large_image",
       title: settings.site_name,
       description: settings.tagline ?? undefined,
       images: ogImages,
