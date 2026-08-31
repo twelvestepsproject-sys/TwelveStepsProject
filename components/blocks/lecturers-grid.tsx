@@ -5,6 +5,7 @@ import { db } from "@/lib/queries";
 import { mediaUrlFor } from "@/lib/media";
 import { Skeleton } from "./skeleton";
 import { RevealOnScroll } from "./_shared/reveal-on-scroll";
+import { ExpandableBio } from "./_shared/expandable-bio";
 
 /**
  * §5 block 12 — Lecturers grid. Reads `db.listLecturers({ visibleOnly: true })`.
@@ -104,17 +105,12 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                   <p className="text-sm text-ink-muted">{lecturer.role}</p>
                 ) : null}
                 {lecturer.bio ? (
-                  // Capped at three lines so one long biography cannot stretch
-                  // its card far past its neighbours — bios in the data range
-                  // from 25 to 800+ characters. The full text stays in the DOM
-                  // (line-clamp only hides the overflow visually) and shows on
-                  // hover via the title attribute.
-                  <p
-                    className="line-clamp-3 whitespace-pre-line text-sm text-ink-muted"
-                    title={lecturer.bio}
-                  >
-                    {lecturer.bio}
-                  </p>
+                  // Still capped at three lines so one long biography cannot
+                  // stretch its card past its neighbours, but the rest is now
+                  // reachable: this was a `title` tooltip, which touch devices
+                  // never show, so on a phone the tail of an 800-character bio
+                  // could not be read at all.
+                  <ExpandableBio bio={lecturer.bio} name={lecturer.id} />
                 ) : null}
               </RevealOnScroll>
             );

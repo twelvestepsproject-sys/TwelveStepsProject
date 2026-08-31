@@ -1947,6 +1947,18 @@ export function FocusAreasFields({ data, onChange }: { data: Record<string, unkn
               </button>
             ) : null}
           </div>
+          {/* `icon` has always been in the schema and the block renders it,
+              but this form only offered title and body — so a card saved
+              here lost its emoji and there was no way to add one back. */}
+          <input
+            className={`${inputClass} w-20 text-center text-lg`}
+            placeholder="🙂"
+            aria-label={`אייקון לכרטיס ${i + 1}`}
+            value={card.icon ?? ""}
+            // Empty means "no icon", which the schema spells as null rather
+            // than "" — an empty string would render an empty icon slot.
+            onChange={(e) => updateCard(i, { icon: e.target.value || null })}
+          />
           <input
             className={inputClass}
             placeholder="כותרת"
