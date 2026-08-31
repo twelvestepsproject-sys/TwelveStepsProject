@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { fontDisplay, fontBody, fontRubik, fontNotoSansHebrew, fontFredoka } from "@/lib/fonts";
 import { db } from "@/lib/queries";
+import { mediaUrlFor } from "@/lib/media";
 import { renderThemeStyleTag, fontFamilyVars } from "@/lib/admin/theme-style";
 import "./globals.css";
 
@@ -18,9 +19,64 @@ import "./globals.css";
  */
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await db.getSiteSettings();
+  const logo = settings.logo_id ? await db.getMedia(settings.logo_id) : null;
+  const favicon = settings.favicon_id ? await db.getMedia(settings.favicon_id) : null;
+
+  // Sharing a link produced no preview image at all — there was no
+  // openGraph block here, so WhatsApp, Facebook and iMessage fell back to
+  // a bare title. The logo already in Branding is the image, which means
+  // replacing it there updates the preview with no code change, exactly
+  // like the header. `metadataBase` is what turns the relative
+  // /api/media/... path into the absolute URL these scrapers require.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const ogImages = logo
+    ? [
+        {
+          url: mediaUrlFor(logo),
+          width: logo.width,
+          height: logo.height,
+          alt: logo.alt_he || settings.site_name,
+        },
+      ]
+    : undefined;
+
   return {
+    metadataBase: siteUrl ? new URL(siteUrl) : undefined,
     title: settings.site_name,
     description: settings.tagline,
+    // The Branding screen has offered a favicon upload since it was built,
+    // but nothing ever read `favicon_id` — uploading one saved the row and
+    // changed nothing, so the tab kept showing the generic mark shipped in
+    // public/favicon.ico. Wired up here, with that file as the fallback for
+    // when no favicon has been uploaded.
+    //
+    // `apple` gets the same image: iOS uses it for a home-screen bookmark,
+    // and falling back to the site logo beats iOS's own default, which is a
+    // screenshot of the page.
+    icons: favicon
+      ? {
+          icon: mediaUrlFor(favicon),
+          shortcut: mediaUrlFor(favicon),
+          apple: mediaUrlFor(favicon),
+        }
+      : undefined,
+    openGraph: {
+      type: "website",
+      siteName: settings.site_name,
+      title: settings.site_name,
+      description: settings.tagline ?? undefined,
+      locale: "he_IL",
+      url: siteUrl ?? undefined,
+      images: ogImages,
+    },
+    twitter: {
+      // summary_large_image needs a wide image to look right; the logo is
+      // square or portrait, so the compact card is the honest choice.
+      card: "summary",
+      title: settings.site_name,
+      description: settings.tagline ?? undefined,
+      images: ogImages,
+    },
   };
 }
 

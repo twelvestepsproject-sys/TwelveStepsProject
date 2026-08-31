@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
+import { mediaUrlFor } from "@/lib/media";
 import { renderBlock } from "@/components/blocks";
 
 /**
@@ -65,10 +66,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const [page, settings] = await Promise.all([db.getPage(slug), db.getSiteSettings()]);
   if (!page) return {};
+  const logo = settings.logo_id ? await db.getMedia(settings.logo_id) : null;
+
+  const title = page.seo_title ?? `${page.title} | ${settings.site_name}`;
 
   return {
-    title: page.seo_title ?? `${page.title} | ${settings.site_name}`,
+    title,
     description: page.seo_description ?? undefined,
+    // Without this the shared preview showed the SITE title for every page:
+    // `title` alone does not feed openGraph, so the root layout's value won
+    // and a shared course page was indistinguishable from the homepage.
+    //
+    // `images` has to be repeated even though the root layout sets it: an
+    // openGraph object here REPLACES the parent's rather than merging into
+    // it, so omitting the image dropped the preview picture entirely on
+    // exactly the pages most likely to be shared.
+    openGraph: {
+      title,
+      description: page.seo_description ?? undefined,
+      images: logo ? [mediaUrlFor(logo)] : undefined,
+    },
     alternates: page.seo_canonical ? { canonical: page.seo_canonical } : undefined,
     robots: page.seo_noindex ? { index: false, follow: false } : undefined,
   };
