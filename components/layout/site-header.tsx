@@ -85,12 +85,19 @@ export async function SiteHeader() {
               // Sized by HEIGHT with an automatic width, not a 36x36 box.
               // The logo is the wordmark now that the site name no longer
               // sits beside it, so it has to be legible — and a square box
-              // would letterbox the current portrait file (398x494) and
-              // squash a landscape one just as badly. Height-only keeps any
-              // aspect ratio intact, so replacing the file in the admin
-              // needs no code change.
-              sizes="(min-width: 1024px) 200px, 160px"
-              className="h-12 w-auto shrink-0 object-contain lg:h-14"
+              // would letterbox or squash it depending on the file.
+              // Height-only keeps any aspect ratio intact, so replacing the
+              // file in the admin needs no code change.
+              //
+              // 80px at lg. The file is 2000x757 with three lines of text
+              // plus a strapline under the mark, so the 56px this started
+              // at left all of that unreadable. 96px was tried and read as
+              // out of proportion — taller than everything else in the bar,
+              // which made the logo look bolted on rather than part of it.
+              // 80px still resolves the wording and sits closer to the
+              // height of the nav row it shares.
+              sizes="(min-width: 1024px) 280px, 200px"
+              className="h-14 w-auto shrink-0 object-contain lg:h-20"
             />
           ) : (
             // No logo uploaded yet (site_settings.logo_id is null in the
@@ -122,7 +129,17 @@ export async function SiteHeader() {
                   href={item.href}
                   target={item.open_in_new_tab ? "_blank" : undefined}
                   rel={item.open_in_new_tab ? "noreferrer" : undefined}
-                  className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface-alt hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  // The wide logo left the desktop bar needing ~1146px of a
+                  // 1152px container — six pixels of slack, so any small
+                  // change tipped an item onto a second line. Tighter
+                  // padding and a slightly smaller label buy back ~110px.
+                  //
+                  // `whitespace-nowrap` is the part that actually prevents
+                  // a recurrence: without it an item breaks mid-label the
+                  // moment the row is under pressure, which is what the
+                  // client saw. With it the row stays on one line whatever
+                  // the logo's width turns out to be.
+                  className="flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-2 text-[0.8125rem] font-semibold text-ink transition-colors hover:bg-surface-alt hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary xl:px-3 xl:text-sm"
                 >
                   {item.label}
                   {item.children.length > 0 ? (
@@ -161,22 +178,15 @@ export async function SiteHeader() {
             The desktop flex row is unaffected: both order utilities are
             undone at lg, where source order applies again. */}
         <div className="order-first flex items-center gap-3 justify-self-start lg:order-none lg:justify-self-auto">
-          <form action="/search" className="hidden items-center md:flex" role="search">
-            <label htmlFor="site-search" className="sr-only">
-              חיפוש באתר
-            </label>
-            <input
-              id="site-search"
-              type="search"
-              name="q"
-              placeholder="חיפוש..."
-              className="w-40 rounded-full border border-border bg-bg px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:w-56"
-            />
-          </form>
-
+          {/* The search box was removed from the header at the client's
+              request. `/search` itself still works and stays in the
+              sitemap — this only takes the box out of the bar, which also
+              returns ~220px to a row that had six pixels of slack. */}
           <a
             href="#registration-modal"
-            className="hidden rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-block"
+            // The widest single item in the bar, so it breaks first under
+            // pressure — nowrap for the same reason as the nav links.
+            className="hidden whitespace-nowrap rounded-full bg-accent px-4 py-2 text-[0.8125rem] font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:inline-block xl:text-sm"
           >
             תיאום שיחת היכרות
           </a>
