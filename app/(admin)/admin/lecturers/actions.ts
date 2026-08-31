@@ -22,6 +22,30 @@ import type { Lecturer } from "@/lib/schemas";
 const CONSENT_WARNING_HE =
   "פרטי המרצה נשמרו כמוסתרים. לא ניתן להציג מרצה אמיתי/ת ללא אישור בכתב. סמנו את אישור ההסכמה כדי להציגם.";
 
+/**
+ * Every one of these actions used to revalidate `/admin/lecturers` alone,
+ * so an edit was visible in the admin list and nowhere else. The client hit
+ * exactly that: replacement photos appeared for some lecturers and not
+ * others, with no obvious pattern.
+ *
+ * The pattern was which public page happened to show them. `/odot` and the
+ * per-lecturer pages are statically prerendered (`generateStaticParams`, no
+ * `revalidate`), so without an explicit call here they were frozen until
+ * the next deploy — never updating. A `lecturers_grid` block on a content
+ * page sat behind that route's `revalidate = 3600` instead, so those did
+ * update, just up to an hour later. Same edit, two behaviours.
+ *
+ * `/` is included because the homepage carries a lecturers_grid, and the
+ * lecturer's own page only when it has a slug — `revalidatePath` on
+ * `/odot/null` would be a no-op at best.
+ */
+function revalidateLecturerPages(pageSlug?: string | null): void {
+  revalidatePath("/admin/lecturers");
+  revalidatePath("/odot");
+  revalidatePath("/");
+  if (pageSlug) revalidatePath(`/odot/${pageSlug}`);
+}
+
 export async function saveLecturerAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
   try {
     await requireContentRole();
@@ -60,7 +84,7 @@ export async function saveLecturerAction(formData: FormData): Promise<ActionResu
     };
 
     const saved = await db.saveLecturer(input);
-    revalidatePath("/admin/lecturers");
+    revalidateLecturerPages(saved.page_slug);
 
     const warning = "__consentWarning" in saved && saved.__consentWarning ? CONSENT_WARNING_HE : undefined;
     return { ok: true, data: { id: saved.id }, warning };
@@ -71,15 +95,18 @@ export async function saveLecturerAction(formData: FormData): Promise<ActionResu
 
 export async function deleteLecturerAction(id: string): Promise<void> {
   await requireContentRole();
+  // Read the slug before the row is gone: the lecturer's own page has to be
+  // dropped from the cache too, or it keeps serving a deleted person.
+  const existing = await db.getLecturer(id);
   await db.deleteLecturer(id);
-  revalidatePath("/admin/lecturers");
+  revalidateLecturerPages(existing?.page_slug ?? null);
 }
 
 export async function toggleLecturerVisibilityAction(id: string, nextVisible: boolean): Promise<ActionResult> {
   try {
     await requireContentRole();
     const saved = await db.saveLecturer({ id, is_visible: nextVisible });
-    revalidatePath("/admin/lecturers");
+    revalidateLecturerPages(saved.page_slug);
     const warning = "__consentWarning" in saved && saved.__consentWarning ? CONSENT_WARNING_HE : undefined;
     return { ok: true, warning };
   } catch (err) {
