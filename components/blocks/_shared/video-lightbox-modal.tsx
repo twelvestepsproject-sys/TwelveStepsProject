@@ -73,16 +73,3 @@ export function VideoLightboxModal({
     </div>
   );
 }
-
-/** Extracts an 11-char YouTube video id from common URL shapes. Returns
- * null on anything unrecognized so a malformed `video_url` degrades to
- * "nothing plays" rather than a broken embed src. Shared with
- * intro-media-player.tsx's identical helper (kept here as the one
- * definition; that file re-exports/uses this rather than duplicating it
- * would be the cleaner end state — see final report friction note). */
-export function extractYouTubeId(url: string): string | null {
-  const pattern =
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/|youtube\.com\/embed\/)([\w-]{11})/;
-  const match = url.match(pattern);
-  return match ? match[1] : null;
-}

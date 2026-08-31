@@ -3,6 +3,7 @@ import type { podcastBlockDataSchema } from "@/lib/schemas";
 import { db } from "@/lib/queries";
 import { Skeleton } from "./skeleton";
 import { RevealOnScroll } from "./_shared/reveal-on-scroll";
+import { extractYouTubeId } from "./_shared/youtube";
 
 /**
  * §5 block 15 — Podcast. Its presence on the homepage is a matter of the
@@ -19,6 +20,7 @@ export async function Podcast({ data }: { data: PodcastData }) {
 
   if (episodes.length === 0) return null;
   const latest = episodes[0];
+  const videoId = latest.video_url ? extractYouTubeId(latest.video_url) : null;
 
   return (
     <section className="bg-primary px-6 py-16 text-primary-fg">
@@ -28,6 +30,27 @@ export async function Podcast({ data }: { data: PodcastData }) {
         ) : null}
         <h3 className="font-display text-lg font-bold">{latest.title}</h3>
         <p className="text-primary-fg/90">{latest.description}</p>
+
+        {/* An episode with a `video_url` plays here instead of only linking
+            out. `extractYouTubeId` returns null for anything it does not
+            recognise, so a mistyped URL falls back to the button below
+            rather than rendering a broken iframe. -nocookie is the same
+            host the other video blocks embed from. */}
+        {videoId ? (
+          <div className="aspect-video w-full overflow-hidden rounded-lg bg-ink shadow-lg">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+              title={latest.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+              className="h-full w-full border-0"
+            />
+          </div>
+        ) : null}
+
+        {/* Kept even when a video is shown: the video is one episode, the
+            button goes to the whole show. */}
         <a
           href={data.platform_cta.href}
           target={data.platform_cta.open_in_new_tab ? "_blank" : undefined}

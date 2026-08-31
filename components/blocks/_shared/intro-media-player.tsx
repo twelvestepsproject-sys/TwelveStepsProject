@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { VideoLightboxModal, extractYouTubeId } from "./video-lightbox-modal";
+import { VideoLightboxModal } from "./video-lightbox-modal";
+import { extractYouTubeId } from "./youtube";
 
 /**
  * Click-to-play video affordance for the `intro_media` block (§5 #3).

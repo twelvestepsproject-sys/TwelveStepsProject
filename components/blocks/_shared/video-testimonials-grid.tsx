@@ -5,7 +5,8 @@ import type { z } from "zod";
 import Image from "next/image";
 import type { Media, videoTestimonialsBlockDataSchema } from "@/lib/schemas";
 import { mediaUrlFor } from "@/lib/media";
-import { VideoLightboxModal, extractYouTubeId } from "./video-lightbox-modal";
+import { VideoLightboxModal } from "./video-lightbox-modal";
+import { extractYouTubeId } from "./youtube";
 import { RevealOnScroll } from "./reveal-on-scroll";
 
 type VideoTestimonialsData = z.infer<typeof videoTestimonialsBlockDataSchema>;

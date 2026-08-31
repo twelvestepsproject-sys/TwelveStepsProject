@@ -20,6 +20,9 @@ export async function savePodcastEpisodeAction(
       title: String(formData.get("title") ?? "").trim(),
       description: String(formData.get("description") ?? ""),
       spotify_url: String(formData.get("spotify_url") ?? ""),
+      // Empty means "no video", stored as null rather than "" so the block
+      // can test the column directly instead of also checking for a blank.
+      video_url: String(formData.get("video_url") ?? "").trim() || null,
       published_at: publishedAtRaw ? new Date(publishedAtRaw).toISOString() : new Date().toISOString(),
       duration: Number(formData.get("duration_minutes") ?? 0) * 60,
       cover_image_id: null,

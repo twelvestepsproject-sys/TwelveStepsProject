@@ -13,6 +13,7 @@ interface FormState {
   title: string;
   description: string;
   spotify_url: string;
+  video_url: string;
   published_at: string;
   duration_minutes: string;
 }
@@ -22,6 +23,7 @@ function toFormState(ep?: PodcastEpisode | null): FormState {
     title: ep?.title ?? "",
     description: ep?.description ?? "",
     spotify_url: ep?.spotify_url ?? "",
+    video_url: ep?.video_url ?? "",
     published_at: ep?.published_at ? ep.published_at.slice(0, 10) : "",
     duration_minutes: ep ? String(Math.round(ep.duration / 60)) : "",
   };
@@ -33,6 +35,7 @@ function toFormData(state: FormState, id?: string): FormData {
   fd.set("title", state.title);
   fd.set("description", state.description);
   fd.set("spotify_url", state.spotify_url);
+  fd.set("video_url", state.video_url);
   fd.set("published_at", state.published_at);
   fd.set("duration_minutes", state.duration_minutes);
   return fd;
@@ -113,6 +116,20 @@ export function PodcastForm({ episode, canEdit }: { episode?: PodcastEpisode | n
             value={state.spotify_url}
             onChange={(e) => update("spotify_url", e.target.value)}
             required
+          />
+        </Field>
+
+        <Field
+          label="סרטון יוטיוב (אופציונלי)"
+          htmlFor="video_url"
+          hint="אם ימולא, הסרטון יוצג באתר במקום רק כפתור לספוטיפיי. הדביקו כתובת רגילה של יוטיוב."
+        >
+          <input
+            id="video_url"
+            className={inputClass}
+            placeholder="https://www.youtube.com/watch?v=..."
+            value={state.video_url}
+            onChange={(e) => update("video_url", e.target.value)}
           />
         </Field>
 
