@@ -53,22 +53,44 @@ export async function SiteHeader() {
 
   return (
     <HeaderShell className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur transition-[padding,box-shadow] duration-300">
-      <div className="site-header-inner mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-3 transition-[padding] duration-300 lg:flex lg:justify-between">
-        {/* BUG FIX (design feedback): on mobile there's no true center slot
-            with a 2-item flex justify-between layout — the site name sat
-            at whichever edge this link happened to land on. A 3-column
-            grid (logo | flexible-center-name | hamburger) genuinely centers
-            the middle column regardless of the outer groups' widths, mobile
-            only — lg: reverts to the original flex layout, where the
-            logo+name sit inline together as one lockup like before. */}
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+      {/* Mobile is a 3-column grid whose outer tracks are the same width
+          (1fr), so the middle one is centred against the bar itself rather
+          than against whatever the hamburger happens to measure — the
+          spacer below is what makes that true. `justify-between` cannot do
+          this: with two items it centres nothing, and with the logo as one
+          of them it would sit at an edge.
+
+          lg: drops back to the original flex row, where the logo leads and
+          the nav follows. */}
+      <div className="site-header-inner mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-3 transition-[padding] duration-300 lg:flex lg:justify-between">
+        {/* Balances the hamburger's column so the logo lands in the true
+            centre. `order-last` pairs with the hamburger's `order-first`:
+            first in the DOM, last in the visual row. Hidden from assistive
+            tech — it carries no content — and removed entirely at lg,
+            where the flex row needs no counterweight. */}
+        <div aria-hidden="true" className="order-last lg:hidden" />
+
+        {/* The logo alone is the home link now — the site name that used to
+            sit beside it is screen-reader-only, per the client's request. */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 justify-self-center font-display text-lg font-bold text-ink lg:justify-self-auto"
+        >
           {logo ? (
             <Image
               src={mediaUrlFor(logo)}
               alt={logo.alt_he}
-              width={36}
-              height={36}
-              className="h-9 w-9 shrink-0 object-contain"
+              width={logo.width}
+              height={logo.height}
+              // Sized by HEIGHT with an automatic width, not a 36x36 box.
+              // The logo is the wordmark now that the site name no longer
+              // sits beside it, so it has to be legible — and a square box
+              // would letterbox the current portrait file (398x494) and
+              // squash a landscape one just as badly. Height-only keeps any
+              // aspect ratio intact, so replacing the file in the admin
+              // needs no code change.
+              sizes="(min-width: 1024px) 200px, 160px"
+              className="h-12 w-auto shrink-0 object-contain lg:h-14"
             />
           ) : (
             // No logo uploaded yet (site_settings.logo_id is null in the
@@ -83,19 +105,14 @@ export async function SiteHeader() {
               {settings.site_name.slice(0, 1)}
             </span>
           )}
-          {/* Inline name — desktop only. On mobile the name moves to its
-              own centered grid column below instead (larger text per
-              design feedback), so it isn't duplicated here. */}
-          <span className="hidden lg:inline">{settings.site_name}</span>
+          {/* The site name was printed twice — inline on desktop and in a
+              centered mobile column — and the client asked for both to go:
+              the logo IS the wordmark, so the name beside it read as a
+              duplicate. Kept as screen-reader text because the logo is now
+              the only content of the home link, and "הנני" is what the link
+              actually goes to. */}
+          <span className="sr-only">{settings.site_name}</span>
         </Link>
-
-        {/* Centered site name, mobile only — genuinely centered between the
-            logo and the hamburger regardless of either one's width, which
-            justify-between could never guarantee. Larger text per design
-            feedback ("שהמילה הנני יהיה בטקסט גדול"). */}
-        <span className="justify-self-center text-center font-display text-2xl font-bold text-ink lg:hidden">
-          {settings.site_name}
-        </span>
 
         <nav aria-label="ניווט ראשי" className="hidden lg:block">
           <ul className="flex items-center gap-1">
@@ -135,15 +152,15 @@ export async function SiteHeader() {
           </ul>
         </nav>
 
-        {/* BUG FIX: on mobile, this wrapper (effectively just the hamburger
-            button, since search/CTA are hidden below md/sm) used to render
-            as the LAST flex child. With dir="rtl" + justify-between, the
-            last child paints at the visual LEFT — so the hamburger showed
-            up on the wrong side. `order-first` (mobile-only, undone at lg
-            where the desktop layout takes over) moves it to the visual
-            START of the row — the right side in RTL — without touching
-            desktop ordering at all. */}
-        <div className="order-first flex items-center gap-3 lg:order-none">
+        {/* The hamburger belongs at the visual RIGHT in RTL — the start of
+            the row. It is the last child in the DOM, so on mobile it is
+            pulled into the grid's first column (`order-first`) and the
+            spacer, being `order-last`, takes the third. That keeps the
+            logo alone in the middle column and centred.
+
+            The desktop flex row is unaffected: both order utilities are
+            undone at lg, where source order applies again. */}
+        <div className="order-first flex items-center gap-3 justify-self-start lg:order-none lg:justify-self-auto">
           <form action="/search" className="hidden items-center md:flex" role="search">
             <label htmlFor="site-search" className="sr-only">
               חיפוש באתר
