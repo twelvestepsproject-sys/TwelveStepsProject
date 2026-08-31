@@ -130,6 +130,22 @@ fi
 if [ -d "certbot/conf/live/$DOMAIN" ]; then
   echo "  already issued, skipping"
 else
+  # Adding a domain to a server that has been running --no-domain is the
+  # normal path here, and in that mode the app itself holds port 80. The
+  # throwaway container below then fails with "port is already allocated"
+  # and the certificate is never requested — so free the port first rather
+  # than leaving the operator to decode a docker networking error.
+  #
+  # `down` on the no-domain overlay stops the app and database; both come
+  # back with `deploy.sh` at the end, and neither owns any data (the
+  # database lives in a named volume and uploads on a host path).
+  if docker ps --format '{{.Ports}}' 2>/dev/null | grep -q ':80->'; then
+    echo "  port 80 is in use — stopping the running stack for the challenge"
+    docker compose -f docker-compose.prod.yml -f docker-compose.no-domain.yml down >/dev/null 2>&1 \
+      || docker compose -f docker-compose.prod.yml down >/dev/null 2>&1 || true
+    RESTART_AFTER=1
+  fi
+
   echo "  starting nginx on port 80 for the ACME challenge..."
   # nginx will not start while its config references a certificate that
   # does not exist, so serve the challenge from a throwaway container.
@@ -159,6 +175,15 @@ else
     echo "    - DNS changes can take a few hours to propagate"
     echo "  Check with:  dig +short $DOMAIN"
     echo "  Then re-run this script."
+    echo
+    echo "  Let's Encrypt allows a limited number of failures per hour, so"
+    echo "  read the error above before re-running rather than retrying blind."
+    if [ "${RESTART_AFTER:-0}" -eq 1 ]; then
+      echo
+      echo "  The site was stopped to free port 80 and is still down. Bring it"
+      echo "  back on HTTP while you sort the DNS out:"
+      echo "     bash deploy/deploy.sh --no-domain"
+    fi
     exit 1
   fi
   echo "  issued for $DOMAIN and www.$DOMAIN"
