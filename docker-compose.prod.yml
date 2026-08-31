@@ -49,6 +49,10 @@ services:
       args:
         DATA_SOURCE: postgres
         DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:${BUILD_DB_PORT:-55432}/${POSTGRES_DB}
+        # Needed at BUILD time, not just runtime: Next inlines NEXT_PUBLIC_*
+        # into the output, so without this the code's localhost fallback is
+        # what ships and the runtime value below can never take effect.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL in .env}
     container_name: twelvesteps-app
     restart: unless-stopped
     depends_on:

@@ -53,9 +53,22 @@ COPY . .
 # argument, and docker-compose.prod.yml points it at the postgres service.
 ARG DATA_SOURCE=postgres
 ARG DATABASE_URL
+
+# NEXT_PUBLIC_* is substituted into the output at BUILD time, not read at
+# runtime — so leaving this unset here baked the code's own
+# "http://localhost:3000" fallback into the image, and setting the real
+# value in .env afterwards could not override it. The live site advertised
+# og:image and the robots.txt sitemap on localhost, which is why a shared
+# link showed no preview: the scraper was told to fetch the image from
+# itself.
+#
+# Also feeds the prerendered pages, which are generated in this stage.
+ARG NEXT_PUBLIC_SITE_URL
+
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATA_SOURCE=${DATA_SOURCE}
 ENV DATABASE_URL=${DATABASE_URL}
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
 RUN if [ -f pnpm-lock.yaml ]; then pnpm build; else npm run build; fi
 
