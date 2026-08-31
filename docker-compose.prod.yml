@@ -97,16 +97,32 @@ services:
     networks:
       - internal
 
-  # Runs on demand, not as a long-lived service:
-  #   docker compose -f docker-compose.prod.yml run --rm certbot ...
+  # Renews the TLS certificate. This was a `profiles: tools` container that
+  # only ran when invoked by hand, which meant nothing renewed anything —
+  # nginx reloaded every 6h to pick up a new certificate that was never
+  # going to appear, and the site would have started failing with an expiry
+  # warning 90 days after issue.
+  #
+  # `renew` is a no-op until a certificate is within 30 days of expiry, so
+  # running it on a timer is safe and is what Let's Encrypt recommends.
+  # Twice a day, per their guidance: it leaves ~60 chances to recover from a
+  # transient failure before anything actually expires, which matters on a
+  # link measured at 8% packet loss.
+  #
+  # --webroot writes the challenge into the same volume nginx serves
+  # /.well-known/acme-challenge/ from, so renewal needs no downtime and no
+  # port juggling — unlike the first issue, which had to stop the stack.
   certbot:
     image: certbot/certbot:latest
     container_name: twelvesteps-certbot
+    restart: unless-stopped
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    profiles:
-      - tools
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+      certbot renew --webroot -w /var/www/certbot --quiet;
+      sleep 12h & wait $${!}; done"
 
 volumes:
   postgres_data:

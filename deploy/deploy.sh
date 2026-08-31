@@ -114,7 +114,10 @@ echo "=== 5/6  start ==="
 # nothing changed and leaves the OLD container running. A deploy then
 # reported success while still serving the previous build.
 if [ "$NO_DOMAIN" -eq 1 ]; then
-  # Only these two: `up -d` with no arguments would also try to start nginx.
+  # Named explicitly: a bare `up -d` would also start nginx, which cannot
+  # run without a certificate, and certbot, which would have nothing to
+  # renew. With a domain both are wanted, so the else branch starts
+  # everything.
   $COMPOSE up -d postgres
   $COMPOSE up -d --force-recreate app
 else
