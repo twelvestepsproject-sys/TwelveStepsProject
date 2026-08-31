@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import type { MenuItem } from "@/lib/schemas";
+import type { MenuItem, Media } from "@/lib/schemas";
+import { SocialIcon } from "./social-icon";
 
 /**
  * Hamburger -> off-canvas mobile menu with social links, per §5 block 1.
@@ -27,10 +28,12 @@ import type { MenuItem } from "@/lib/schemas";
 export function MobileNav({
   menu,
   socialLinks,
+  socialIcons,
   siteName,
 }: {
   menu: MenuItem[];
   socialLinks: Record<string, string>;
+  socialIcons: Record<string, Media | null>;
   siteName: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -137,9 +140,16 @@ export function MobileNav({
                         href={href}
                         target="_blank"
                         rel="noreferrer"
+                        aria-label={platform}
                         className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-alt text-sm font-semibold text-ink-muted transition-colors hover:bg-primary hover:text-primary-fg"
                       >
-                        {platform.slice(0, 1).toUpperCase()}
+                        {/* Was `platform.slice(0, 1)` — a bare letter, so
+                            the drawer showed "F"/"I" while the footer next
+                            to it showed real marks. <SocialIcon> is the
+                            same three-tier resolution the footer uses:
+                            uploaded image, built-in SVG, then the letter
+                            only as a last resort for an unrecognised key. */}
+                        <SocialIcon platform={platform} icon={socialIcons[platform] ?? null} />
                       </a>
                     ))}
                   </div>

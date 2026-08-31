@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/lib/queries";
+import type { Media } from "@/lib/schemas";
 import { mediaUrlFor } from "@/lib/media";
 import { MobileNav } from "./mobile-nav";
 import { HeaderShell } from "./header-shell";
@@ -50,6 +51,17 @@ import { HeaderShell } from "./header-shell";
 export async function SiteHeader() {
   const [menu, settings] = await Promise.all([db.getMenu("header"), db.getSiteSettings()]);
   const logo = settings.logo_id ? await db.getMedia(settings.logo_id) : null;
+
+  // Resolved here rather than inside MobileNav: that is a client component
+  // and cannot read the database. Same lookup the footer does, so both
+  // render the client's uploaded icons instead of a fallback letter.
+  const socialIconIds = settings.social_icons ?? {};
+  const socialIcons: Record<string, Media | null> = {};
+  await Promise.all(
+    Object.entries(socialIconIds).map(async ([platform, mediaId]) => {
+      socialIcons[platform] = mediaId ? await db.getMedia(mediaId) : null;
+    }),
+  );
 
   return (
     <HeaderShell className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur transition-[padding,box-shadow] duration-300">
@@ -191,7 +203,12 @@ export async function SiteHeader() {
             תיאום שיחת היכרות
           </a>
 
-          <MobileNav menu={menu} socialLinks={settings.social_links} siteName={settings.site_name} />
+          <MobileNav
+            menu={menu}
+            socialLinks={settings.social_links}
+            socialIcons={socialIcons}
+            siteName={settings.site_name}
+          />
         </div>
       </div>
     </HeaderShell>
