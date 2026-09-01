@@ -29,7 +29,12 @@ export async function Podcast({ data }: { data: PodcastData }) {
           <h2 className="font-display text-2xl font-bold sm:text-3xl">{data.heading}</h2>
         ) : null}
         <h3 className="font-display text-lg font-bold">{latest.title}</h3>
-        <p className="text-primary-fg/90">{latest.description}</p>
+        {/* Guarded: the description is optional now that an episode can be
+            a video on its own, and an unguarded <p> renders as a blank gap
+            between the title and the embed. */}
+        {latest.description ? (
+          <p className="text-primary-fg/90">{latest.description}</p>
+        ) : null}
 
         {/* An episode with a `video_url` plays here instead of only linking
             out. `extractYouTubeId` returns null for anything it does not

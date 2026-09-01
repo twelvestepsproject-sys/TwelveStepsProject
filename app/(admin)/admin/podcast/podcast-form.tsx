@@ -25,7 +25,7 @@ function toFormState(ep?: PodcastEpisode | null): FormState {
     spotify_url: ep?.spotify_url ?? "",
     video_url: ep?.video_url ?? "",
     published_at: ep?.published_at ? ep.published_at.slice(0, 10) : "",
-    duration_minutes: ep ? String(Math.round(ep.duration / 60)) : "",
+    duration_minutes: ep?.duration ? String(Math.round(ep.duration / 60)) : "",
   };
 }
 
@@ -99,30 +99,32 @@ export function PodcastForm({ episode, canEdit }: { episode?: PodcastEpisode | n
           />
         </Field>
 
-        <Field label="תיאור" htmlFor="description" required>
+        <Field label="תיאור (אופציונלי)" htmlFor="description">
           <textarea
             id="description"
             className={textareaClass}
             value={state.description}
             onChange={(e) => update("description", e.target.value)}
-            required
           />
         </Field>
 
-        <Field label="קישור ל-Spotify" htmlFor="spotify_url" required>
+        <Field
+          label="קישור ל-Spotify (אופציונלי)"
+          htmlFor="spotify_url"
+          hint="אפשר להשאיר ריק ולהעלות סרטון יוטיוב במקום."
+        >
           <input
             id="spotify_url"
             className={inputClass}
             value={state.spotify_url}
             onChange={(e) => update("spotify_url", e.target.value)}
-            required
           />
         </Field>
 
         <Field
           label="סרטון יוטיוב (אופציונלי)"
           htmlFor="video_url"
-          hint="אם ימולא, הסרטון יוצג באתר במקום רק כפתור לספוטיפיי. הדביקו כתובת רגילה של יוטיוב."
+          hint="אם ימולא, הסרטון יוצג מוטמע בדף. הדביקו כתובת רגילה של יוטיוב."
         >
           <input
             id="video_url"

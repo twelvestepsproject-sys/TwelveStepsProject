@@ -42,7 +42,11 @@ export default async function PodcastListPage() {
                       {ep.title}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-ink-muted">{formatDuration(ep.duration)}</td>
+                  {/* Duration is optional now — a video episode often has
+                      none — and formatDuration(null) would print NaN:NaN. */}
+                  <td className="px-3 py-2 text-ink-muted">
+                    {ep.duration ? formatDuration(ep.duration) : "—"}
+                  </td>
                   <td className="px-3 py-2 text-ink-muted">
                     {new Date(ep.published_at).toLocaleDateString("he-IL")}
                   </td>

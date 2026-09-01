@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
+import { extractYouTubeId } from "@/components/blocks/_shared/youtube";
 
 /**
  * `/podcast` — Podcast episodes list (§4 `/[podcast]`, "only if the client
@@ -36,16 +37,45 @@ export default async function PodcastIndexPage() {
           {episodes.map((ep) => (
             <li key={ep.id} className="rounded-lg border border-border bg-surface p-5 shadow-sm">
               <h2 className="font-display text-lg font-bold text-ink">{ep.title}</h2>
-              <p className="mt-2 text-sm text-ink-muted">{ep.description}</p>
-              <p className="mt-2 text-xs text-ink-muted">{formatDuration(ep.duration)}</p>
-              <a
-                href={ep.spotify_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-block font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline"
-              >
-                האזנה בספוטיפיי
-              </a>
+              {/* The homepage block gained a video embed but this page did
+                  not, so an episode published as a video showed up here as
+                  a card with a title and nothing else. Same embed and the
+                  same null-safe id extraction as the block. */}
+              {(() => {
+                const videoId = ep.video_url ? extractYouTubeId(ep.video_url) : null;
+                return videoId ? (
+                  <div className="mt-3 aspect-video w-full overflow-hidden rounded-lg bg-ink">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+                      title={ep.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      className="h-full w-full border-0"
+                    />
+                  </div>
+                ) : null;
+              })()}
+              {/* Description, duration and the Spotify link are all optional
+                  since an episode can be published as a YouTube video on its
+                  own — each is guarded rather than rendering an empty line or
+                  a link with no href. */}
+              {ep.description ? (
+                <p className="mt-2 text-sm text-ink-muted">{ep.description}</p>
+              ) : null}
+              {ep.duration ? (
+                <p className="mt-2 text-xs text-ink-muted">{formatDuration(ep.duration)}</p>
+              ) : null}
+              {ep.spotify_url ? (
+                <a
+                  href={ep.spotify_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-block font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-hover hover:underline"
+                >
+                  האזנה בספוטיפיי
+                </a>
+              ) : null}
             </li>
           ))}
         </ol>
