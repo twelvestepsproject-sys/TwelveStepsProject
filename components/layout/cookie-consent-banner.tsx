@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const STORAGE_KEY = "eshed-cookie-consent";
 
@@ -48,9 +49,9 @@ export function CookieConsentBanner() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 sm:flex-row sm:justify-between">
         <p className="text-sm text-ink-muted">
           אנחנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה באתר. לפרטים נוספים ראו את{" "}
-          <a href="/privacy" className="underline underline-offset-2 hover:text-ink">
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-ink">
             מדיניות הפרטיות
-          </a>
+          </Link>
           .
         </p>
         <div className="flex shrink-0 gap-2">

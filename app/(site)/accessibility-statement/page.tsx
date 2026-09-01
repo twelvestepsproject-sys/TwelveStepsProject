@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { db } from "@/lib/queries";
 
 /**
@@ -76,9 +77,9 @@ export default async function AccessibilityStatementPage() {
           <h2 className="font-display text-xl font-bold text-ink">פניות בנושא נגישות</h2>
           <p className="mt-2 text-ink-muted">
             נתקלתם בבעיית נגישות באתר? נשמח שתפנו אלינו דרך{" "}
-            <a href="/tsor-kesher" className="text-primary underline-offset-2 hover:underline">
+            <Link href="/tsor-kesher" className="text-primary underline-offset-2 hover:underline">
               עמוד יצירת הקשר
-            </a>
+            </Link>
             , ונטפל בפנייה בהקדם.
           </p>
         </section>

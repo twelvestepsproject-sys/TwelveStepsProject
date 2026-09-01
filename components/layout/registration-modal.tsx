@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { usePathname } from "next/navigation";
 import { submitRegistrationAction, type FormActionResult } from "@/lib/actions/public-forms";
@@ -229,9 +230,9 @@ export function RegistrationModal({ trainings = [] }: { trainings?: string[] }) 
               <input type="checkbox" name="consent" required className="mt-1" />
               <span>
                 אני מאשר/ת יצירת קשר בהתאם ל
-                <a href="/privacy" className="underline underline-offset-2 hover:text-ink">
+                <Link href="/privacy" className="underline underline-offset-2 hover:text-ink">
                   מדיניות הפרטיות
-                </a>
+                </Link>
                 .
               </span>
             </label>

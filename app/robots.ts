@@ -17,7 +17,11 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/privacy"],
+      // /privacy was blocked while the page was a hardcoded "not published
+      // yet" placeholder — no reason to index that. It is an ordinary
+      // editable page now, and a real privacy policy should be findable:
+      // people look for it, and its absence reads as a trust problem.
+      disallow: ["/admin"],
     },
     sitemap: `${base}/sitemap.xml`,
   };
