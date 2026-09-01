@@ -236,6 +236,15 @@ export function RegistrationModal({ trainings = [] }: { trainings?: string[] }) 
                 .
               </span>
             </label>
+            {/* Marketing consent, separate from the privacy one above and
+                deliberately NOT `required`: the form must still submit when
+                someone declines mailings, or it stops being a consent at
+                all. `defaultChecked` per the client's request — opt-out
+                rather than opt-in. */}
+            <label className="flex items-start gap-2 text-sm text-ink-muted">
+              <input type="checkbox" name="marketing_consent" defaultChecked className="mt-1" />
+              <span>אני מאשר/ת קבלת עדכונים ודיוור על תוכניות, מאמרים ואירועים.</span>
+            </label>
             <SubmitButton />
           </form>
         )}

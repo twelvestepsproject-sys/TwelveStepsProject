@@ -116,6 +116,28 @@ export async function submitRegistrationAction(
 
     await db.createLead(parsed);
 
+    // Marketing consent is a separate, optional tick on the same form. It
+    // subscribes to the existing newsletter list rather than adding a flag
+    // to `leads`: that list is what an unsubscribe link and any future
+    // mailing tool would read, and a boolean on the lead would be invisible
+    // to both.
+    //
+    // Failure here is swallowed on purpose. The lead is already saved, and
+    // the person's actual request was the callback — telling them the whole
+    // submission failed because a mailing-list insert did would be wrong,
+    // and would invite a resubmit that duplicates the lead.
+    if (formData.get("marketing_consent")) {
+      try {
+        await db.subscribeNewsletter({
+          email: parsed.email,
+          consent_at: new Date().toISOString(),
+          source: "registration",
+        });
+      } catch {
+        // Intentionally ignored — see above.
+      }
+    }
+
     // TODO(gtm): fire a GTM event (e.g. dataLayer.push({ event:
     // 'registration_submit' })) here once NEXT_PUBLIC_GTM_ID / a real GTM
     // container is wired up (§13, site_settings.gtm_id) — no GTM
