@@ -168,7 +168,25 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-          {settings.footer_credits ? <p>{settings.footer_credits}</p> : null}
+          {/* Linked only when a URL is set, so a site that just wants a
+              copyright line is unaffected. rel="noreferrer" and the new tab
+              match how every other outbound link here behaves. */}
+          {settings.footer_credits ? (
+            settings.footer_credits_url ? (
+              <p>
+                <a
+                  href={settings.footer_credits_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition-colors hover:text-primary"
+                >
+                  {settings.footer_credits}
+                </a>
+              </p>
+            ) : (
+              <p>{settings.footer_credits}</p>
+            )
+          ) : null}
           <ul className="flex gap-4">
             <li>
               <Link href="/accessibility-statement" className="transition-colors hover:text-primary">

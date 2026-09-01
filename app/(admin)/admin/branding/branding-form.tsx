@@ -100,6 +100,7 @@ interface FormState {
   community_url: string;
   donation_url: string;
   footer_credits: string;
+  footer_credits_url: string;
 }
 
 function toFormState(s: SiteSettings): FormState {
@@ -132,6 +133,7 @@ function toFormState(s: SiteSettings): FormState {
     community_url: s.community_url ?? "",
     donation_url: s.donation_url ?? "",
     footer_credits: s.footer_credits ?? "",
+    footer_credits_url: s.footer_credits_url ?? "",
   };
 }
 
@@ -180,6 +182,7 @@ function toPayload(data: FormState): BrandingPayload {
     community_url: data.community_url.trim() || null,
     donation_url: data.donation_url.trim() || null,
     footer_credits: data.footer_credits.trim() || null,
+    footer_credits_url: data.footer_credits_url.trim() || null,
   };
 }
 
@@ -656,6 +659,20 @@ export function BrandingForm({
               className={inputClass}
               value={state.footer_credits}
               onChange={(e) => update("footer_credits", e.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="קישור משורת הזכויות (אופציונלי)"
+            htmlFor="br-credits-url"
+            hint="אם ימולא, שורת הזכויות תהפוך לקישור. אפשר אתר, וואטסאפ או מייל."
+          >
+            <input
+              id="br-credits-url"
+              className={inputClass}
+              placeholder="https://..."
+              value={state.footer_credits_url}
+              onChange={(e) => update("footer_credits_url", e.target.value)}
             />
           </Field>
         </div>

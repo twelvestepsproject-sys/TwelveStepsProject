@@ -41,6 +41,7 @@ export interface BrandingPayload {
   community_url: string | null;
   donation_url: string | null;
   footer_credits: string | null;
+  footer_credits_url: string | null;
 }
 
 export async function saveBrandingAction(payload: BrandingPayload): Promise<ActionResult> {

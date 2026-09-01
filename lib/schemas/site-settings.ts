@@ -92,6 +92,10 @@ export const siteSettingsSchema = z.object({
   // Misc
   gtm_id: z.string().nullable(),
   footer_credits: z.string().nullable(),
+  // Optional URL the credit line links to. Kept separate from the text so
+  // the credit itself stays plain text — that field is a normal admin input
+  // and must not accept markup.
+  footer_credits_url: z.string().nullish(),
 
   created_at: timestampSchema,
   updated_at: timestampSchema,
