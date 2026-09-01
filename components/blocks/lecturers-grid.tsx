@@ -80,20 +80,32 @@ export async function LecturersGrid({ data }: { data: LecturersGridData }) {
                     alt={photo.alt_he}
                     width={220}
                     height={220}
-                    // object-cover with a fixed frame and top-biased focal
-                    // point: the uploaded photos vary from 0.51 to 1.0 aspect
-                    // ratio, and centring a tall portrait crops the face out.
-                    // A tinted panel behind it means a pre-cut cutout (some
-                    // photos arrive already circle-cropped on white) sits on
-                    // the same ground as a full-bleed one.
-                    className="h-44 w-full rounded-md bg-surface-alt object-cover object-top"
+                    sizes="(min-width: 1024px) 260px, (min-width: 640px) 45vw, 208px"
+                    // A circular frame with a fixed ASPECT RATIO, not a fixed
+                    // height. Height alone let the frame's ratio follow the
+                    // card's width, so one photo was cropped differently at
+                    // every breakpoint — a 1:1 portrait kept ~84% of its
+                    // height in the desktop columns but only ~53% in the
+                    // full-width mobile card, cutting faces in half. A square
+                    // crops identically everywhere, and most of these sources
+                    // are already 1:1 so they are barely cropped at all.
+                    //
+                    // max-w caps it on mobile, where one card per row would
+                    // otherwise make the portrait the whole card; the desktop
+                    // columns are narrower than the cap, so they are
+                    // unaffected. object-top keeps the non-square sources
+                    // (portraits) from losing the top of the head, and the
+                    // tinted panel puts a pre-cut cutout — some arrive
+                    // circle-cropped on white — on the same ground as a
+                    // full-bleed photo.
+                    className="mx-auto aspect-square w-full max-w-[13rem] rounded-full bg-surface-alt object-cover object-top sm:max-w-none"
                   />
                 ) : (
                   // No photo on file — a plain tinted panel rather than a
                   // broken <img> or an invented stand-in portrait. Same
                   // footprint as a real photo so the grid stays even.
                   <div
-                    className="flex h-44 w-full items-center justify-center rounded-md bg-surface-alt text-3xl text-ink-muted"
+                    className="mx-auto flex aspect-square w-full max-w-[13rem] items-center justify-center rounded-full bg-surface-alt text-3xl text-ink-muted sm:max-w-none"
                     role="img"
                     aria-label={lecturer.name}
                   >
