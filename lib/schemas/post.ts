@@ -26,6 +26,12 @@ export const postSchema = z.object({
   title: z.string(),
   excerpt: z.string(),
   body: z.string(),
+  // Optional button under the article body. Post bodies render as plain
+  // text, so a link cannot live inside `body` — it needs its own fields.
+  // The label is separate so it can differ per post ("לרכישת הספר" vs
+  // "להזמנה"); it falls back to a default when only the URL is set.
+  cta_label: z.string().nullish(),
+  cta_url: z.string().nullish(),
   cover_image_id: uuidSchema.nullable(),
   category_id: uuidSchema.nullable(),
   category: categorySchema.nullable(),

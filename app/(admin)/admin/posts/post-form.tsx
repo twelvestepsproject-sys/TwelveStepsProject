@@ -14,6 +14,8 @@ interface FormState {
   slug: string;
   excerpt: string;
   body: string;
+  cta_label: string;
+  cta_url: string;
   category_id: string;
   published_at: string;
   reading_time: string;
@@ -26,6 +28,8 @@ function toFormState(p?: Post | null): FormState {
     slug: p?.slug ?? "",
     excerpt: p?.excerpt ?? "",
     body: p?.body ?? "",
+    cta_label: p?.cta_label ?? "",
+    cta_url: p?.cta_url ?? "",
     category_id: p?.category_id ?? "",
     published_at: p?.published_at ? p.published_at.slice(0, 16) : "",
     reading_time: String(p?.reading_time ?? 5),
@@ -40,6 +44,8 @@ function toFormData(state: FormState, id?: string): FormData {
   fd.set("slug", state.slug);
   fd.set("excerpt", state.excerpt);
   fd.set("body", state.body);
+  fd.set("cta_label", state.cta_label);
+  fd.set("cta_url", state.cta_url);
   fd.set("category_id", state.category_id);
   fd.set("published_at", state.published_at);
   fd.set("reading_time", state.reading_time);
@@ -146,6 +152,39 @@ export function PostForm({
             required
           />
         </Field>
+
+        {/* Optional button under the article. Used for publishing a book's
+            first chapter with a "buy the book" link — post bodies are plain
+            text, so the link cannot live inside the content. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            label="קישור לכפתור (אופציונלי)"
+            htmlFor="cta_url"
+            hint="למשל קישור לרכישת הספר. אם יישאר ריק, לא יוצג כפתור."
+          >
+            <input
+              id="cta_url"
+              className={inputClass}
+              placeholder="https://..."
+              value={state.cta_url}
+              onChange={(e) => update("cta_url", e.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="טקסט הכפתור"
+            htmlFor="cta_label"
+            hint='ברירת מחדל: "לרכישת הספר"'
+          >
+            <input
+              id="cta_label"
+              className={inputClass}
+              placeholder="לרכישת הספר"
+              value={state.cta_label}
+              onChange={(e) => update("cta_label", e.target.value)}
+            />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="קטגוריה" htmlFor="category_id">

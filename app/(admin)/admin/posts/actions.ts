@@ -45,6 +45,10 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
       title,
       excerpt: String(formData.get("excerpt") ?? ""),
       body: String(formData.get("body") ?? ""),
+      // Blank stays null, not "" — the article page tests cta_url directly
+      // to decide whether to render the button at all.
+      cta_label: String(formData.get("cta_label") ?? "").trim() || null,
+      cta_url: String(formData.get("cta_url") ?? "").trim() || null,
       cover_image_id: null,
       category_id: categoryId,
       category,

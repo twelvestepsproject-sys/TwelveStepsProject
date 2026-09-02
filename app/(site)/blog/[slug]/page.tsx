@@ -104,6 +104,23 @@ export default async function SingleArticlePage({ params }: PageProps) {
       </div>
 
       <div className="prose prose-ink mt-8 max-w-none whitespace-pre-line text-ink">{post.body}</div>
+
+      {/* Optional call-to-action, used for the "buy the book" button under a
+          first-chapter article. Rendered only when a URL is set, so ordinary
+          posts are unaffected. The label falls back to a sensible default so
+          filling in just the URL still produces a usable button. */}
+      {post.cta_url ? (
+        <div className="mt-10 border-t border-border pt-8 text-center">
+          <a
+            href={post.cta_url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block rounded-full bg-accent px-8 py-3 font-semibold text-accent-fg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:bg-accent-hover hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {post.cta_label?.trim() || "לרכישת הספר"}
+          </a>
+        </div>
+      ) : null}
     </main>
   );
 }
