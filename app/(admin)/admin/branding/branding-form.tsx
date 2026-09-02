@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveBrandingAction, type BrandingPayload } from "./actions";
 import { useAutosave } from "@/components/admin/use-autosave";
 import { AutosaveStatus } from "@/components/admin/autosave-status";
-import { Field, inputClass, PrimaryButton, SecondaryButton } from "@/components/admin/fields";
+import { Field, inputClass, textareaClass, PrimaryButton, SecondaryButton } from "@/components/admin/fields";
 import { MediaPickerField } from "@/components/admin/media-picker";
 import { THEME_PRESETS, THEME_DEFAULTS, FALLBACK_COLOR } from "@/lib/admin/theme-presets";
 import { CONTRAST_PAIRS_TO_CHECK, contrastRatio, aaLevel } from "@/lib/admin/contrast";
@@ -81,6 +81,7 @@ const RADIUS_OPTIONS: { value: RadiusScale; label: string }[] = [
 interface FormState {
   site_name: string;
   tagline: string;
+  seo_description: string;
   logo_id: string | null;
   logo_dark_id: string | null;
   favicon_id: string | null;
@@ -107,6 +108,7 @@ function toFormState(s: SiteSettings): FormState {
   return {
     site_name: s.site_name,
     tagline: s.tagline,
+    seo_description: s.seo_description ?? "",
     logo_id: s.logo_id,
     logo_dark_id: s.logo_dark_id,
     favicon_id: s.favicon_id,
@@ -165,6 +167,7 @@ function toPayload(data: FormState): BrandingPayload {
   return {
     site_name: data.site_name,
     tagline: data.tagline,
+    seo_description: data.seo_description.trim() || null,
     logo_id: data.logo_id,
     logo_dark_id: data.logo_dark_id,
     favicon_id: data.favicon_id,
@@ -285,13 +288,36 @@ export function BrandingForm({
                 required
               />
             </Field>
-            <Field label="תגית (Tagline)" htmlFor="br-tagline">
+            <Field
+              label="תגית (Tagline)"
+              htmlFor="br-tagline"
+              hint="משפט קצר שמופיע בתחתית האתר, מתחת לשם."
+            >
               <input
                 id="br-tagline"
                 className={inputClass}
                 value={state.tagline}
                 onChange={(e) => update("tagline", e.target.value)}
               />
+            </Field>
+
+            {/* Separate from the tagline: this one is written for search
+                results, where length and keywords matter, while the tagline
+                is printed in the footer and needs to stay short. */}
+            <Field
+              label="תיאור לתוצאות חיפוש (SEO)"
+              htmlFor="br-seo-description"
+              hint="מה שגוגל מציג מתחת לכותרת, וגם בשיתוף קישור. עד כ-155 תווים. אם יישאר ריק, תשמש התגית."
+            >
+              <textarea
+                id="br-seo-description"
+                className={`${textareaClass} min-h-20`}
+                value={state.seo_description}
+                onChange={(e) => update("seo_description", e.target.value)}
+              />
+              <p className="mt-1 text-xs text-ink-muted">
+                {state.seo_description.length} / 155 תווים
+              </p>
             </Field>
           </div>
         </div>

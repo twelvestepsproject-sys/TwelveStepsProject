@@ -57,6 +57,10 @@ export const siteSettingsSchema = z.object({
   // Branding
   site_name: z.string(),
   tagline: z.string(),
+  // Meta description for search results and link previews. Separate from
+  // `tagline`, which is printed in the footer and wants to stay short —
+  // see migration 34. Falls back to tagline when empty.
+  seo_description: z.string().nullish(),
   logo_id: uuidSchema.nullable(),
   logo_dark_id: uuidSchema.nullable(),
   favicon_id: uuidSchema.nullable(),

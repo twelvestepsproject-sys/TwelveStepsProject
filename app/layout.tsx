@@ -30,6 +30,12 @@ export async function generateMetadata(): Promise<Metadata> {
   // /api/media/... path into the absolute URL these scrapers require.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
+  // The footer prints `tagline`, so it has to stay short — a description
+  // written for search results would read as a heavy paragraph there.
+  // `seo_description` is the one Google and link previews get, falling back
+  // to the tagline when it has not been filled in.
+  const description = settings.seo_description?.trim() || settings.tagline;
+
   // Through the optimizer, not the raw upload — see ogImageFor for why the
   // original file produced no preview at all.
   const ogImages = logo
@@ -39,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: siteUrl ? new URL(siteUrl) : undefined,
     title: settings.site_name,
-    description: settings.tagline,
+    description,
     // The Branding screen has offered a favicon upload since it was built,
     // but nothing ever read `favicon_id` — uploading one saved the row and
     // changed nothing, so the tab kept showing the generic mark shipped in
@@ -60,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       siteName: settings.site_name,
       title: settings.site_name,
-      description: settings.tagline ?? undefined,
+      description: description ?? undefined,
       locale: "he_IL",
       url: siteUrl ?? undefined,
       images: ogImages,
@@ -71,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       // text. Was chosen when the uploaded logo was still portrait.
       card: "summary_large_image",
       title: settings.site_name,
-      description: settings.tagline ?? undefined,
+      description: description ?? undefined,
       images: ogImages,
     },
   };

@@ -21,6 +21,7 @@ import type { SiteSettings, ThemeOverrides, FontFamilyOption, RadiusScale, BodyT
 export interface BrandingPayload {
   site_name: string;
   tagline: string;
+  seo_description: string | null;
   logo_id: string | null;
   logo_dark_id: string | null;
   favicon_id: string | null;
