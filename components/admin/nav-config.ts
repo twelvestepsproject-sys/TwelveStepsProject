@@ -24,6 +24,9 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { href: "/admin/pages", label: "עמודים", minRole: ["admin", "editor", "viewer"] },
   { href: "/admin/trainings", label: "הכשרות", minRole: ["admin", "editor", "viewer"] },
   { href: "/admin/posts", label: "מאמרים", minRole: ["admin", "editor", "viewer"] },
+  // Directly under מאמרים: categories only exist to group articles, and
+  // this is where an editor looks for them.
+  { href: "/admin/categories", label: "קטגוריות", minRole: ["admin", "editor", "viewer"] },
   { href: "/admin/lecturers", label: "מרצים", minRole: ["admin", "editor", "viewer"] },
   { href: "/admin/testimonials", label: "המלצות", minRole: ["admin", "editor", "viewer"] },
   { href: "/admin/program-stages", label: "שלבי התוכנית", minRole: ["admin", "editor", "viewer"] },
