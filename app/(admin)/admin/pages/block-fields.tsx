@@ -274,6 +274,61 @@ export function TrainingsCarouselFields({ data, onChange }: { data: Record<strin
   );
 }
 
+/**
+ * intro_media — heading, a YouTube URL, and the still shown before the
+ * video is played.
+ *
+ * Was falling through to the raw-JSON editor, so changing the poster image
+ * meant hand-editing a uuid — not something to ask an editor to do, and the
+ * homepage shipped pointing at a fixture row whose file was never uploaded
+ * (repeated "isn't a valid image" errors in the server log).
+ */
+export function IntroMediaFields({
+  data,
+  onChange,
+  media,
+}: {
+  data: Record<string, unknown>;
+  onChange: UpdateFn;
+  media?: Media | null;
+}) {
+  const d = data as { heading: string; video_url: string | null; thumbnail_media_id: string | null };
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="כותרת" htmlFor="b-im-heading" required>
+        <input
+          id="b-im-heading"
+          className={inputClass}
+          value={d.heading ?? ""}
+          onChange={(e) => onChange({ ...d, heading: e.target.value })}
+        />
+      </Field>
+
+      <Field
+        label="קישור לסרטון יוטיוב"
+        htmlFor="b-im-video"
+        hint="הדביקו כתובת רגילה של יוטיוב. אם יישאר ריק, יוצג רק הטקסט."
+      >
+        <input
+          id="b-im-video"
+          className={inputClass}
+          placeholder="https://www.youtube.com/watch?v=..."
+          value={d.video_url ?? ""}
+          onChange={(e) => onChange({ ...d, video_url: e.target.value || null })}
+        />
+      </Field>
+
+      <MediaPickerField
+        label="תמונה מקדימה (לפני הפעלת הסרטון)"
+        hint="התמונה שרואים לפני לחיצה על הפעלה. רצוי יחס 16:9, למשל 1280x720."
+        value={d.thumbnail_media_id}
+        media={media}
+        onChange={(id) => onChange({ ...d, thumbnail_media_id: id })}
+      />
+    </div>
+  );
+}
+
 export function AboutFields({ data, onChange }: { data: Record<string, unknown>; onChange: UpdateFn }) {
   const d = data as {
     icon: string | null;

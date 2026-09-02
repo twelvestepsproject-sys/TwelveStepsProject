@@ -10,6 +10,7 @@ import { PlaceholderBadge } from "@/components/admin/badges";
 import { BLOCK_TYPE_LABELS, ALL_BLOCK_TYPES, BLOCK_TYPES_WITH_CUSTOM_FORM, createNewBlock } from "@/lib/admin/block-registry";
 import {
   HeroFields,
+  IntroMediaFields,
   LeaderMessageFields,
   TrainingsCarouselFields,
   AboutFields,
@@ -565,6 +566,14 @@ export function BlockDataForm({
 }) {
   const data = block.data as Record<string, unknown>;
   switch (block.block_type) {
+    case "intro_media":
+      return (
+        <IntroMediaFields
+          data={data}
+          onChange={onChange}
+          media={data.thumbnail_media_id ? mediaById[data.thumbnail_media_id as string] : null}
+        />
+      );
     case "hero":
       return (
         <HeroFields
