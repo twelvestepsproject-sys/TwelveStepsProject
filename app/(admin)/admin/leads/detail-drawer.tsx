@@ -15,7 +15,7 @@ import type { Lead, ContactMessage, NewsletterSubscriber } from "@/lib/schemas";
  */
 
 type DrawerContent =
-  | { kind: "lead"; row: Lead }
+  | { kind: "lead"; row: Lead; subscribed: boolean }
   | { kind: "message"; row: ContactMessage }
   | { kind: "subscriber"; row: NewsletterSubscriber };
 
@@ -69,6 +69,7 @@ export function DetailDrawer({ content, canEdit, onClose }: { content: DrawerCon
         {content.kind === "lead" ? (
           <LeadDetail
             lead={content.row}
+            subscribed={content.subscribed}
             canEdit={canEdit}
             isPending={isPending}
             onSave={(input) =>
@@ -125,11 +126,14 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function LeadDetail({
   lead,
+  subscribed,
   canEdit,
   isPending,
   onSave,
 }: {
   lead: Lead;
+  /** Whether this lead's email is on the newsletter list. */
+  subscribed: boolean;
   canEdit: boolean;
   isPending: boolean;
   onSave: (input: { status?: string; notes?: string | null }) => void;
@@ -143,6 +147,7 @@ function LeadDetail({
       <DetailRow label="אימייל" value={lead.email} />
       <DetailRow label="טלפון" value={lead.phone} />
       <DetailRow label="מסלול מבוקש" value={lead.interest ?? "—"} />
+      <DetailRow label="אישור דיוור" value={subscribed ? "כן — רשום/ה לדיוור" : "לא"} />
       <DetailRow label="עמוד מקור" value={lead.source_page ?? ""} />
       <DetailRow label="תאריך הסכמה" value={new Date(lead.consent_at).toLocaleString("he-IL")} />
       <DetailRow label="נוצר בתאריך" value={new Date(lead.created_at).toLocaleString("he-IL")} />

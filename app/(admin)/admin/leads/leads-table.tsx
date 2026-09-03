@@ -27,7 +27,19 @@ function fmtDate(iso: string): string {
  * as props — this component never calls `db` directly, only renders what
  * it's given and opens the drawer on row click.
  */
-export function LeadsTable({ leads, canEdit }: { leads: Lead[]; canEdit: boolean }) {
+export function LeadsTable({
+  leads,
+  subscribedEmails,
+  canEdit,
+}: {
+  leads: Lead[];
+  /** Lower-cased emails on the newsletter list — see the page for why this
+   *  is resolved there rather than looked up per row. */
+  subscribedEmails: Set<string>;
+  canEdit: boolean;
+}) {
+  const isSubscribed = (email: string) => subscribedEmails.has(email.trim().toLowerCase());
+
   const [open, setOpen] = useState<DrawerContent | null>(null);
 
   if (leads.length === 0) {
@@ -43,6 +55,7 @@ export function LeadsTable({ leads, canEdit }: { leads: Lead[]; canEdit: boolean
               <th className="px-3 py-2 text-start font-semibold text-ink">שם</th>
               <th className="px-3 py-2 text-start font-semibold text-ink">אימייל</th>
               <th className="px-3 py-2 text-start font-semibold text-ink">טלפון</th>
+              <th className="px-3 py-2 text-start font-semibold text-ink">דיוור</th>
               <th className="px-3 py-2 text-start font-semibold text-ink">סטטוס</th>
               <th className="px-3 py-2 text-start font-semibold text-ink">נוצר בתאריך</th>
             </tr>
@@ -52,13 +65,22 @@ export function LeadsTable({ leads, canEdit }: { leads: Lead[]; canEdit: boolean
               <tr
                 key={lead.id}
                 className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-alt/60"
-                onClick={() => setOpen({ kind: "lead", row: lead })}
+                onClick={() => setOpen({ kind: "lead", row: lead, subscribed: isSubscribed(lead.email) })}
               >
                 <td className="px-3 py-2 font-semibold text-ink">
                   {lead.first_name} {lead.last_name}
                 </td>
                 <td className="px-3 py-2 text-ink-muted">{lead.email}</td>
                 <td className="px-3 py-2 text-ink-muted">{lead.phone}</td>
+                <td className="px-3 py-2">
+                  {isSubscribed(lead.email) ? (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                      מאושר
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-muted">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-ink-muted">{LEAD_STATUS_LABELS[lead.status] ?? lead.status}</td>
                 <td className="px-3 py-2 text-ink-muted">{fmtDate(lead.created_at)}</td>
               </tr>

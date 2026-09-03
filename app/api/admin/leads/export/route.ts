@@ -19,14 +19,23 @@ export async function GET() {
   }
 
   const { items } = await db.listLeadsAdmin({ perPage: 10_000 });
+
+  // Marketing consent is held on the newsletter list rather than the lead,
+  // so it is matched by email — the same resolution the leads screen does.
+  // Worth having in the export specifically: this file is what gets opened
+  // in a spreadsheet to decide who may be mailed.
+  const subs = await db.listNewsletterSubscribersAdmin({ status: "subscribed", perPage: 10_000 });
+  const subscribed = new Set(subs.items.map((s) => s.email.trim().toLowerCase()));
+
   const csv = toCsv(
-    ["שם פרטי", "שם משפחה", "אימייל", "טלפון", "מסלול מבוקש", "עמוד מקור", "סטטוס", "הערות", "תאריך יצירה"],
+    ["שם פרטי", "שם משפחה", "אימייל", "טלפון", "מסלול מבוקש", "אישור דיוור", "עמוד מקור", "סטטוס", "הערות", "תאריך יצירה"],
     items.map((l) => [
       l.first_name,
       l.last_name,
       l.email,
       l.phone,
       l.interest ?? "",
+      subscribed.has(l.email.trim().toLowerCase()) ? "כן" : "לא",
       l.source_page ?? "",
       l.status,
       l.notes ?? "",

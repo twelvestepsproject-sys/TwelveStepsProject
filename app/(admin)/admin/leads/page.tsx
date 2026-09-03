@@ -121,5 +121,19 @@ async function TabContent({
     return <SubscribersTable subscribers={result.items} canEdit={canEdit} />;
   }
   const result = await db.listLeadsAdmin({ q, status, perPage: 200 });
-  return <LeadsTable leads={result.items} canEdit={canEdit} />;
+
+  // Marketing consent lives in newsletter_subscribers, not on the lead —
+  // that list is what an unsubscribe link and any mailing tool read, so a
+  // flag on the lead would be the wrong source of truth. Resolved here as
+  // one query and matched by email, rather than a lookup per row.
+  //
+  // It answers "may we email this person", not "did they tick the box on
+  // this particular form": someone who subscribed separately from the
+  // footer counts too, which is the useful reading.
+  const subs = await db.listNewsletterSubscribersAdmin({ status: "subscribed", perPage: 1000 });
+  const subscribedEmails = new Set(
+    subs.items.map((s) => s.email.trim().toLowerCase()),
+  );
+
+  return <LeadsTable leads={result.items} subscribedEmails={subscribedEmails} canEdit={canEdit} />;
 }
