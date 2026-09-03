@@ -30,7 +30,18 @@ export async function inviteUserAction(formData: FormData): Promise<ActionResult
 
     const saved = await db.saveUser(input);
     revalidatePath("/admin/users");
-    return { ok: true, data: { id: saved.id } };
+
+    // Self-hosted creation returns a generated password. It is shown to the
+    // admin once, here, because nothing emails it — without this the account
+    // exists and nobody can sign in to it.
+    const temporary = (saved as { __temporaryPassword?: string }).__temporaryPassword;
+    return {
+      ok: true,
+      data: { id: saved.id },
+      warning: temporary
+        ? `המשתמש נוצר. סיסמה זמנית: ${temporary} — העבירו אותה למשתמש/ת ובקשו להחליף. היא לא תוצג שוב.`
+        : undefined,
+    };
   } catch (err) {
     return { ok: false, error: toFriendlyMessage(err) };
   }

@@ -1449,13 +1449,77 @@ async function listUsersAdmin(opts: AdminListOptions = {}): Promise<Paginated<Pr
  * `saveUser` is called with no `id`, it throws rather than silently doing
  * nothing, so this gap is visible immediately instead of failing quietly.
  */
+/**
+ * Creates a user on the self-hosted stack, where auth is ours rather than
+ * Supabase's.
+ *
+ * A temporary password is generated rather than asked for in the form: it
+ * has to exist or the account cannot sign in at all, and a password typed
+ * into a form field ends up in browser history and autofill. The caller
+ * shows it to the admin once, to pass on.
+ *
+ * The profile row is written by the on_auth_user_created trigger from
+ * raw_user_meta_data, then updated here for the fields the trigger does
+ * not know about.
+ */
+async function createSelfHostedUser(
+  input: Partial<Profile> & { email?: string },
+): Promise<Profile & { __temporaryPassword?: string }> {
+  const { query } = await import("@/lib/pg/client");
+  const { hashPassword } = await import("@/lib/auth/password");
+  const { randomBytes } = await import("node:crypto");
+
+  const email = String(input.email ?? "").trim().toLowerCase();
+  if (!email) throw new Error("יש להזין כתובת אימייל.");
+
+  const existing = await query<{ id: string }>(
+    "select id from auth.users where lower(email) = $1",
+    [email],
+  );
+  if (existing.rows.length > 0) {
+    throw new Error("כתובת האימייל הזו כבר קיימת במערכת.");
+  }
+
+  // URL-safe and unambiguous enough to read aloud or paste into a message.
+  const temporaryPassword = randomBytes(12).toString("base64url");
+  const encrypted = await hashPassword(temporaryPassword);
+  const role = input.role ?? "viewer";
+
+  const created = await query<{ id: string }>(
+    `insert into auth.users (email, encrypted_password, raw_user_meta_data, email_confirmed_at)
+     values ($1, $2, $3::jsonb, now())
+     returning id`,
+    [email, encrypted, JSON.stringify({ full_name: input.full_name ?? email.split("@")[0], role })],
+  );
+  const id = created.rows[0].id;
+
+  const profile = await query<Profile>(
+    `update public.profiles
+        set role = $2, is_active = $3, full_name = coalesce($4, full_name)
+      where id = $1
+      returning *`,
+    [id, role, input.is_active ?? true, input.full_name ?? null],
+  );
+
+  return { ...(profile.rows[0] as Profile), __temporaryPassword: temporaryPassword };
+}
+
 async function saveUser(input: Partial<Profile> & { id?: string }): Promise<Profile> {
   const supabase = await getClient();
   const { id, email, ...fields } = input as any;
   if (!id) {
-    throw new Error(
-      "[supabaseDataSource] saveUser: creating a new user requires the Supabase Admin API (auth.admin.createUser) via a service-role Server Action, not this RLS-scoped method. See lib/supabase/admin.ts.",
-    );
+    // Creating a user needed Supabase's Admin API, which this RLS-scoped
+    // client could not reach — so this threw, and the admin screen showed
+    // the generic save error with no way forward. Self-hosted, auth is
+    // ours: the row goes straight into auth.users, and the
+    // on_auth_user_created trigger writes the matching profile. Same path
+    // scripts/pg-set-password.mjs already uses to create the first admin.
+    if (process.env.DATA_SOURCE !== "postgres") {
+      throw new Error(
+        "[supabaseDataSource] saveUser: creating a new user requires the Supabase Admin API (auth.admin.createUser) via a service-role Server Action, not this RLS-scoped method. See lib/supabase/admin.ts.",
+      );
+    }
+    return createSelfHostedUser({ email, ...fields });
   }
   const { data, error } = await supabase.from("profiles").update(fields).eq("id", id).select().single();
   throwIfError(error, "saveUser");
