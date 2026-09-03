@@ -24,6 +24,9 @@ export const profileSchema = z.object({
   email: z.email(),
   avatar_id: uuidSchema.nullable(),
   is_active: z.boolean(),
+  // True while the account is still on an admin-issued temporary password.
+  // Nullish so a row read before migration 35 still parses.
+  must_change_password: z.boolean().nullish(),
   created_at: timestampSchema,
   updated_at: timestampSchema,
 });

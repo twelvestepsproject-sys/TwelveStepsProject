@@ -1495,7 +1495,8 @@ async function createSelfHostedUser(
 
   const profile = await query<Profile>(
     `update public.profiles
-        set role = $2, is_active = $3, full_name = coalesce($4, full_name)
+        set role = $2, is_active = $3, full_name = coalesce($4, full_name),
+            must_change_password = true
       where id = $1
       returning *`,
     [id, role, input.is_active ?? true, input.full_name ?? null],

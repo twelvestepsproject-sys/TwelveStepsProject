@@ -74,3 +74,35 @@ export async function deleteUserAction(id: string): Promise<void> {
   await db.deleteUser(id);
   revalidatePath("/admin/users");
 }
+
+/**
+ * Resets another user's password to a fresh temporary one.
+ *
+ * With no mail server there can be no self-service "forgot password", so
+ * this is the recovery path: an admin issues a new temporary password and
+ * passes it on, and the flag forces the user to replace it immediately.
+ * Without this every reset would go through whoever has server access.
+ */
+export async function resetUserPasswordAction(id: string): Promise<ActionResult<{ password: string }>> {
+  try {
+    await requireAdminRole();
+
+    const { query } = await import("@/lib/pg/client");
+    const { hashPassword } = await import("@/lib/auth/password");
+    const { randomBytes } = await import("node:crypto");
+
+    const temporary = randomBytes(12).toString("base64url");
+    const { rowCount } = await query(
+      `update auth.users set encrypted_password = $2, updated_at = now() where id = $1`,
+      [id, await hashPassword(temporary)],
+    );
+    if (!rowCount) return { ok: false, error: "המשתמש לא נמצא." };
+
+    await query(`update public.profiles set must_change_password = true where id = $1`, [id]);
+
+    revalidatePath("/admin/users");
+    return { ok: true, data: { password: temporary } };
+  } catch (err) {
+    return { ok: false, error: toFriendlyMessage(err) };
+  }
+}

@@ -43,6 +43,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return <>{children}</>;
   }
 
+  // An account still on an admin-issued temporary password is sent to
+  // change it and cannot reach anything else. The temporary one exists only
+  // to get in — it was chosen by someone else and passed over WhatsApp or
+  // read aloud, so leaving it usable indefinitely defeats the point.
+  //
+  // The change-password route itself is exempt, or this would loop.
+  const isAccountRoute = pathname.startsWith("/admin/account");
+  if (!isAccountRoute && session.must_change_password) {
+    redirect("/admin/account");
+  }
+
   const visibleNav = ADMIN_NAV.filter((item) => item.minRole.includes(session.role));
   // BUG FIX: this used to be the literal string "מכללת אשד — ניהול" — same
   // class of bug as app/layout.tsx's static `metadata` export, just here

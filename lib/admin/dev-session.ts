@@ -48,6 +48,11 @@ const COOKIE_NAME_NAME = "dev_session_name";
 export interface DevSession {
   full_name: string;
   role: Role;
+  /** True while the account is still on an admin-issued temporary password.
+   *  Read here rather than queried again in the layout — this function
+   *  already loads the profile row. Absent in mock mode, which has no
+   *  passwords at all. */
+  must_change_password?: boolean;
 }
 
 const ROLE_DISPLAY_NAMES: Record<Role, string> = {
