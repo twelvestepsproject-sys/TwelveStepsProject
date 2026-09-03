@@ -42,7 +42,7 @@ export async function ProgramStagesStepper({ data }: { data: ProgramStagesData }
             the existing border token, never a new hex.
           */}
           <svg
-            className="pointer-events-none absolute inset-y-0 inset-inline-start-1/2 -z-10 hidden w-px sm:block"
+            className="pointer-events-none absolute inset-y-0 inset-inline-start-1/2 -z-10 hidden w-px sm:block lg:hidden"
             width="2"
             height="100%"
             aria-hidden="true"
@@ -57,7 +57,12 @@ export async function ProgramStagesStepper({ data }: { data: ProgramStagesData }
               className="stage-connector-line text-border"
             />
           </svg>
-          <ol className="flex flex-col gap-8">
+          {/* Two stages per row from lg. The stages were a single column,
+              which was fine when each held several steps — but the content
+              was cut back to one step per stage, leaving every card mostly
+              empty and the page very tall. Still one column on smaller
+              screens, where two would be too narrow to read. */}
+          <ol className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {stages.map((stage, i) => (
               <RevealOnScroll
                 key={stage.id}
@@ -74,7 +79,14 @@ export async function ProgramStagesStepper({ data }: { data: ProgramStagesData }
                 {stage.subtitle ? (
                   <p className="mb-4 text-sm text-ink-muted">{stage.subtitle}</p>
                 ) : null}
-                <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Two columns only when there is more than one step —
+                    a lone step in a 2-column grid left half the card blank,
+                    which is what made the stages look so sparse. */}
+                <ol
+                  className={`grid grid-cols-1 gap-4 ${
+                    stage.steps.length > 1 ? "sm:grid-cols-2" : ""
+                  }`}
+                >
                   {stage.steps.map((step) => (
                     <li
                       key={step.id}
