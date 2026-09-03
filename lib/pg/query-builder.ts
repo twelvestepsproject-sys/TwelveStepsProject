@@ -409,7 +409,16 @@ export class PgQuery<T = Row> implements PromiseLike<Result<T>> {
       } else if (this.mode === "insert") {
         const list = Array.isArray(this.payload) ? this.payload : [this.payload as Row];
         if (list.length === 0) return { data: [] as T[], error: null };
-        const cols = Object.keys(list[0]);
+        // Drop keys whose value is `undefined`. supabase-js sends its payload
+        // as JSON, where those keys simply vanish and the column falls back
+        // to its DEFAULT; here they became an explicit NULL instead, which a
+        // NOT NULL column rejects however sensible its default is.
+        //
+        // Real symptom: adding a menu item failed with `null value in column
+        // "sort_order" violates not-null constraint`, because the action
+        // always passes sort_order and it is undefined when adding. `null`
+        // is kept as-is — that is a caller asking for NULL on purpose.
+        const cols = Object.keys(list[0]).filter((c) => list[0][c] !== undefined);
         const values: unknown[] = [];
         const tuples = list.map((row) => {
           const ph = cols.map((c) => {
@@ -424,18 +433,30 @@ export class PgQuery<T = Row> implements PromiseLike<Result<T>> {
         );
         rows = res.rows;
       } else if (this.mode === "update") {
-        const entries = Object.entries(this.payload as Row);
-        const values: unknown[] = [];
-        const sets = entries.map(([c, v]) => {
-          values.push(serialise(v));
-          return `"${c}" = $${values.length}`;
-        });
-        const where = this.buildWhere(values.length + 1);
-        const res = await query<Row>(
-          `update public."${this.table}" set ${sets.join(", ")}${where.sql} returning *`,
-          [...values, ...where.values],
-        );
-        rows = res.rows;
+        // Same reasoning as the insert above, and it matters more here: an
+        // undefined field meant "leave this column alone" to supabase-js,
+        // but would have written an explicit NULL over the existing value.
+        const entries = Object.entries(this.payload as Row).filter(([, v]) => v !== undefined);
+        // Every field was undefined, so there is nothing to change. Emitting
+        // `set` with no assignments would be a syntax error; supabase-js
+        // treats this as a no-op, so return the rows the filter selects.
+        if (entries.length === 0) {
+          const w = this.buildWhere(1);
+          const res = await query<Row>(`select * from public."${this.table}"${w.sql}`, w.values);
+          rows = res.rows;
+        } else {
+          const values: unknown[] = [];
+          const sets = entries.map(([c, v]) => {
+            values.push(serialise(v));
+            return `"${c}" = $${values.length}`;
+          });
+          const where = this.buildWhere(values.length + 1);
+          const res = await query<Row>(
+            `update public."${this.table}" set ${sets.join(", ")}${where.sql} returning *`,
+            [...values, ...where.values],
+          );
+          rows = res.rows;
+        }
       } else {
         const where = this.buildWhere(1);
         const res = await query<Row>(
