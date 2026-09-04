@@ -55,13 +55,16 @@ export async function generateMetadata(): Promise<Metadata> {
     // `apple` gets the same image: iOS uses it for a home-screen bookmark,
     // and falling back to the site logo beats iOS's own default, which is a
     // screenshot of the page.
-    icons: favicon
-      ? {
-          icon: mediaUrlFor(favicon),
-          shortcut: mediaUrlFor(favicon),
-          apple: mediaUrlFor(favicon),
-        }
-      : undefined,
+    // `icon` is deliberately NOT set from the upload. Declaring it pointed
+    // crawlers at /api/media/uploads/<hebrew name>.jpg — a long
+    // percent-encoded URL — while /favicon.ico served the same mark from
+    // the path search engines look for first. Two sources for one icon, and
+    // the awkward one was the one being advertised.
+    //
+    // public/favicon.ico is now the single answer for the tab and search
+    // results. The uploaded image still drives `apple`, where a large
+    // square PNG genuinely beats a 48px .ico for a home-screen bookmark.
+    icons: favicon ? { apple: mediaUrlFor(favicon) } : undefined,
     openGraph: {
       type: "website",
       siteName: settings.site_name,
