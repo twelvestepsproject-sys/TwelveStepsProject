@@ -57,9 +57,18 @@ export async function GlobalOverlays() {
   const trainings = await db.listTrainings();
   const trainingOptions = trainings.map((t) => t.title);
 
+  // Passed to the modal so a successful submit can report the Ads
+  // conversion. Both halves come from settings, so an agency reissuing the
+  // label does not need a deploy.
+  const settings = await db.getSiteSettings();
+  const conversionSendTo =
+    settings.gtm_id && settings.ads_conversion_label
+      ? `${settings.gtm_id}/${settings.ads_conversion_label}`
+      : null;
+
   return (
     <>
-      <RegistrationModal trainings={trainingOptions} />
+      <RegistrationModal trainings={trainingOptions} conversionSendTo={conversionSendTo} />
       <CookieConsentBanner />
       <AccessibilityToolbar />
     </>

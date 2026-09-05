@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { GlobalOverlays } from "@/components/layout/global-overlays";
+import { AnalyticsTag } from "@/components/layout/analytics-tag";
 import { db } from "@/lib/queries";
 
 /**
@@ -56,6 +57,9 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
       <SiteHeader />
       {children}
       <SiteFooter />
+      {/* Reads the id from site settings, and renders nothing until the
+          cookie banner has been accepted — see AnalyticsTag. */}
+      <AnalyticsTag measurementId={settings.gtm_id} />
       <GlobalOverlays />
     </>
   );

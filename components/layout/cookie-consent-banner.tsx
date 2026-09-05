@@ -2,39 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const STORAGE_KEY = "eshed-cookie-consent";
+import { readConsent, writeConsent } from "@/lib/analytics/consent";
 
 /**
  * §5 block 20 (part) — Cookie consent banner, one piece of `global_overlays`.
- * Client-side only, localStorage-based dismissal, no backend — per the
- * task brief's explicit scope for this piece. No cookie/analytics script
- * is actually gated behind this yet (no GTM wiring exists in the repo
- * today, confirmed by grep) — this banner establishes the UI and the
- * accept/dismiss persistence only; wiring real conditional script loading
- * behind the stored choice is a later phase's job once GTM/analytics is
- * actually added.
+ * Client-side only, localStorage-based, no backend.
+ *
+ * The stored choice is now load-bearing: components/layout/analytics-tag
+ * reads it and will not request gtag.js unless it says "accepted". Until
+ * that existed this banner gated nothing, which made it a question whose
+ * answer went nowhere. Both sides share lib/analytics/consent so the key
+ * and the spelling cannot drift apart.
  */
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (!stored) setVisible(true);
-    } catch {
-      // localStorage unavailable (private mode / disabled) — fail open to
-      // showing the banner once per page load rather than crashing.
-      setVisible(true);
-    }
+    // No stored choice — including when storage is unavailable — means ask
+    // again. Failing open to the banner is right: the alternative is
+    // treating an unreadable browser as consent.
+    if (!readConsent()) setVisible(true);
   }, []);
 
   function dismiss(choice: "accepted" | "declined") {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, choice);
-    } catch {
-      // Ignore write failures — the banner still hides for this session.
-    }
+    writeConsent(choice);
     setVisible(false);
   }
 

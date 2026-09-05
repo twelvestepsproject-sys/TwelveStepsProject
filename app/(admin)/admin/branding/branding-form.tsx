@@ -102,6 +102,8 @@ interface FormState {
   donation_url: string;
   footer_credits: string;
   footer_credits_url: string;
+  gtm_id: string;
+  ads_conversion_label: string;
 }
 
 function toFormState(s: SiteSettings): FormState {
@@ -136,6 +138,8 @@ function toFormState(s: SiteSettings): FormState {
     donation_url: s.donation_url ?? "",
     footer_credits: s.footer_credits ?? "",
     footer_credits_url: s.footer_credits_url ?? "",
+    gtm_id: s.gtm_id ?? "",
+    ads_conversion_label: s.ads_conversion_label ?? "",
   };
 }
 
@@ -186,6 +190,8 @@ function toPayload(data: FormState): BrandingPayload {
     donation_url: data.donation_url.trim() || null,
     footer_credits: data.footer_credits.trim() || null,
     footer_credits_url: data.footer_credits_url.trim() || null,
+    gtm_id: data.gtm_id.trim() || null,
+    ads_conversion_label: data.ads_conversion_label.trim() || null,
   };
 }
 
@@ -701,6 +707,41 @@ export function BrandingForm({
               onChange={(e) => update("footer_credits_url", e.target.value)}
             />
           </Field>
+
+            {/* Both halves of the Google Ads setup live here rather than in
+                the build, so an agency reissuing either one does not need a
+                deploy. Empty means nothing is loaded at all — which is what
+                keeps a preview environment from reporting into a live
+                account. */}
+            <Field
+              label="מזהה Google Ads / Analytics"
+              htmlFor="br-gtm-id"
+              hint="למשל AW-1010503396. אם יישאר ריק, לא ייטען שום קוד מעקב."
+            >
+              <input
+                id="br-gtm-id"
+                className={inputClass}
+                dir="ltr"
+                placeholder="AW-XXXXXXXXXX"
+                value={state.gtm_id}
+                onChange={(e) => update("gtm_id", e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="תווית המרה (Conversion label)"
+              htmlFor="br-ads-label"
+              hint="החלק שאחרי הלוכסן ב-send_to. נדרש כדי לספור שליחות טופס כהמרה."
+            >
+              <input
+                id="br-ads-label"
+                className={inputClass}
+                dir="ltr"
+                placeholder="hKZZCIbkgaUDEOSd7OED"
+                value={state.ads_conversion_label}
+                onChange={(e) => update("ads_conversion_label", e.target.value)}
+              />
+            </Field>
         </div>
       </fieldset>
     </form>

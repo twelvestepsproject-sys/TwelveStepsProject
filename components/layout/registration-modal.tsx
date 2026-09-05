@@ -47,16 +47,35 @@ export function openRegistrationModal() {
   }
 }
 
-export function RegistrationModal({ trainings = [] }: { trainings?: string[] }) {
+export function RegistrationModal({
+  trainings = [],
+  conversionSendTo = null,
+}: {
+  trainings?: string[];
+  /** "<AW-id>/<label>", or null when either half is unset in settings. */
+  conversionSendTo?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState(submitRegistrationAction, initialState);
   const pathname = usePathname();
 
-  // GTM event integration point: once a real GTM container is wired up
-  // (§13 NEXT_PUBLIC_GTM_ID / site_settings.gtm_id — nothing exists yet in
-  // this project), fire e.g. `window.dataLayer?.push({ event:
-  // 'registration_submit' })` here when `state?.ok` flips true. Skipped for
-  // now rather than faking an analytics call.
+  // Reports the Ads conversion once the submit has actually succeeded.
+  //
+  // Google's instructions say to paste this on a "conversion page", which
+  // assumes a redirect to a thank-you URL. There is no such page here — the
+  // modal swaps to a confirmation in place — so it is tied to `state.ok`
+  // instead, which is the same moment and the more accurate one: it cannot
+  // fire for a submission the server rejected.
+  //
+  // `gtag` only exists once the tag has loaded, which only happens after
+  // cookies are accepted. Declining therefore reports nothing, rather than
+  // throwing.
+  useEffect(() => {
+    if (!state?.ok || !conversionSendTo) return;
+    const g = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+    g?.("event", "conversion", { send_to: conversionSendTo });
+  }, [state?.ok, conversionSendTo]);
+
   useEffect(() => {
     function onOpen() {
       setOpen(true);

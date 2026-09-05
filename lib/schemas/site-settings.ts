@@ -95,6 +95,9 @@ export const siteSettingsSchema = z.object({
 
   // Misc
   gtm_id: z.string().nullable(),
+  // Second half of a Google Ads conversion `send_to`, the part after the
+  // slash. Nullish so rows written before migration 36 still parse.
+  ads_conversion_label: z.string().nullish(),
   footer_credits: z.string().nullable(),
   // Optional URL the credit line links to. Kept separate from the text so
   // the credit itself stays plain text — that field is a normal admin input

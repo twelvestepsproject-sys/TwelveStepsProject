@@ -43,6 +43,8 @@ export interface BrandingPayload {
   donation_url: string | null;
   footer_credits: string | null;
   footer_credits_url: string | null;
+  gtm_id: string | null;
+  ads_conversion_label: string | null;
 }
 
 export async function saveBrandingAction(payload: BrandingPayload): Promise<ActionResult> {
