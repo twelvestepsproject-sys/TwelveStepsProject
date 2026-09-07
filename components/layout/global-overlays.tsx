@@ -1,4 +1,5 @@
 import { RegistrationModal } from "./registration-modal";
+import { ContactConversions } from "./contact-conversions";
 import { db } from "@/lib/queries";
 import { CookieConsentBanner } from "./cookie-consent-banner";
 import { AccessibilityToolbar } from "./accessibility-toolbar";
@@ -69,6 +70,10 @@ export async function GlobalOverlays() {
   return (
     <>
       <RegistrationModal trainings={trainingOptions} conversionSendTo={conversionSendTo} />
+      {/* Phone and WhatsApp clicks are enquiries too, and on this site most
+          of them never reach the form. Reported against the same action
+          until the Ads account issues dedicated ones. */}
+      <ContactConversions sendTo={conversionSendTo} />
       <CookieConsentBanner />
       <AccessibilityToolbar />
     </>

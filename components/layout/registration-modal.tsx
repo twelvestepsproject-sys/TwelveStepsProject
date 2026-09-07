@@ -67,9 +67,12 @@ export function RegistrationModal({
   // instead, which is the same moment and the more accurate one: it cannot
   // fire for a submission the server rejected.
   //
-  // `gtag` only exists once the tag has loaded, which only happens after
-  // cookies are accepted. Declining therefore reports nothing, rather than
-  // throwing.
+  // Under Consent Mode the tag is present for every visitor, so `gtag`
+  // normally exists by now; it is still called optionally because the
+  // script is remote and may not have loaded. A visitor who declined does
+  // reach this line, and the tag answers with a cookieless ping rather
+  // than an identified conversion — which is the intended behaviour, not a
+  // leak.
   useEffect(() => {
     if (!state?.ok || !conversionSendTo) return;
     const g = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
