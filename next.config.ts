@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // A second site (Tamar Reiss) runs from this same source tree on another
+  // port against its own database. Next keeps a dev lock in the build
+  // directory, so two servers sharing one .next refuse to start together —
+  // and they should not share a build cache anyway. Unset for the הנני
+  // site, which keeps using .next exactly as before.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+
   // Bundles only the packages actually imported into .next/standalone,
   // instead of shipping all of node_modules. Turns a ~700MB deploy into
   // ~80MB, which is what makes the Docker image small enough to rebuild

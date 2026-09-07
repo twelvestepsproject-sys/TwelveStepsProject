@@ -66,3 +66,6 @@ next-env.d.ts
 # This project uses pnpm. A stray npm lockfile would make the Dockerfile
 # choose `npm ci` over `pnpm install --frozen-lockfile`.
 package-lock.json
+
+# Build output for the second site (see NEXT_DIST_DIR in .env.tamar)
+.next-tamar

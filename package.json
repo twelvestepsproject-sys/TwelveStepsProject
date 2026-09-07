@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:tamar": "node scripts/dev-tamar.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -17,11 +18,15 @@
     "supabase:create-first-admin": "tsx scripts/create-first-admin.mjs",
     "supabase:rls-proof": "tsx supabase/tests/rls-anon-proof.mjs",
     "db:up": "docker compose up -d",
+    "db:up:tamar": "docker compose -f docker-compose.tamar.yml up -d",
     "db:down": "docker compose down",
+    "db:down:tamar": "docker compose -f docker-compose.tamar.yml down",
     "db:reset": "docker compose down -v && docker compose up -d && node scripts/wait-for-db.mjs && node scripts/pg-migrate.mjs",
     "db:migrate": "node scripts/pg-migrate.mjs",
+    "db:migrate:tamar": "node --env-file=.env.tamar scripts/pg-migrate.mjs",
     "db:import": "node scripts/pg-import-content.mjs && node scripts/pg-import-storage.mjs",
     "db:psql": "docker exec -it twelvesteps-postgres psql -U postgres -d twelvesteps",
+    "db:psql:tamar": "docker exec -it tamar-postgres psql -U postgres -d tamar",
     "setup:local": "node scripts/setup-local.mjs",
     "db:set-password": "node scripts/pg-set-password.mjs"
   },

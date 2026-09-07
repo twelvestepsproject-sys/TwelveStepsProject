@@ -1,0 +1,52 @@
+# Local Postgres for the Tamar Reiss site (tamarreiss.com).
+#
+# A SECOND, fully independent instance alongside the הנני one in
+# docker-compose.yml. Same codebase, same migrations, different data —
+# the two sites share source but must never share a database.
+#
+# Every name here is deliberately distinct from the הנני stack, because
+# docker-compose.yml pins `container_name: twelvesteps-postgres` and a
+# duplicate name would either refuse to start or, far worse, silently
+# attach this site to the other site's data:
+#
+#   container   twelvesteps-postgres  ->  tamar-postgres
+#   database    twelvesteps           ->  tamar
+#   port        5432                  ->  5433
+#   volume      postgres_data         ->  tamar_postgres_data
+#
+# Run both at once:
+#   docker compose -f docker-compose.tamar.yml up -d   # this one
+#   docker compose up -d                               # הנני, unchanged
+
+# Compose derives its project name from the directory, so without this both
+# stacks in this folder would resolve to the SAME project - and bringing one
+# up would remove the other's containers as "no longer in the file". An
+# explicit name keeps the two stacks fully separate.
+name: tamar
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tamar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${TAMAR_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${TAMAR_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${TAMAR_POSTGRES_DB:-tamar}
+    ports:
+      # 127.0.0.1 prefix matters: without it Docker publishes on 0.0.0.0
+      # and the database is exposed to the local network. 5433 so it can
+      # run beside the הנני database on 5432.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - tamar_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TAMAR_POSTGRES_USER:-postgres} -d ${TAMAR_POSTGRES_DB:-tamar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  # Named apart from the הנני volume so `down -v` on either stack cannot
+  # destroy the other site's data.
+  tamar_postgres_data:
