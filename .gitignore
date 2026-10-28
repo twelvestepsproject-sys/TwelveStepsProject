@@ -66,3 +66,13 @@ next-env.d.ts
 # This project uses pnpm. A stray npm lockfile would make the Dockerfile
 # choose `npm ci` over `pnpm install --frozen-lockfile`.
 package-lock.json
+
+# Build output and uploads for the EMETMATRIX site
+.next-emet
+.storage-emet
+
+# Crawled source content for the EMETMATRIX migration. Holds the full
+# article bodies including quoted film dialogue, so it stays out of git
+# history, which cannot be edited after the fact. Re-crawl with
+# scripts/crawl-emet.py; the database is the working copy.
+.content-emet

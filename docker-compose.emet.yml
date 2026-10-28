@@ -1,0 +1,51 @@
+# Local Postgres for the EMETMATRIX site (emetmatrix.com).
+#
+# A THIRD independent instance beside הנני (docker-compose.yml) and the
+# Tamar Reiss clinic (docker-compose.tamar.yml). Same codebase, same
+# migrations, separate data — these sites share source but must never
+# share a database.
+#
+# `name:` is not optional. Compose derives its project name from the
+# directory, so without it every stack in this folder resolves to the SAME
+# project and bringing one up removes the others' containers as "no longer
+# in the file". That is not theoretical: it happened when the tamar stack
+# was first started.
+#
+#   container   twelvesteps-postgres  ->  emet-postgres
+#   database    twelvesteps           ->  emet
+#   port        5432                  ->  5435   (5433 tamar; 5434/5436-8 are
+#                                              other projects on this machine)
+#   volume      postgres_data         ->  emet_postgres_data
+#
+# Run all three at once:
+#   docker compose up -d                              # הנני
+#   docker compose -f docker-compose.tamar.yml up -d   # tamar
+#   docker compose -f docker-compose.emet.yml up -d    # this one
+
+name: emet
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: emet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${EMET_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${EMET_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${EMET_POSTGRES_DB:-emet}
+    ports:
+      # 127.0.0.1 prefix matters: without it Docker publishes on 0.0.0.0
+      # and the database is exposed to the local network.
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - emet_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EMET_POSTGRES_USER:-postgres} -d ${EMET_POSTGRES_DB:-emet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  # Named apart from the other stacks' volumes so `down -v` on any one of
+  # them cannot destroy another site's data.
+  emet_postgres_data:
