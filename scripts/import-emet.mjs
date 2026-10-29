@@ -79,6 +79,45 @@ function isTranscript(post) {
   return named >= 3 || lines >= 8;
 }
 
+/** Reads the chapter number out of a Hebrew category name.
+ *
+ *  Chapters are titled "פרק ג' | …", numbered with Hebrew letters rather
+ *  than digits, and the gershayim in the teens ("י״ב") is written
+ *  inconsistently across the source. Matching letter by letter from the
+ *  start of the name handles both forms and is what makes
+ *  /chapters/chapter-12 land on chapter יב.
+ */
+const HEBREW_NUMERALS = {
+  "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5,
+  "ו": 6, "ז": 7, "ח": 8, "ט": 9, "י": 10,
+  "כ": 20, "ל": 30,
+};
+function hebrewChapterNumber(categoryName) {
+  // "פרק ג' | …" or "פרק-ז' | …" — take what sits between פרק and the
+  // separator, then add up its numeral letters.
+  const m = /^פרק[\s–-]*([א-ת׳״'"’”]+)/.exec(
+    categoryName,
+  );
+  if (!m) return null;
+  let total = 0;
+  for (const ch of m[1]) {
+    const v = HEBREW_NUMERALS[ch];
+    if (v) total += v;
+  }
+  return total > 0 && total <= 40 ? total : null;
+}
+
+/** Last-resort slug for a chapter whose number cannot be read. Latin
+ *  characters only, so the URL never becomes percent-encoded Hebrew. */
+function slugifyHebrew(name) {
+  return (
+    decodeEntities(name)
+      .replace(/[^א-ת0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 24) || "untitled"
+  );
+}
+
 const isEnglish = (p) => p.categories.includes("English");
 const chapterCategory = (p) =>
   p.categories.find((c) => c.startsWith("פרק")) ?? null;
@@ -93,6 +132,7 @@ await client.connect();
 const report = {
   chapters: 0, subchapters: 0, sources: 0, english: 0, transcripts: 0,
   emptyBodies: [], mosimage: [], bareImageRefs: [], redirects: 0,
+  unnumberedChapters: [],
 };
 
 async function upsertCategory(slug, name, description) {
@@ -184,13 +224,16 @@ try {
   const chapterNames = [...new Set(posts.map(chapterCategory).filter(Boolean))];
   const categoryIds = new Map();
   for (const name of chapterNames) {
-    // "פרק ג' | מהות עולם ההעלם" -> chapter-3, so the slug is stable even
-    // if the Hebrew title is edited later.
-    const id = await upsertCategory(
-      `chapter-${chapterNames.indexOf(name) + 1}-${name.length}`,
-      decodeEntities(name),
-      null,
-    );
+    // The slug carries the real chapter number read off the Hebrew
+    // numeral: "פרק ג' | מהות עולם ההעלם" -> chapter-3. Deriving it from
+    // the crawl order or the title's length would look similar and be
+    // wrong twice over — the feed does not return chapters in order, and
+    // a title edited in the admin would silently change the URL and break
+    // every redirect pointing at it.
+    const number = hebrewChapterNumber(name);
+    const slug = number ? `chapter-${number}` : `chapter-x-${slugifyHebrew(name)}`;
+    if (!number) report.unnumberedChapters.push(decodeEntities(name));
+    const id = await upsertCategory(slug, decodeEntities(name), null);
     categoryIds.set(name, id);
   }
   const sourcesId = await upsertCategory("sources", "מקורות", null);
