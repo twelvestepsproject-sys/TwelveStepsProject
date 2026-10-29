@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,10 +16,27 @@ import { usePathname } from "next/navigation";
  * Closing on route change matters more than it looks. Next keeps this
  * component mounted across navigations, so without it the drawer stays
  * open over the page the visitor just asked for.
+ *
+ * The open drawer is portalled to <body>. It is rendered from inside
+ * <header>, which is `sticky` and carries `backdrop-blur` — each of which
+ * creates a stacking context, so a z-index set on a descendant is
+ * confined within the header and cannot rise above it however large it
+ * is. Left in place the drawer sat *under* the header's own translucent
+ * background, which showed the page through the top of the menu and hid
+ * the site name behind the overlay. A portal takes it out of that context
+ * entirely; the z-index then means what it says.
  */
 export function EmetMobileNav({ items }: { items: { href: string; label: string }[] }) {
   const [open, setOpen] = useState(false);
+  // createPortal needs document, which does not exist while the server
+  // renders. Gating on this keeps the first client render identical to
+  // the server's, so React does not report a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -54,7 +72,8 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
         </svg>
       </button>
 
-      {open ? (
+      {open && mounted
+        ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -103,8 +122,10 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
               </ul>
             </nav>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
