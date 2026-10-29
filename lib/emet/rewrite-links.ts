@@ -65,9 +65,42 @@ export function rewriteLegacyLinks(html: string, routes: LegacyRouteMap): string
  * the author's own writing and stays. The database keeps every body as
  * imported, so this is presentation, not deletion.
  */
+// The heading paragraph is not always just the words. Chapter ב opens
+// with a linked image inside the same <strong>, which an exact-shape
+// pattern missed — so the stale list rendered under the one the page
+// draws itself. Matching "a leading <p> that contains תת-פרקים, followed
+// by a <ul>" covers both forms.
 const LEADING_INDEX =
-  /^\s*<p>\s*(?:<strong>)?\s*תת-?פרקים\s*:?\s*(?:<\/strong>)?\s*<\/p>\s*<ul>[\s\S]*?<\/ul>/i;
+  /^\s*<p>(?:(?!<\/p>)[\s\S])*?תת[\s-]?פרקים[\s\S]*?<\/p>\s*<ul>[\s\S]*?<\/ul>/i;
 
 export function stripLeadingSubchapterIndex(html: string): string {
   return html.replace(LEADING_INDEX, "").trimStart();
+}
+
+/**
+ * Removes images the migration cannot resolve.
+ *
+ * Three bodies still reference pictures the Joomla era left behind, as
+ * bare relative paths like `images/thenextlecture.jpg`. A relative src
+ * resolves against the current page, so each one is a 404 and renders as
+ * a broken-image icon — which is what appeared at the top of chapter ב.
+ *
+ * Only images whose src is relative are touched; anything absolute, or
+ * served from this site's own /api/media, is left alone. A link wrapping
+ * such an image keeps its text, so "למעבר להרצאה הבאה לחץ כאן" survives
+ * as a working link rather than disappearing with the picture.
+ *
+ * The database keeps every body as imported, and the import report counts
+ * these for review, so nothing is lost by hiding them from the page.
+ */
+const UNRESOLVABLE_IMG = /<img[^>]*src="(?!https?:|\/|data:)[^"]*"[^>]*>/gi;
+
+export function dropUnresolvableImages(html: string): string {
+  if (!html) return "";
+  return html.replace(UNRESOLVABLE_IMG, (match) => {
+    // An alt worth reading becomes the link text when the <img> was the
+    // only thing inside an anchor; otherwise the image simply goes.
+    const alt = /alt="([^"]*)"/i.exec(match)?.[1]?.trim();
+    return alt ? alt : "";
+  });
 }

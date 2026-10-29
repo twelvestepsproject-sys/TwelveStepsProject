@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
-import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
+import {
+  buildLegacyRouteMap,
+  stripLeadingSubchapterIndex,
+} from "@/lib/emet/rewrite-links";
 import { emetPath } from "@/lib/emet/routes";
 import {
   byReadingOrder,
@@ -98,6 +101,12 @@ export default async function ChapterPage({ params }: PageProps) {
   const { items: everyPost } = await db.listPosts({ perPage: 1000 });
   const routes = buildLegacyRouteMap(everyPost);
 
+  // Whether anything survives once the duplicated index is removed.
+  // Mirrors what ArticleBody does, so the two cannot disagree about
+  // whether this chapter has an introduction.
+  const introHtml = stripLeadingSubchapterIndex(main?.body ?? "");
+  const hasIntro = introHtml.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").trim().length > 0;
+
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -153,13 +162,15 @@ export default async function ChapterPage({ params }: PageProps) {
           </h1>
         </header>
 
-        {main ? (
+        {hasIntro ? (
           /* The chapter renders its own subchapter navigation below, so
              the copy WordPress wrote into the body is dropped here. */
-          <ArticleBody html={main.body ?? ""} routes={routes} stripIndex />
+          <ArticleBody html={main?.body ?? ""} routes={routes} stripIndex />
         ) : (
-          /* No main post: say so rather than rendering an empty page
-             that looks broken. The subchapters below are the content. */
+          /* Some chapters are only an index: chapter ב's entire body was
+             the subchapter list, so once that is stripped nothing is
+             left. Say so rather than leaving a blank band above the
+             navigation, which reads as a page that failed to load. */
           <p className="mx-auto max-w-[70ch] text-[#6b6b6b]">
             לפרק זה אין טקסט פתיחה נפרד. התוכן מופיע בחלקים שלהלן.
           </p>

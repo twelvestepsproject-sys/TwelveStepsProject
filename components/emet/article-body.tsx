@@ -1,5 +1,6 @@
 import { sanitizeArticleHtml } from "@/lib/emet/sanitize-html";
 import {
+  dropUnresolvableImages,
   rewriteLegacyLinks,
   stripLeadingSubchapterIndex,
   type LegacyRouteMap,
@@ -40,6 +41,9 @@ export function ArticleBody({
 }) {
   let source = html;
   if (stripIndex) source = stripLeadingSubchapterIndex(source);
+  // Always: a relative src is a 404 on every page, not just the ones
+  // whose index gets stripped.
+  source = dropUnresolvableImages(source);
   if (routes) source = rewriteLegacyLinks(source, routes);
   const clean = sanitizeArticleHtml(source);
   const english = lang === "en";
