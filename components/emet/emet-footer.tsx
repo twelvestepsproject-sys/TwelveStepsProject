@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { emetPath } from "@/lib/emet/routes";
 
 /**
  * Site footer for EMETMATRIX.
@@ -27,9 +28,9 @@ export function EmetFooter({ siteName }: { siteName: string }) {
               ניווט
             </p>
             <ul className="mt-3 flex flex-col gap-2 text-sm">
-              <li><Link href="/chapters" className="transition-colors hover:text-white">הפרקים</Link></li>
-              <li><Link href="/sources" className="transition-colors hover:text-white">מקורות</Link></li>
-              <li><Link href="/search" className="transition-colors hover:text-white">חיפוש</Link></li>
+              <li><Link href={emetPath("/chapters")} className="transition-colors hover:text-white">הפרקים</Link></li>
+              <li><Link href={emetPath("/sources")} className="transition-colors hover:text-white">מקורות</Link></li>
+              <li><Link href={emetPath("/search")} className="transition-colors hover:text-white">חיפוש</Link></li>
             </ul>
           </nav>
 
@@ -38,9 +39,9 @@ export function EmetFooter({ siteName }: { siteName: string }) {
               שפות
             </p>
             <ul className="mt-3 flex flex-col gap-2 text-sm">
-              <li><Link href="/" className="transition-colors hover:text-white">עברית</Link></li>
+              <li><Link href={emetPath("/")} className="transition-colors hover:text-white">עברית</Link></li>
               <li>
-                <Link href="/en" lang="en" dir="ltr" className="inline-block transition-colors hover:text-white">
+                <Link href={emetPath("/en")} lang="en" dir="ltr" className="inline-block transition-colors hover:text-white">
                   English
                 </Link>
               </li>

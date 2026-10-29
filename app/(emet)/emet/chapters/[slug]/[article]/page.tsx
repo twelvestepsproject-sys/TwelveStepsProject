@@ -5,6 +5,7 @@ import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
 import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
+import { emetPath } from "@/lib/emet/routes";
 import {
   byReadingOrder,
   chapterNumberOf,
@@ -132,13 +133,13 @@ export default async function SubchapterPage({ params }: PageProps) {
       <div className="mx-auto max-w-6xl px-5 py-12 sm:py-16">
         <nav aria-label="מיקום" className="mb-8 text-sm text-white/40">
           <ol className="flex flex-wrap items-center gap-2">
-            <li><Link href="/" className="transition-colors hover:text-white/70">דף הבית</Link></li>
+            <li><Link href={emetPath("/")} className="transition-colors hover:text-white/70">דף הבית</Link></li>
             <li aria-hidden="true">/</li>
-            <li><Link href="/chapters" className="transition-colors hover:text-white/70">הפרקים</Link></li>
+            <li><Link href={emetPath("/chapters")} className="transition-colors hover:text-white/70">הפרקים</Link></li>
             <li aria-hidden="true">/</li>
             <li>
               <Link
-                href={`/chapters/${category.slug}`}
+                href={emetPath(`/chapters/${category.slug}`)}
                 className="transition-colors hover:text-white/70"
               >
                 {number ? `פרק ${number}` : chapterTitle}
@@ -164,7 +165,7 @@ export default async function SubchapterPage({ params }: PageProps) {
                 {number ? `פרק ${number}` : "הפרק"}
               </p>
               <Link
-                href={`/chapters/${category.slug}`}
+                href={emetPath(`/chapters/${category.slug}`)}
                 className="mt-2 block font-display text-sm font-semibold leading-snug text-white/85 transition-colors hover:text-white"
               >
                 {chapterTitle}
@@ -175,7 +176,7 @@ export default async function SubchapterPage({ params }: PageProps) {
                   return (
                     <li key={sibling.id}>
                       <Link
-                        href={`/chapters/${category.slug}/${sibling.slug}`}
+                        href={emetPath(`/chapters/${category.slug}/${sibling.slug}`)}
                         aria-current={current ? "page" : undefined}
                         className={`flex gap-2.5 rounded-md px-2 py-2 text-sm transition-colors ${
                           current
@@ -215,7 +216,7 @@ export default async function SubchapterPage({ params }: PageProps) {
             >
               {previous ? (
                 <Link
-                  href={`/chapters/${category.slug}/${previous.slug}`}
+                  href={emetPath(`/chapters/${category.slug}/${previous.slug}`)}
                   className="group flex-1 rounded-lg border border-white/10 p-4 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03]"
                 >
                   <span className="block text-xs text-white/40">הקודם</span>
@@ -225,7 +226,7 @@ export default async function SubchapterPage({ params }: PageProps) {
                 </Link>
               ) : (
                 <Link
-                  href={`/chapters/${category.slug}`}
+                  href={emetPath(`/chapters/${category.slug}`)}
                   className="group flex-1 rounded-lg border border-white/10 p-4 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03]"
                 >
                   <span className="block text-xs text-white/40">חזרה</span>
@@ -236,7 +237,7 @@ export default async function SubchapterPage({ params }: PageProps) {
               )}
               {next ? (
                 <Link
-                  href={`/chapters/${category.slug}/${next.slug}`}
+                  href={emetPath(`/chapters/${category.slug}/${next.slug}`)}
                   className="group flex-1 rounded-lg border border-white/10 p-4 text-start transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03] sm:text-end"
                 >
                   <span className="block text-xs text-white/40">הבא</span>

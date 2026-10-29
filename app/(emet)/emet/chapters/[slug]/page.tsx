@@ -5,6 +5,7 @@ import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
 import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
+import { emetPath } from "@/lib/emet/routes";
 import {
   byReadingOrder,
   chapterNumberOf,
@@ -135,9 +136,9 @@ export default async function ChapterPage({ params }: PageProps) {
       <article className="mx-auto max-w-4xl px-5 py-12 sm:py-20">
         <nav aria-label="מיקום" className="mb-8 text-sm text-white/40">
           <ol className="flex flex-wrap items-center gap-2">
-            <li><Link href="/" className="transition-colors hover:text-white/70">דף הבית</Link></li>
+            <li><Link href={emetPath("/")} className="transition-colors hover:text-white/70">דף הבית</Link></li>
             <li aria-hidden="true">/</li>
-            <li><Link href="/chapters" className="transition-colors hover:text-white/70">הפרקים</Link></li>
+            <li><Link href={emetPath("/chapters")} className="transition-colors hover:text-white/70">הפרקים</Link></li>
           </ol>
         </nav>
 
@@ -176,7 +177,7 @@ export default async function ChapterPage({ params }: PageProps) {
               {subchapters.map((post, i) => (
                 <li key={post.id} className="border-b border-white/10">
                   <Link
-                    href={`/chapters/${category.slug}/${post.slug}`}
+                    href={emetPath(`/chapters/${category.slug}/${post.slug}`)}
                     className="group flex items-baseline gap-4 py-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400/60"
                   >
                     <span
@@ -207,7 +208,7 @@ export default async function ChapterPage({ params }: PageProps) {
         >
           {previous ? (
             <Link
-              href={`/chapters/${previous.slug}`}
+              href={emetPath(`/chapters/${previous.slug}`)}
               className="group flex-1 rounded-lg border border-white/10 p-4 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03]"
             >
               <span className="block text-xs text-white/40">הפרק הקודם</span>
@@ -220,7 +221,7 @@ export default async function ChapterPage({ params }: PageProps) {
           )}
           {next ? (
             <Link
-              href={`/chapters/${next.slug}`}
+              href={emetPath(`/chapters/${next.slug}`)}
               className="group flex-1 rounded-lg border border-white/10 p-4 text-start transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03] sm:text-end"
             >
               <span className="block text-xs text-white/40">הפרק הבא</span>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/queries";
 import { chapterNumberOf, isChapterCategory, chapterTitleOf } from "@/lib/emet/chapters";
+import { emetPath } from "@/lib/emet/routes";
 
 /**
  * `/chapters` — the index of all seventeen chapters.
@@ -67,7 +68,7 @@ export default async function ChaptersPage() {
             return (
               <li key={chapter.id} className="border-b border-white/10">
                 <Link
-                  href={`/chapters/${chapter.slug}`}
+                  href={emetPath(`/chapters/${chapter.slug}`)}
                   className="group flex items-baseline gap-5 py-6 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400/60 sm:gap-8 sm:py-7"
                 >
                   <span

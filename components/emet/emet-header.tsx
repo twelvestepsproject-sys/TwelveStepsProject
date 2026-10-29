@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmetMobileNav } from "./emet-mobile-nav";
+import { emetPath } from "@/lib/emet/routes";
 
 /**
  * Site header for EMETMATRIX.
@@ -16,10 +17,10 @@ import { EmetMobileNav } from "./emet-mobile-nav";
  * requirement in the brief, and the accessible default besides.
  */
 const NAV = [
-  { href: "/chapters", label: "הפרקים" },
-  { href: "/sources", label: "מקורות" },
-  { href: "/en", label: "English" },
-  { href: "/search", label: "חיפוש" },
+  { href: emetPath("/chapters"), label: "הפרקים" },
+  { href: emetPath("/sources"), label: "מקורות" },
+  { href: emetPath("/en"), label: "English" },
+  { href: emetPath("/search"), label: "חיפוש" },
 ];
 
 export function EmetHeader({ siteName, tagline }: { siteName: string; tagline: string }) {
@@ -35,7 +36,7 @@ export function EmetHeader({ siteName, tagline }: { siteName: string; tagline: s
       </a>
 
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-        <Link href="/" className="group flex flex-col leading-tight">
+        <Link href={emetPath("/")} className="group flex flex-col leading-tight">
           <span className="font-display text-lg font-bold tracking-wide text-white sm:text-xl">
             {siteName}
           </span>
