@@ -29,13 +29,32 @@ const STORAGE = process.env.STORAGE_DIR ?? "./.storage-emet";
 const MEDIA = [
   ["hero-bg.webp", "רקע קוד ירוק זוהר על רקע כהה"],
   ["author-portrait.webp", "רוני אילון הירש"],
-  ["ch1-cover.webp", "יד מחזיקה טלפון מול נוף"],
-  ["ch2-cover.webp", "פנים בתאורה חלקית"],
-  ["ch3-cover.webp", "רחוב עירוני בלילה"],
-  ["ch4-cover.webp", "משקפיים ומחשב נייד על שולחן"],
-  ["ch5-cover.webp", "אצבע נוגעת במנורה דולקת"],
-  ["ch6-cover.webp", "מחשב נייד פתוח"],
 ];
+
+/** The seventeen chapter covers, in chapter order, with alt text that
+ *  describes the photograph rather than repeating the chapter title —
+ *  the title is already read out as the link text beside it. */
+const COVERS = [
+  [1,  "יד מחזיקה טלפון מול נוף"],
+  [2,  "מחשב נייד ועיניים"],
+  [3,  "משקפיים על שולחן עבודה"],
+  [4,  "רחוב עירוני בלילה"],
+  [5,  "אצבע נוגעת במנורה דולקת"],
+  [6,  "פנים בתאורה חלקית"],
+  [7,  "קוד ירוק על רקע כהה"],
+  [8,  "דיוקן על רקע לבנים"],
+  [9,  "ילד מביט הצידה"],
+  [10, "יד מושיטה לב אדום"],
+  [11, "כלי נשק עתיק"],
+  [12, "תפוח אדום על רקע כהה"],
+  [13, "דמות בצללית בפתח מואר"],
+  [14, "כדור הארץ ולהבות"],
+  [15, "חיילים ומסוק בשדה"],
+  [16, "מסך מחשב בחדר חשוך"],
+  [17, "סליל דנא"],
+].map(([n, alt]) => [`chapter-${n}-cover.webp`, alt]);
+
+MEDIA.push(...COVERS);
 
 function dimensions(file) {
   const out = execFileSync(

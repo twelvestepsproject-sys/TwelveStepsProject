@@ -32,15 +32,10 @@ const AUTHOR_BIO =
 const CHAPTERS_HEADING =
   "פיצוח קוד המטריקס… בואו להציץ אל מעבר לאשליה";
 
-/** The six covers the live homepage shows, in chapter order. */
-const COVER_FILES = [
-  "ch1-cover.webp",
-  "ch2-cover.webp",
-  "ch3-cover.webp",
-  "ch4-cover.webp",
-  "ch5-cover.webp",
-  "ch6-cover.webp",
-];
+/** The homepage shows the first six chapters. Covers are keyed by the
+ *  chapter's own slug, the same set /chapters uses, so a cover replaced
+ *  in the admin changes in both places. */
+const HOMEPAGE_CHAPTERS = 6;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await db.getSiteSettings();
@@ -59,10 +54,11 @@ export default async function EmetHomePage() {
     .filter((c) => isChapterCategory(c.slug))
     .sort((a, b) => (chapterNumberOf(a.slug) ?? 0) - (chapterNumberOf(b.slug) ?? 0));
 
+  const featured = chapters.slice(0, HOMEPAGE_CHAPTERS);
   const media = await loadMediaByFilename([
     "hero-bg.webp",
     "author-portrait.webp",
-    ...COVER_FILES,
+    ...featured.map((c) => `${c.slug}-cover.webp`),
   ]);
   const hero = media.get("hero-bg.webp");
   const portrait = media.get("author-portrait.webp");
@@ -146,8 +142,8 @@ export default async function EmetHomePage() {
           </h2>
 
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {chapters.slice(0, 6).map((chapter, i) => {
-              const cover = media.get(COVER_FILES[i]);
+            {featured.map((chapter) => {
+              const cover = media.get(`${chapter.slug}-cover.webp`);
               return (
                 <li key={chapter.id}>
                   <Link
