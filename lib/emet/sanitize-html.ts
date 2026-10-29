@@ -140,6 +140,19 @@ export function sanitizeArticleHtml(input: string): string {
     if (name === "video") {
       if (!kept.some((a) => a.startsWith("controls"))) kept.push("controls");
       if (!kept.some((a) => a.startsWith("preload="))) kept.push('preload="metadata"');
+
+      // The bodies carry width="353" height="235" from a 2012 layout and
+      // a poster like "files/1_4(1).jpg" — a relative path that resolves
+      // against the current page and 404s, which is why the player opened
+      // on a blank frame. Dropping all three lets the stylesheet size the
+      // player to the column instead of pinning it to 353px.
+      for (let i = kept.length - 1; i >= 0; i--) {
+        const attr = kept[i];
+        if (attr.startsWith('width="') || attr.startsWith('height="')) kept.splice(i, 1);
+        else if (attr.startsWith('poster="') && !/poster="(https?:|\/)/.test(attr)) {
+          kept.splice(i, 1);
+        }
+      }
     }
 
     return `<${name}${kept.length ? " " + kept.join(" ") : ""}>`;

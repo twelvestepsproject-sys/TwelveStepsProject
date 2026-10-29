@@ -152,6 +152,40 @@
   border-radius: 0.5rem;
 }
 
+/*
+ * The lecture videos.
+ *
+ * The bodies pin them to width="353" from a 2012 layout and point poster
+ * at a relative path that 404s, so the player opened small and on a blank
+ * frame. Both attributes are dropped in the sanitizer; sizing happens
+ * here instead, so the player fills the reading column on any screen.
+ *
+ * The native controls stay. A custom player would mean re-implementing
+ * keyboard access, captions and fullscreen that the browser already gets
+ * right, and these are lectures someone scrubs through rather than a
+ * branded surface.
+ */
+.emet-prose video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  /* Nearly all of these are 353x235, close enough to 3:2 that reserving
+     that box stops the page jumping when metadata arrives. */
+  aspect-ratio: 3 / 2;
+  height: auto;
+  margin-block: 2em;
+  border-radius: 0.75rem;
+  background: #0f1211;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+  outline: 1px solid rgb(0 0 0 / 0.06);
+  outline-offset: -1px;
+}
+
+.emet-prose video:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 3px;
+}
+
 .emet-prose hr {
   margin-block: 2.5em;
   border: 0;
