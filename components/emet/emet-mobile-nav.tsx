@@ -59,7 +59,11 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
           role="dialog"
           aria-modal="true"
           aria-label="תפריט ניווט"
-          className="fixed inset-0 z-50 bg-white/97 backdrop-blur"
+          // Opaque, not a tint. bg-white/97 silently produced nothing —
+          // Tailwind generates the opacity scale in steps and 97 is not
+          // one of them — so the drawer rendered fully transparent and
+          // the page showed straight through the menu.
+          className="fixed inset-0 z-50 bg-white"
           onClick={() => setOpen(false)}
         >
           <div
