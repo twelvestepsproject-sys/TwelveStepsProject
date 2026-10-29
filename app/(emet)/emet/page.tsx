@@ -5,6 +5,7 @@ import { db } from "@/lib/queries";
 import { mediaUrlFor } from "@/lib/media";
 import { emetPath } from "@/lib/emet/routes";
 import { loadMediaByFilename } from "@/lib/emet/media";
+import { Reveal } from "@/components/emet/reveal";
 import { chapterNumberOf, isChapterCategory } from "@/lib/emet/chapters";
 
 /**
@@ -89,14 +90,17 @@ export default async function EmetHomePage() {
             // The largest element on first paint, so it must not be lazy.
             priority
             sizes="100vw"
-            className="object-cover object-center"
+            // A very slow zoom: enough to keep the code-rain from reading
+            // as a flat photograph, far too slow to pull the eye off the
+            // title. Dropped entirely under reduced motion.
+            className="emet-hero-drift object-cover object-center"
           />
         ) : null}
         {/* Darkens the centre so white type stays legible over the busiest
             part of the image. */}
         <div aria-hidden="true" className="absolute inset-0 bg-black/25" />
 
-        <div className="relative z-10 px-5 text-center">
+        <div className="emet-hero-enter relative z-10 px-5 text-center">
           <h1 className="font-display text-6xl font-light tracking-[0.06em] text-white drop-shadow-lg sm:text-8xl">
             EMETRIX
           </h1>
@@ -111,7 +115,7 @@ export default async function EmetHomePage() {
 
       {/* 2. The opening question, with the portrait alongside. */}
       <section className="bg-white px-5 py-20 sm:py-28">
-        <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2 md:gap-16">
+        <Reveal className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2 md:gap-16">
           <div className="order-2 md:order-1">
             <h2 className="font-display text-2xl leading-[1.6] text-[#2b2b2b] sm:text-3xl sm:leading-[1.55]">
               {OPENING_QUESTION}
@@ -131,7 +135,7 @@ export default async function EmetHomePage() {
               />
             </div>
           ) : null}
-        </div>
+        </Reveal>
       </section>
 
       {/* 3. The chapters, as cover cards with the title over the image. */}

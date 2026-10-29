@@ -5,6 +5,7 @@ import { db } from "@/lib/queries";
 import { mediaUrlFor } from "@/lib/media";
 import { emetPath } from "@/lib/emet/routes";
 import { loadMediaByFilename } from "@/lib/emet/media";
+import { Reveal } from "@/components/emet/reveal";
 import { chapterNumberOf, isChapterCategory, chapterTitleOf } from "@/lib/emet/chapters";
 
 /**
@@ -78,6 +79,10 @@ export default async function ChaptersPage() {
 
             return (
               <li key={chapter.id}>
+                {/* Staggered by column rather than by position in the
+                    list: 17 cards at 60ms each would make the last one
+                    arrive a second after the first, long after the eye. */}
+                <Reveal delay={(index % 3) * 70}>
                 <Link
                   href={emetPath(`/chapters/${chapter.slug}`)}
                   className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
@@ -117,6 +122,7 @@ export default async function ChaptersPage() {
                     ) : null}
                   </div>
                 </Link>
+                </Reveal>
               </li>
             );
           })}

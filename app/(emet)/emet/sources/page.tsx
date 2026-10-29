@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/queries";
 import { emetPath } from "@/lib/emet/routes";
+import { Reveal } from "@/components/emet/reveal";
 import { byReadingOrder } from "@/lib/emet/chapters";
 
 /**
@@ -56,6 +57,7 @@ export default async function SourcesPage() {
         {sources.length === 0 ? (
           <p className="text-[#6b6b6b]">אין מקורות להצגה כרגע.</p>
         ) : (
+          <Reveal>
           <ol className="border-t border-black/10">
             {sources.map((source) => (
               <li key={source.id} className="border-b border-black/10">
@@ -76,6 +78,7 @@ export default async function SourcesPage() {
               </li>
             ))}
           </ol>
+          </Reveal>
         )}
       </div>
     </div>

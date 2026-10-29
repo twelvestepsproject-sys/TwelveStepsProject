@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/queries";
 import { emetPath } from "@/lib/emet/routes";
+import { Reveal } from "@/components/emet/reveal";
 import { byReadingOrder } from "@/lib/emet/chapters";
 
 /**
@@ -72,6 +73,7 @@ export default async function EnglishIndexPage() {
         {posts.length === 0 ? (
           <p className="text-[#6b6b6b]">Nothing to show yet.</p>
         ) : (
+          <Reveal>
           <ul className="border-t border-black/10">
             {posts.map((post) => (
               <li key={post.id} className="border-b border-black/10">
@@ -92,6 +94,7 @@ export default async function EnglishIndexPage() {
               </li>
             ))}
           </ul>
+          </Reveal>
         )}
       </div>
     </div>
