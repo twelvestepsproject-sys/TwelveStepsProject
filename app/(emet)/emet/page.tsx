@@ -6,7 +6,11 @@ import { mediaUrlFor } from "@/lib/media";
 import { emetPath } from "@/lib/emet/routes";
 import { loadMediaByFilename } from "@/lib/emet/media";
 import { Reveal } from "@/components/emet/reveal";
-import { chapterNumberOf, isChapterCategory } from "@/lib/emet/chapters";
+import {
+  chapterNumberOf,
+  chapterTitleOf,
+  isChapterCategory,
+} from "@/lib/emet/chapters";
 
 /**
  * `/` — the homepage, rebuilt to match the live site's three sections:
@@ -114,66 +118,92 @@ export default async function EmetHomePage() {
       </section>
 
       {/* 2. The opening question, with the portrait alongside. */}
-      <section className="bg-white px-5 py-20 sm:py-28">
-        <Reveal className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2 md:gap-16">
+      <section className="bg-white px-6 py-24 sm:px-10 sm:py-32">
+        <Reveal className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-[1.15fr_1fr] md:gap-20 lg:gap-24">
           <div className="order-2 md:order-1">
-            <h2 className="font-display text-2xl leading-[1.6] text-[#2b2b2b] sm:text-3xl sm:leading-[1.55]">
+            {/* Scales with the viewport instead of jumping at one
+                breakpoint, so the question stays the largest thing on the
+                screen on a wide monitor without overflowing a phone. */}
+            <h2 className="font-display text-[clamp(1.6rem,2.6vw,2.6rem)] font-light leading-[1.45] tracking-tight text-[#141414]">
               {OPENING_QUESTION}
             </h2>
-            <p className="mt-7 text-[0.95rem] leading-[2] text-[#6b6b6b]">{AUTHOR_BIO}</p>
+            <div aria-hidden="true" className="mt-9 h-px w-16 bg-emerald-700/35" />
+            <p className="mt-7 max-w-prose text-[1.0625rem] leading-[1.95] text-[#5a5a5a]">
+              {AUTHOR_BIO}
+            </p>
           </div>
 
           {portrait ? (
             <div className="order-1 md:order-2">
-              <Image
-                src={mediaUrlFor(portrait)}
-                alt={portrait.alt_he}
-                width={portrait.width}
-                height={portrait.height}
-                sizes="(min-width: 768px) 460px, 100vw"
-                className="h-auto w-full"
-              />
+              <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-[#f0f0f0]">
+                <Image
+                  src={mediaUrlFor(portrait)}
+                  alt={portrait.alt_he}
+                  fill
+                  sizes="(min-width: 768px) 46vw, 100vw"
+                  className="object-cover object-top transition-transform duration-[1.2s] ease-out hover:scale-[1.03]"
+                />
+              </div>
             </div>
           ) : null}
         </Reveal>
       </section>
 
       {/* 3. The chapters, as cover cards with the title over the image. */}
-      <section className="px-5 py-20 sm:py-24">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center font-display text-xl text-[#3a3a3a] sm:text-2xl">
-            {CHAPTERS_HEADING}
-          </h2>
+      <section className="bg-[#fafafa] px-6 py-24 sm:px-10 sm:py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700/70">
+              הפרקים
+            </p>
+            <h2 className="mt-4 font-display text-[clamp(1.5rem,2.2vw,2.15rem)] font-light leading-snug text-[#141414]">
+              {CHAPTERS_HEADING}
+            </h2>
+          </div>
 
-          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-14 grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((chapter) => {
               const cover = media.get(`${chapter.slug}-cover.webp`);
+              const number = chapterNumberOf(chapter.slug);
               return (
                 <li key={chapter.id}>
                   <Link
                     href={emetPath(`/chapters/${chapter.slug}`)}
-                    className="group relative block aspect-[16/9] overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
+                    className="group relative block aspect-[4/3] overflow-hidden rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
                   >
                     {cover ? (
                       <Image
                         src={mediaUrlFor(cover)}
                         alt=""
                         fill
-                        sizes="(min-width: 1024px) 340px, (min-width: 640px) 45vw, 100vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        sizes="(min-width: 1024px) 400px, (min-width: 640px) 46vw, 100vw"
+                        className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
                       />
                     ) : (
                       <span aria-hidden="true" className="absolute inset-0 bg-[#2a2a2a]" />
                     )}
                     {/* Gradient rather than a flat wash: the titles sit at the
-                        bottom, so only that band needs darkening. */}
+                        bottom, so only that band needs darkening. It deepens
+                        on hover so the title stays legible as the image
+                        brightens behind it. */}
                     <span
                       aria-hidden="true"
-                      className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent transition-opacity duration-500 group-hover:from-black/90"
                     />
-                    <span className="absolute inset-x-0 bottom-0 p-5">
-                      <span className="block text-sm font-semibold leading-snug text-white drop-shadow sm:text-base">
-                        {chapter.name}
+
+                    {number ? (
+                      <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 font-display text-sm tabular-nums text-white backdrop-blur-sm transition-colors duration-300 group-hover:bg-emerald-700/80">
+                        {number}
+                      </span>
+                    ) : null}
+
+                    <span className="absolute inset-x-0 bottom-0 p-6">
+                      <span className="block font-display text-base font-semibold leading-snug text-white drop-shadow-sm sm:text-lg">
+                        {chapterTitleOf(chapter.name)}
+                      </span>
+                      <span className="mt-2 flex items-center gap-1.5 text-sm text-white/0 transition-all duration-300 group-hover:text-white/85">
+                        לקריאה
+                        <span aria-hidden="true">←</span>
                       </span>
                     </span>
                   </Link>
@@ -182,12 +212,21 @@ export default async function EmetHomePage() {
             })}
           </ul>
 
-          <div className="mt-12 text-center">
+          <div className="mt-14">
             <Link
               href={emetPath("/chapters")}
-              className="inline-block rounded-full border border-[#c9c9c9] px-12 py-4 tracking-[0.15em] text-[#3a3a3a] transition-colors hover:border-[#3a3a3a] hover:bg-[#3a3a3a] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
+              // The light-theme pass left this hovering to dark-on-dark:
+              // bg-[#3a3a3a] with text-[#1a1a1a] is unreadable. White text
+              // on the filled state, as it should have been.
+              className="group inline-flex items-center gap-3 rounded-full border border-[#141414] px-9 py-4 text-sm tracking-[0.12em] text-[#141414] transition-colors duration-300 hover:bg-[#141414] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700"
             >
-              לכל הפרקים לחצו
+              לכל הפרקים
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-300 group-hover:-translate-x-1"
+              >
+                ←
+              </span>
             </Link>
           </div>
         </div>
