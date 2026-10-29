@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
+import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
 import {
   byReadingOrder,
   chapterNumberOf,
@@ -91,6 +92,11 @@ export default async function ChapterPage({ params }: PageProps) {
   const previous = index > 0 ? all[index - 1] : null;
   const next = index >= 0 && index < all.length - 1 ? all[index + 1] : null;
 
+  // Built from every post so the body's /?p= cross-references resolve
+  // to real routes rather than dead WordPress query URLs.
+  const { items: everyPost } = await db.listPosts({ perPage: 1000 });
+  const routes = buildLegacyRouteMap(everyPost);
+
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -147,10 +153,12 @@ export default async function ChapterPage({ params }: PageProps) {
         </header>
 
         {main ? (
-          <ArticleBody html={main.body ?? ""} />
+          /* The chapter renders its own subchapter navigation below, so
+             the copy WordPress wrote into the body is dropped here. */
+          <ArticleBody html={main.body ?? ""} routes={routes} stripIndex />
         ) : (
-          // No main post: say so rather than rendering an empty page that
-          // looks broken. The subchapters below are still the content.
+          /* No main post: say so rather than rendering an empty page
+             that looks broken. The subchapters below are the content. */
           <p className="mx-auto max-w-[70ch] text-white/50">
             לפרק זה אין טקסט פתיחה נפרד. התוכן מופיע בחלקים שלהלן.
           </p>

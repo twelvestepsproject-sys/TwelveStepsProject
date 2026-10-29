@@ -1,4 +1,9 @@
 import { sanitizeArticleHtml } from "@/lib/emet/sanitize-html";
+import {
+  rewriteLegacyLinks,
+  stripLeadingSubchapterIndex,
+  type LegacyRouteMap,
+} from "@/lib/emet/rewrite-links";
 
 /**
  * Renders a migrated article body.
@@ -18,8 +23,25 @@ import { sanitizeArticleHtml } from "@/lib/emet/sanitize-html";
  * ~70 characters, which is where Hebrew prose stays comfortable over the
  * long articles this site is made of.
  */
-export function ArticleBody({ html, lang }: { html: string; lang?: "he" | "en" }) {
-  const clean = sanitizeArticleHtml(html);
+export function ArticleBody({
+  html,
+  lang,
+  routes,
+  stripIndex = false,
+}: {
+  html: string;
+  lang?: "he" | "en";
+  /** Legacy id -> route, so `/?p=8` links resolve. Omitted on pages
+   *  that have no cross-references to fix. */
+  routes?: LegacyRouteMap;
+  /** Drops the duplicated "תת-פרקים" list where the page renders that
+   *  navigation itself. */
+  stripIndex?: boolean;
+}) {
+  let source = html;
+  if (stripIndex) source = stripLeadingSubchapterIndex(source);
+  if (routes) source = rewriteLegacyLinks(source, routes);
+  const clean = sanitizeArticleHtml(source);
   const english = lang === "en";
 
   return (
