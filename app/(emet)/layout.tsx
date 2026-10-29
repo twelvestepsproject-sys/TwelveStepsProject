@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { EmetHeader } from "@/components/emet/emet-header";
 import { EmetFooter } from "@/components/emet/emet-footer";
 import { db } from "@/lib/queries";
+import "./emet-prose.css";
 
 /**
  * Route group for the EMETMATRIX site.

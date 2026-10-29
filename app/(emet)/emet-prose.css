@@ -1,0 +1,179 @@
+/*
+ * Typography for migrated article bodies.
+ *
+ * The content is raw WordPress HTML — <p>, <ul>, <a>, <blockquote> with
+ * no classes of its own — and Tailwind's preflight removes the browser's
+ * default styling for all of it. Without these rules a list of links
+ * renders as plain text in a flat stack: no bullets, no underline, no
+ * colour, nothing that says the words are clickable. That is what the
+ * subchapter lists were doing.
+ *
+ * Every rule is scoped under .emet-prose, which only app/(emet) applies,
+ * so none of this can reach הנני's pages.
+ */
+
+.emet-prose p {
+  margin-block: 1.35em;
+}
+
+.emet-prose > :first-child {
+  margin-block-start: 0;
+}
+
+.emet-prose h2,
+.emet-prose h3,
+.emet-prose h4 {
+  font-weight: 700;
+  line-height: 1.35;
+  color: #1a1a1a;
+  margin-block: 2em 0.75em;
+}
+
+.emet-prose h2 { font-size: 1.5rem; }
+.emet-prose h3 { font-size: 1.25rem; }
+.emet-prose h4 { font-size: 1.1rem; }
+
+.emet-prose strong { font-weight: 700; color: #1a1a1a; }
+.emet-prose em { font-style: italic; }
+
+/* Links inside running text. Underlined rather than colour-only: colour
+   alone fails WCAG 1.4.1, and these sit mid-sentence where there is no
+   other cue that they are links. */
+.emet-prose a {
+  color: #047857;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgb(4 120 87 / 0.35);
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.emet-prose a:hover {
+  color: #065f46;
+  text-decoration-color: currentColor;
+}
+
+.emet-prose a:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.emet-prose ul,
+.emet-prose ol {
+  margin-block: 1.35em;
+  padding-inline-start: 1.4em;
+}
+
+.emet-prose ul { list-style: disc; }
+.emet-prose ol { list-style: decimal; }
+.emet-prose li { margin-block: 0.5em; }
+.emet-prose li::marker { color: #047857; }
+
+/*
+ * A list whose items are *only* links is navigation, not prose — the
+ * subchapter index at the top of several chapters is exactly this. It
+ * reads better as a set of rows than as bullets, and the rows make the
+ * whole width clickable rather than just the words.
+ *
+ * :has() does the detection, so the markup needs no classes it does not
+ * have. Browsers without :has() fall back to the bulleted list above,
+ * which is still perfectly usable.
+ */
+.emet-prose ul:has(> li > a:only-child) {
+  list-style: none;
+  padding-inline-start: 0;
+  margin-block: 1.75em;
+  border-block: 1px solid rgb(0 0 0 / 0.08);
+}
+
+.emet-prose ul:has(> li > a:only-child) > li {
+  margin: 0;
+  border-block-end: 1px solid rgb(0 0 0 / 0.06);
+}
+
+.emet-prose ul:has(> li > a:only-child) > li:last-child {
+  border-block-end: 0;
+}
+
+.emet-prose ul:has(> li > a:only-child) > li > a:only-child {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  padding: 0.85em 0.4em;
+  color: #2b2b2b;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* The arrow is generated rather than written into the content, so the
+   migrated HTML stays untouched. aria-hidden is not available on a
+   pseudo-element; a decorative glyph in content is ignored by screen
+   readers that follow the spec, and it carries no meaning the link text
+   does not already have. */
+.emet-prose ul:has(> li > a:only-child) > li > a:only-child::before {
+  content: "←";
+  color: #047857;
+  opacity: 0.45;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.emet-prose ul:has(> li > a:only-child) > li > a:only-child:hover {
+  background: rgb(4 120 87 / 0.04);
+  color: #047857;
+}
+
+.emet-prose ul:has(> li > a:only-child) > li > a:only-child:hover::before {
+  opacity: 1;
+  transform: translateX(-0.2em);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emet-prose ul:has(> li > a:only-child) > li > a:only-child::before {
+    transition: none;
+  }
+  .emet-prose ul:has(> li > a:only-child) > li > a:only-child:hover::before {
+    transform: none;
+  }
+}
+
+.emet-prose blockquote {
+  margin-block: 1.75em;
+  padding-inline-start: 1.1em;
+  border-inline-start: 3px solid rgb(4 120 87 / 0.35);
+  color: #4a4a4a;
+  font-style: italic;
+}
+
+.emet-prose img {
+  max-width: 100%;
+  height: auto;
+  margin-block: 1.75em;
+  border-radius: 0.5rem;
+}
+
+.emet-prose hr {
+  margin-block: 2.5em;
+  border: 0;
+  border-block-start: 1px solid rgb(0 0 0 / 0.1);
+}
+
+.emet-prose table {
+  width: 100%;
+  margin-block: 1.75em;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.emet-prose th,
+.emet-prose td {
+  padding: 0.6em 0.8em;
+  border: 1px solid rgb(0 0 0 / 0.1);
+  text-align: start;
+}
+
+.emet-prose th {
+  background: rgb(0 0 0 / 0.03);
+  font-weight: 600;
+  color: #1a1a1a;
+}
