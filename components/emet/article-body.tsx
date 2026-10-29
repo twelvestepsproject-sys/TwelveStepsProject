@@ -1,4 +1,5 @@
 import { sanitizeArticleHtml } from "@/lib/emet/sanitize-html";
+import { rewriteAbsoluteLinks } from "@/lib/emet/rewrite-absolute";
 import {
   dropUnresolvableImages,
   rewriteLegacyLinks,
@@ -28,6 +29,8 @@ export function ArticleBody({
   html,
   lang,
   routes,
+  titleRoutes,
+  sourcesRoute,
   stripIndex = false,
 }: {
   html: string;
@@ -35,6 +38,12 @@ export function ArticleBody({
   /** Legacy id -> route, so `/?p=8` links resolve. Omitted on pages
    *  that have no cross-references to fix. */
   routes?: LegacyRouteMap;
+  /** Normalised title -> route, for the Joomla-era permalinks that point
+   *  at the old domain by title rather than by id. */
+  titleRoutes?: Map<string, string>;
+  /** Where "למקורות … לחצו כאן" should land. Those anchors point at
+   *  Joomla ids that resolve to nothing, but their text is unambiguous. */
+  sourcesRoute?: string;
   /** Drops the duplicated "תת-פרקים" list where the page renders that
    *  navigation itself. */
   stripIndex?: boolean;
@@ -45,6 +54,12 @@ export function ArticleBody({
   // whose index gets stripped.
   source = dropUnresolvableImages(source);
   if (routes) source = rewriteLegacyLinks(source, routes);
+  // Absolute links to the old domain would take the reader off this site
+  // entirely — including the "לחצו כאן" that should move them to the
+  // next subchapter.
+  if (titleRoutes) {
+    source = rewriteAbsoluteLinks(source, titleRoutes, sourcesRoute).html;
+  }
   const clean = sanitizeArticleHtml(source);
   const english = lang === "en";
 

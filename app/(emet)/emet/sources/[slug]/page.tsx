@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { emetPath } from "@/lib/emet/routes";
+import { titleRoutesFromPosts } from "@/lib/emet/rewrite-absolute";
 import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
 import { byReadingOrder } from "@/lib/emet/chapters";
 
@@ -54,6 +55,7 @@ export default async function SourcePage({ params }: PageProps) {
 
   const { items: everyPost } = await db.listPosts({ perPage: 1000 });
   const routes = buildLegacyRouteMap(everyPost);
+  const titleRoutes = titleRoutesFromPosts(everyPost, emetPath);
 
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
   const breadcrumbJsonLd = {
@@ -105,7 +107,7 @@ export default async function SourcePage({ params }: PageProps) {
           </h1>
         </header>
 
-        <ArticleBody html={post.body ?? ""} routes={routes} />
+        <ArticleBody html={post.body ?? ""} routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")} />
 
         <nav
           aria-label="ניווט בין מקורות"

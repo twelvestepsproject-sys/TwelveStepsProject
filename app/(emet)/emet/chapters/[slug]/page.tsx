@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
+import { titleRoutesFromPosts } from "@/lib/emet/rewrite-absolute";
 import {
   buildLegacyRouteMap,
   stripLeadingSubchapterIndex,
@@ -100,6 +101,7 @@ export default async function ChapterPage({ params }: PageProps) {
   // to real routes rather than dead WordPress query URLs.
   const { items: everyPost } = await db.listPosts({ perPage: 1000 });
   const routes = buildLegacyRouteMap(everyPost);
+  const titleRoutes = titleRoutesFromPosts(everyPost, emetPath);
 
   // Whether anything survives once the duplicated index is removed.
   // Mirrors what ArticleBody does, so the two cannot disagree about
@@ -165,7 +167,7 @@ export default async function ChapterPage({ params }: PageProps) {
         {hasIntro ? (
           /* The chapter renders its own subchapter navigation below, so
              the copy WordPress wrote into the body is dropped here. */
-          <ArticleBody html={main?.body ?? ""} routes={routes} stripIndex />
+          <ArticleBody html={main?.body ?? ""} routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")} stripIndex />
         ) : (
           /* Some chapters are only an index: chapter ב's entire body was
              the subchapter list, so once that is stripped nothing is
