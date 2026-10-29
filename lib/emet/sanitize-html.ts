@@ -22,6 +22,11 @@ const ALLOWED_TAGS = new Set([
   "ul", "ol", "li", "dl", "dt", "dd",
   "blockquote", "q", "cite",
   "a", "img", "figure", "figcaption",
+  // The lectures are <video> with an external <source>. Without these two
+  // the tags were unwrapped, leaving only the "your browser doesn't
+  // support video" fallback the markup carries for old browsers — which
+  // is what readers saw.
+  "video", "source",
   "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption",
   "span", "div", "section", "article",
   "pre", "code",
@@ -32,6 +37,12 @@ const ALLOWED_TAGS = new Set([
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(["href", "title", "target", "rel", "lang", "dir"]),
   img: new Set(["src", "alt", "title", "width", "height", "loading"]),
+  // No `autoplay`: a lecture that starts talking on its own is hostile,
+  // and browsers block it unmuted anyway. `controls` and `preload` are
+  // added below when the body omits them, so a player is always usable
+  // and never downloads a video nobody asked to watch.
+  video: new Set(["src", "controls", "poster", "width", "height", "preload", "playsinline", "muted", "loop"]),
+  source: new Set(["src", "type"]),
   th: new Set(["colspan", "rowspan", "scope"]),
   td: new Set(["colspan", "rowspan"]),
   "*": new Set(["lang", "dir"]),
@@ -122,6 +133,13 @@ export function sanitizeArticleHtml(input: string): string {
     // chapter header — so none of them should block first paint.
     if (name === "img" && !kept.some((a) => a.startsWith('loading='))) {
       kept.push('loading="lazy"');
+    }
+    // A <video> with no controls cannot be played at all once autoplay is
+    // stripped, and metadata-only preload keeps a page with several
+    // lectures from pulling them all on load.
+    if (name === "video") {
+      if (!kept.some((a) => a.startsWith("controls"))) kept.push("controls");
+      if (!kept.some((a) => a.startsWith("preload="))) kept.push('preload="metadata"');
     }
 
     return `<${name}${kept.length ? " " + kept.join(" ") : ""}>`;
