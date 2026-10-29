@@ -47,7 +47,7 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
         aria-label="פתיחת תפריט"
         aria-expanded={open}
         // 44px square: the minimum comfortable tap target.
-        className="flex h-11 w-11 items-center justify-center rounded-lg text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-[#3a3a3a] transition-colors hover:bg-black/5 hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -59,7 +59,7 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
           role="dialog"
           aria-modal="true"
           aria-label="תפריט ניווט"
-          className="fixed inset-0 z-50 bg-[#0b0d0c]/97 backdrop-blur"
+          className="fixed inset-0 z-50 bg-white/97 backdrop-blur"
           onClick={() => setOpen(false)}
         >
           <div
@@ -71,7 +71,7 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="סגירת תפריט"
-                className="flex h-11 w-11 items-center justify-center rounded-lg text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-[#3a3a3a] transition-colors hover:bg-black/5 hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -85,7 +85,7 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="block rounded-lg px-4 py-4 font-display text-2xl text-white/85 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/60"
+                      className="block rounded-lg px-4 py-4 font-display text-2xl text-[#2b2b2b] transition-colors hover:bg-black/5 hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
                     >
                       {item.label}
                     </Link>

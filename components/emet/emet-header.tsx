@@ -25,23 +25,23 @@ const NAV = [
 
 export function EmetHeader({ siteName, tagline }: { siteName: string; tagline: string }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0d0c]/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/95 backdrop-blur">
       {/* A skip link is the one piece of keyboard navigation that has to come
           first in the DOM, so it lives here rather than in the layout. */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:right-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#0b0d0c]"
+        className="sr-only focus:not-sr-only focus:absolute focus:right-4 focus:top-3 focus:z-50 focus:rounded focus:bg-[#1a1a1a] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
         דילוג לתוכן
       </a>
 
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
         <Link href={emetPath("/")} className="group flex flex-col leading-tight">
-          <span className="font-display text-lg font-bold tracking-wide text-white sm:text-xl">
+          <span className="font-display text-lg font-bold tracking-wide text-[#1a1a1a] sm:text-xl">
             {siteName}
           </span>
           {tagline ? (
-            <span className="text-[0.7rem] text-white/55 transition-colors group-hover:text-white/75 sm:text-xs">
+            <span className="text-[0.7rem] text-[#6b6b6b] transition-colors group-hover:text-[#3a3a3a] sm:text-xs">
               {tagline}
             </span>
           ) : null}
@@ -53,7 +53,7 @@ export function EmetHeader({ siteName, tagline }: { siteName: string; tagline: s
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="text-sm text-white/70 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/60"
+                  className="text-sm text-[#5a5a5a] transition-colors hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1a1a1a]"
                 >
                   {item.label}
                 </Link>
