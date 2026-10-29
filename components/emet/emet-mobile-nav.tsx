@@ -59,11 +59,16 @@ export function EmetMobileNav({ items }: { items: { href: string; label: string 
           role="dialog"
           aria-modal="true"
           aria-label="תפריט ניווט"
-          // Opaque, not a tint. bg-white/97 silently produced nothing —
-          // Tailwind generates the opacity scale in steps and 97 is not
-          // one of them — so the drawer rendered fully transparent and
-          // the page showed straight through the menu.
-          className="fixed inset-0 z-50 bg-white"
+          // z-70, above the header's z-50 and the reading-progress bar's
+          // z-60. Header and drawer both sat at 50, and the header is
+          // `sticky` — so it forms its own stacking context and painted
+          // over the drawer, which is what made the menu look
+          // see-through along the top while the rest of it was opaque.
+          //
+          // Opaque, not a tint: bg-white/97 silently produced nothing,
+          // because Tailwind generates its opacity scale in steps and 97
+          // is not one of them.
+          className="fixed inset-0 z-[70] bg-white"
           onClick={() => setOpen(false)}
         >
           <div
