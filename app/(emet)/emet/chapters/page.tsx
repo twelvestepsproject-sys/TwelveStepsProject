@@ -42,22 +42,22 @@ export default async function ChaptersPage() {
   }
 
   return (
-    <div className="bg-[#0b0d0c]">
+    <div className="bg-white">
       <div className="mx-auto max-w-4xl px-5 py-16 sm:py-24">
         <header className="mb-14 sm:mb-20">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/70">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
             המסע
           </p>
-          <h1 className="mt-3 font-display text-3xl font-bold text-white sm:text-5xl">
+          <h1 className="mt-3 font-display text-3xl font-bold text-[#1a1a1a] sm:text-5xl">
             הפרקים
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-[#5a5a5a] sm:text-lg">
             שבעה עשר פרקים, הבנויים זה על זה. אפשר לקרוא לפי הסדר, ואפשר
             להיכנס מכל נקודה שמסקרנת.
           </p>
         </header>
 
-        <ol className="border-t border-white/10">
+        <ol className="border-t border-black/10">
           {chapters.map((chapter) => {
             const number = chapterNumberOf(chapter.slug);
             const parts = countByCategory.get(chapter.id) ?? 0;
@@ -66,30 +66,30 @@ export default async function ChaptersPage() {
             const title = chapterTitleOf(chapter.name);
 
             return (
-              <li key={chapter.id} className="border-b border-white/10">
+              <li key={chapter.id} className="border-b border-black/10">
                 <Link
                   href={emetPath(`/chapters/${chapter.slug}`)}
-                  className="group flex items-baseline gap-5 py-6 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400/60 sm:gap-8 sm:py-7"
+                  className="group flex items-baseline gap-5 py-6 transition-colors hover:bg-black/[0.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:gap-8 sm:py-7"
                 >
                   <span
                     aria-hidden="true"
-                    className="w-10 shrink-0 text-end font-display text-xl tabular-nums text-emerald-400/50 transition-colors group-hover:text-emerald-400 sm:w-14 sm:text-2xl"
+                    className="w-10 shrink-0 text-end font-display text-xl tabular-nums text-emerald-700/60 transition-colors group-hover:text-emerald-700 sm:w-14 sm:text-2xl"
                   >
                     {number ?? "—"}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display text-lg font-semibold leading-snug text-white/90 transition-colors group-hover:text-white sm:text-xl">
+                    <span className="block font-display text-lg font-semibold leading-snug text-[#1a1a1a] transition-colors group-hover:text-[#1a1a1a] sm:text-xl">
                       {title}
                     </span>
                     {parts > 1 ? (
-                      <span className="mt-1.5 block text-sm text-white/45">
+                      <span className="mt-1.5 block text-sm text-[#8a8a8a]">
                         {parts} חלקים
                       </span>
                     ) : null}
                   </span>
                   <span
                     aria-hidden="true"
-                    className="shrink-0 text-white/25 transition-all group-hover:-translate-x-1 group-hover:text-emerald-400/70"
+                    className="shrink-0 text-[#c0c0c0] transition-all group-hover:-translate-x-1 group-hover:text-emerald-700"
                   >
                     ←
                   </span>

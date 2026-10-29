@@ -185,7 +185,7 @@ export default async function EmetHomePage() {
           <div className="mt-12 text-center">
             <Link
               href={emetPath("/chapters")}
-              className="inline-block rounded-full border border-[#c9c9c9] px-12 py-4 tracking-[0.15em] text-[#3a3a3a] transition-colors hover:border-[#3a3a3a] hover:bg-[#3a3a3a] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
+              className="inline-block rounded-full border border-[#c9c9c9] px-12 py-4 tracking-[0.15em] text-[#3a3a3a] transition-colors hover:border-[#3a3a3a] hover:bg-[#3a3a3a] hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
             >
               לכל הפרקים לחצו
             </Link>

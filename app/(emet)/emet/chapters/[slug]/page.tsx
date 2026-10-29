@@ -120,7 +120,7 @@ export default async function ChapterPage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="bg-[#0b0d0c]">
+    <div className="bg-white">
       <ReadingProgress />
       <script
         type="application/ld+json"
@@ -134,21 +134,21 @@ export default async function ChapterPage({ params }: PageProps) {
       ) : null}
 
       <article className="mx-auto max-w-4xl px-5 py-12 sm:py-20">
-        <nav aria-label="מיקום" className="mb-8 text-sm text-white/40">
+        <nav aria-label="מיקום" className="mb-8 text-sm text-[#9a9a9a]">
           <ol className="flex flex-wrap items-center gap-2">
-            <li><Link href={emetPath("/")} className="transition-colors hover:text-white/70">דף הבית</Link></li>
+            <li><Link href={emetPath("/")} className="transition-colors hover:text-[#4a4a4a]">דף הבית</Link></li>
             <li aria-hidden="true">/</li>
-            <li><Link href={emetPath("/chapters")} className="transition-colors hover:text-white/70">הפרקים</Link></li>
+            <li><Link href={emetPath("/chapters")} className="transition-colors hover:text-[#4a4a4a]">הפרקים</Link></li>
           </ol>
         </nav>
 
-        <header className="mb-12 border-b border-white/10 pb-10">
+        <header className="mb-12 border-b border-black/10 pb-10">
           {number ? (
-            <p className="font-display text-sm tracking-[0.25em] text-emerald-400/70">
+            <p className="font-display text-sm tracking-[0.25em] text-emerald-700">
               פרק {number}
             </p>
           ) : null}
-          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-white sm:text-5xl">
+          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-[#1a1a1a] sm:text-5xl">
             {title}
           </h1>
         </header>
@@ -160,7 +160,7 @@ export default async function ChapterPage({ params }: PageProps) {
         ) : (
           /* No main post: say so rather than rendering an empty page
              that looks broken. The subchapters below are the content. */
-          <p className="mx-auto max-w-[70ch] text-white/50">
+          <p className="mx-auto max-w-[70ch] text-[#6b6b6b]">
             לפרק זה אין טקסט פתיחה נפרד. התוכן מופיע בחלקים שלהלן.
           </p>
         )}
@@ -169,29 +169,29 @@ export default async function ChapterPage({ params }: PageProps) {
           <section aria-labelledby="subchapters" className="mx-auto mt-16 max-w-[70ch]">
             <h2
               id="subchapters"
-              className="font-display text-xl font-bold text-white sm:text-2xl"
+              className="font-display text-xl font-bold text-[#1a1a1a] sm:text-2xl"
             >
               המשך הפרק
             </h2>
-            <ol className="mt-6 border-t border-white/10">
+            <ol className="mt-6 border-t border-black/10">
               {subchapters.map((post, i) => (
-                <li key={post.id} className="border-b border-white/10">
+                <li key={post.id} className="border-b border-black/10">
                   <Link
                     href={emetPath(`/chapters/${category.slug}/${post.slug}`)}
-                    className="group flex items-baseline gap-4 py-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400/60"
+                    className="group flex items-baseline gap-4 py-4 transition-colors hover:bg-black/[0.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
                   >
                     <span
                       aria-hidden="true"
-                      className="w-6 shrink-0 text-end text-sm tabular-nums text-emerald-400/40 group-hover:text-emerald-400/80"
+                      className="w-6 shrink-0 text-end text-sm tabular-nums text-emerald-700/50 group-hover:text-emerald-700"
                     >
                       {i + 1}
                     </span>
-                    <span className="flex-1 text-white/80 transition-colors group-hover:text-white">
+                    <span className="flex-1 text-[#3a3a3a] transition-colors group-hover:text-[#1a1a1a]">
                       {post.title}
                     </span>
                     <span
                       aria-hidden="true"
-                      className="shrink-0 text-white/20 transition-all group-hover:-translate-x-1 group-hover:text-emerald-400/70"
+                      className="shrink-0 text-[#c9c9c9] transition-all group-hover:-translate-x-1 group-hover:text-emerald-700"
                     >
                       ←
                     </span>
@@ -204,15 +204,15 @@ export default async function ChapterPage({ params }: PageProps) {
 
         <nav
           aria-label="ניווט בין פרקים"
-          className="mx-auto mt-16 flex max-w-[70ch] flex-col gap-3 border-t border-white/10 pt-8 sm:flex-row sm:justify-between"
+          className="mx-auto mt-16 flex max-w-[70ch] flex-col gap-3 border-t border-black/10 pt-8 sm:flex-row sm:justify-between"
         >
           {previous ? (
             <Link
               href={emetPath(`/chapters/${previous.slug}`)}
-              className="group flex-1 rounded-lg border border-white/10 p-4 transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03]"
+              className="group flex-1 rounded-lg border border-black/10 p-4 transition-colors hover:border-emerald-700/40 hover:bg-black/[0.02]"
             >
-              <span className="block text-xs text-white/40">הפרק הקודם</span>
-              <span className="mt-1 block text-sm text-white/80 group-hover:text-white">
+              <span className="block text-xs text-[#9a9a9a]">הפרק הקודם</span>
+              <span className="mt-1 block text-sm text-[#3a3a3a] group-hover:text-[#1a1a1a]">
                 {chapterTitleOf(previous.name)}
               </span>
             </Link>
@@ -222,10 +222,10 @@ export default async function ChapterPage({ params }: PageProps) {
           {next ? (
             <Link
               href={emetPath(`/chapters/${next.slug}`)}
-              className="group flex-1 rounded-lg border border-white/10 p-4 text-start transition-colors hover:border-emerald-400/40 hover:bg-white/[0.03] sm:text-end"
+              className="group flex-1 rounded-lg border border-black/10 p-4 text-start transition-colors hover:border-emerald-700/40 hover:bg-black/[0.02] sm:text-end"
             >
-              <span className="block text-xs text-white/40">הפרק הבא</span>
-              <span className="mt-1 block text-sm text-white/80 group-hover:text-white">
+              <span className="block text-xs text-[#9a9a9a]">הפרק הבא</span>
+              <span className="mt-1 block text-sm text-[#3a3a3a] group-hover:text-[#1a1a1a]">
                 {chapterTitleOf(next.name)}
               </span>
             </Link>

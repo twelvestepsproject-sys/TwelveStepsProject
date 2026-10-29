@@ -50,7 +50,7 @@ export function ArticleBody({
       dir={english ? "ltr" : "rtl"}
       className={[
         "emet-prose mx-auto max-w-[70ch]",
-        "text-[1.0625rem] leading-[1.9] text-white/80 sm:text-[1.125rem]",
+        "text-[1.0625rem] leading-[1.9] text-[#333] sm:text-[1.125rem]",
         english ? "text-left" : "text-right",
       ].join(" ")}
       dangerouslySetInnerHTML={{ __html: clean }}
