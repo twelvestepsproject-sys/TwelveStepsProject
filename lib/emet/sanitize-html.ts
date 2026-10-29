@@ -99,10 +99,23 @@ export function sanitizeArticleHtml(input: string): string {
 
     // External links open in a new tab and must not leak the referrer or
     // hand the opener window to the destination.
+    //
+    // The source already sets rel="noopener" on many of its outbound
+    // links, so "add rel only when absent" left those without
+    // noreferrer — half the protection, and invisible unless you read the
+    // rendered tag. Merge instead: whatever the body declares is kept and
+    // both tokens are guaranteed.
     if (name === "a") {
       const href = kept.find((a) => a.startsWith('href="'));
       if (href && /^href="https?:\/\//i.test(href)) {
-        if (!kept.some((a) => a.startsWith('rel="'))) kept.push('rel="noreferrer noopener"');
+        const i = kept.findIndex((a) => a.startsWith('rel="'));
+        const existing = i >= 0 ? /rel="([^"]*)"/.exec(kept[i])?.[1] ?? "" : "";
+        const tokens = new Set(existing.split(/\s+/).filter(Boolean));
+        tokens.add("noreferrer");
+        tokens.add("noopener");
+        const merged = `rel="${[...tokens].join(" ")}"`;
+        if (i >= 0) kept[i] = merged;
+        else kept.push(merged);
       }
     }
     // Images below the fold by definition — the body starts after the
