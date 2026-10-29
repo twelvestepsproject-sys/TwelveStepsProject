@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { emetPath } from "@/lib/emet/routes";
-import { titleRoutesFromPosts } from "@/lib/emet/rewrite-absolute";
+import {
+  chapterRoutesFromCategories,
+  titleRoutesFromPosts,
+} from "@/lib/emet/rewrite-absolute";
 import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
 import { byReadingOrder } from "@/lib/emet/chapters";
 
@@ -60,6 +63,10 @@ export default async function EnglishArticlePage({ params }: PageProps) {
   const { items: everyPost } = await db.listPosts({ perPage: 1000 });
   const routes = buildLegacyRouteMap(everyPost);
   const titleRoutes = titleRoutesFromPosts(everyPost, emetPath);
+  const chapterRoutes = chapterRoutesFromCategories(
+    await db.listCategories(),
+    emetPath,
+  );
 
   return (
     <div className="bg-white" lang="en" dir="ltr">
@@ -86,7 +93,8 @@ export default async function EnglishArticlePage({ params }: PageProps) {
           </h1>
         </header>
 
-        <ArticleBody html={post.body ?? ""} lang="en" routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")} />
+        <ArticleBody html={post.body ?? ""} lang="en" routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")}
+              chapterRoutes={chapterRoutes} />
 
         <nav
           aria-label="Article navigation"

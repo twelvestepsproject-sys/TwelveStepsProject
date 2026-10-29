@@ -31,6 +31,7 @@ export function ArticleBody({
   routes,
   titleRoutes,
   sourcesRoute,
+  chapterRoutes,
   stripIndex = false,
 }: {
   html: string;
@@ -44,6 +45,9 @@ export function ArticleBody({
   /** Where "למקורות … לחצו כאן" should land. Those anchors point at
    *  Joomla ids that resolve to nothing, but their text is unambiguous. */
   sourcesRoute?: string;
+  /** Chapter number -> route, for old URLs that name a chapter by its
+   *  Hebrew numeral and abbreviate the title after it. */
+  chapterRoutes?: Map<number, string>;
   /** Drops the duplicated "תת-פרקים" list where the page renders that
    *  navigation itself. */
   stripIndex?: boolean;
@@ -58,7 +62,7 @@ export function ArticleBody({
   // entirely — including the "לחצו כאן" that should move them to the
   // next subchapter.
   if (titleRoutes) {
-    source = rewriteAbsoluteLinks(source, titleRoutes, sourcesRoute).html;
+    source = rewriteAbsoluteLinks(source, titleRoutes, sourcesRoute, chapterRoutes).html;
   }
   const clean = sanitizeArticleHtml(source);
   const english = lang === "en";

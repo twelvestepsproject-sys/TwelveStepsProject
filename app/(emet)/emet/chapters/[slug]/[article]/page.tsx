@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/queries";
 import { ArticleBody } from "@/components/emet/article-body";
 import { ReadingProgress } from "@/components/emet/reading-progress";
-import { titleRoutesFromPosts } from "@/lib/emet/rewrite-absolute";
+import {
+  chapterRoutesFromCategories,
+  titleRoutesFromPosts,
+} from "@/lib/emet/rewrite-absolute";
 import { buildLegacyRouteMap } from "@/lib/emet/rewrite-links";
 import { emetPath } from "@/lib/emet/routes";
 import {
@@ -100,6 +103,10 @@ export default async function SubchapterPage({ params }: PageProps) {
   const { items: everyPost } = await db.listPosts({ perPage: 1000 });
   const routes = buildLegacyRouteMap(everyPost);
   const titleRoutes = titleRoutesFromPosts(everyPost, emetPath);
+  const chapterRoutes = chapterRoutesFromCategories(
+    await db.listCategories(),
+    emetPath,
+  );
 
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 
@@ -210,7 +217,8 @@ export default async function SubchapterPage({ params }: PageProps) {
 
             {/* The sidebar is this chapter's contents, with the current
                 part marked, so the stale copy in the body goes. */}
-            <ArticleBody html={post.body ?? ""} routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")} stripIndex />
+            <ArticleBody html={post.body ?? ""} routes={routes} titleRoutes={titleRoutes} sourcesRoute={emetPath("/sources")}
+              chapterRoutes={chapterRoutes} stripIndex />
 
             <nav
               aria-label="ניווט בין חלקי הפרק"

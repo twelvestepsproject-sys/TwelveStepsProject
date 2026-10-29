@@ -28,6 +28,37 @@
  * a reader to the wrong article, and the report counts them for review.
  */
 
+
+/** Hebrew numerals, as used in "פרק יב". Same values the importer reads
+ *  chapter numbers with — see scripts/import-emet.mjs. */
+const NUMERALS: Record<string, number> = {
+  "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5,
+  "ו": 6, "ז": 7, "ח": 8, "ט": 9, "י": 10,
+  "כ": 20, "ל": 30,
+};
+
+/** "פרק-ה-שפת-התוכנה" -> 5, "פרק-ט" -> 9. Null when the segment does not
+ *  open with a chapter numeral. */
+export function chapterNumberFromPath(segment: string): number | null {
+  // Strip the Joomla id prefix and the file extension. Without the
+  // extension "פרק-ט.html" failed where "פרק-ט" matched, because the
+  // numeral was then followed by a dot rather than a separator or the
+  // end of the segment.
+  const decoded = decodeURIComponent(segment)
+    .replace(/^\d+-/, "")
+    .replace(/\.html?$/i, "");
+  const m = /^פרק[\s_-]+([א-ת]+)(?:[\s_-]|$)/.exec(decoded);
+  if (!m) return null;
+  let total = 0;
+  for (const ch of m[1]) {
+    const value = NUMERALS[ch];
+    // A letter outside the numeral set means this is a word, not a number.
+    if (!value) return null;
+    total += value;
+  }
+  return total > 0 && total <= 40 ? total : null;
+}
+
 const OLD_DOMAIN = /^https?:\/\/(?:www\.)?emetmatrix\.com(\/.*)?$/i;
 
 /** Strips what varies between a path segment and a post title so the two
@@ -86,6 +117,7 @@ export function rewriteAbsoluteLinks(
   html: string,
   titleRoutes: Map<string, string>,
   sourcesRoute?: string,
+  chapterRoutes?: Map<number, string>,
 ): AbsoluteRewriteResult {
   const unresolved: string[] = [];
   if (!html) return { html: "", unresolved };
@@ -116,6 +148,17 @@ export function rewriteAbsoluteLinks(
     for (let i = segments.length - 1; i >= 0; i--) {
       const key = normaliseTitle(segments[i]);
       const route = key ? titleRoutes.get(key) : undefined;
+      if (route) return `href="${route}"`;
+    }
+
+    // A chapter link names the chapter by its Hebrew numeral, and the old
+    // URLs abbreviate the title after it — "פרק-ה-שפת-התוכנה" against a
+    // category called "פרק ה' | אשר בחר בנו ונתן לנו את שפת התוכנה", and
+    // "פרק-ט" with no title at all. The numeral is the reliable part, so
+    // it is matched on its own once the title has failed.
+    for (let i = segments.length - 1; i >= 0; i--) {
+      const number = chapterNumberFromPath(segments[i]);
+      const route = number ? chapterRoutes?.get(number) : undefined;
       if (route) return `href="${route}"`;
     }
 
@@ -154,4 +197,23 @@ export function titleRoutesFromPosts(
       return { slug: post.slug, title: post.title, route };
     }),
   );
+}
+
+/**
+ * Chapter number -> route, built from the chapter categories.
+ *
+ * Separate from the title map because the old URLs name a chapter by its
+ * numeral and then abbreviate the title, so the titles do not match while
+ * the numerals always do.
+ */
+export function chapterRoutesFromCategories(
+  categories: { slug: string }[],
+  emetPath: (path: string) => string,
+): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const category of categories) {
+    const m = /^chapter-(\d+)$/.exec(category.slug);
+    if (m) map.set(Number(m[1]), emetPath(`/chapters/${category.slug}`));
+  }
+  return map;
 }
