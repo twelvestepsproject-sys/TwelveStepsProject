@@ -8,6 +8,22 @@ import { ADMIN_NAV } from "@/components/admin/nav-config";
 import { db } from "@/lib/queries";
 
 /**
+ * The admin area is never static.
+ *
+ * Every screen here reads something that exists only inside a request: the
+ * session cookie this layout checks, the `headers()` lookup below, and the
+ * `searchParams` the list screens filter by. Without this export Next tries
+ * to prerender them all at build time, and the build dies on
+ * "Expected workStore to be initialized" — the internal error for reading
+ * request state when there is no request.
+ *
+ * Declared on the layout rather than on each page because layouts propagate
+ * to every route beneath them: 40+ admin pages would otherwise each need it,
+ * and a new screen added later would reintroduce the failure.
+ */
+export const dynamic = "force-dynamic";
+
+/**
  * Admin shell (§8: "Hebrew RTL, mobile-usable, built for a non-technical
  * user... it should look and feel like the same site's admin"). Reuses the
  * same tokens/fonts as the public site. Auth is the cookie-backed dev

@@ -43,7 +43,19 @@ export function getPool(): Pool {
       // The database is not exposed to the network (see docker-compose.yml),
       // so TLS is only expected when a deployment explicitly asks for it.
       ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined,
-      max: Number(process.env.DATABASE_POOL_MAX ?? 10),
+      // `next build` prerenders pages in a pool of worker PROCESSES, one
+      // per core, and each worker gets its own module instance and so its
+      // own connection pool. The ceiling is therefore per-worker, not
+      // per-build: on a 12-core machine eleven workers at 10 connections
+      // each asked for 110, over Postgres's default max_connections of
+      // 100, and the export died partway with "too many clients already"
+      // (SQLSTATE 53300). A serving container is a single process and does
+      // want the larger pool, so the build case is lowered on its own
+      // rather than shrinking both.
+      max: Number(
+        process.env.DATABASE_POOL_MAX ??
+          (process.env.NEXT_PHASE === "phase-production-build" ? 4 : 10),
+      ),
       idleTimeoutMillis: 30_000,
     });
   }
