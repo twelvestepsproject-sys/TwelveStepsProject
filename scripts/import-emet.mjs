@@ -23,21 +23,17 @@
  *  - translate anything. English and Hebrew posts are separate records
  *    with no translation link, because no genuine counterparts exist.
  *
- * Guarded on port 5435: this writes content tables and the other two
- * sites' databases are a digit away on 5432 and 5433.
+ * Guarded by scripts/emet-db-guard.mjs: this writes content tables and
+ * the other two sites' databases are a digit away on 5432 and 5433.
  *
  *   node --env-file=.env.emet scripts/import-emet.mjs
  */
 import pg from "pg";
+import { assertEmetDatabase } from "./emet-db-guard.mjs";
 import { readFileSync } from "node:fs";
 
 const url = process.env.DATABASE_URL ?? "";
-if (!/:5435\//.test(url)) {
-  console.error(
-    `refusing to run: DATABASE_URL is not the emet database (port 5435).\n  got: ${url}`,
-  );
-  process.exit(1);
-}
+assertEmetDatabase(url);
 
 const inventory = JSON.parse(readFileSync(".content-emet/inventory.json", "utf8"));
 

@@ -13,15 +13,13 @@
  *   node --env-file=.env.emet scripts/seed-emet-media.mjs
  */
 import pg from "pg";
+import { assertEmetDatabase } from "./emet-db-guard.mjs";
 import { statSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const url = process.env.DATABASE_URL ?? "";
-if (!/:5435\//.test(url)) {
-  console.error(`refusing to run: DATABASE_URL is not the emet database (port 5435).\n  got: ${url}`);
-  process.exit(1);
-}
+assertEmetDatabase(url);
 
 const STORAGE = process.env.STORAGE_DIR ?? "./.storage-emet";
 

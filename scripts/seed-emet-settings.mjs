@@ -14,14 +14,10 @@
  *   node --env-file=.env.emet scripts/seed-emet-settings.mjs
  */
 import pg from "pg";
+import { assertEmetDatabase } from "./emet-db-guard.mjs";
 
 const url = process.env.DATABASE_URL ?? "";
-if (!/:5435\//.test(url)) {
-  console.error(
-    `refusing to run: DATABASE_URL is not the emet database (port 5435).\n  got: ${url}`,
-  );
-  process.exit(1);
-}
+assertEmetDatabase(url);
 
 // From the source site's RSS channel: <title> and <description>.
 const SITE_NAME = "אמתטריקס";
