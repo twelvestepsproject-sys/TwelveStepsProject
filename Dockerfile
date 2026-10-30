@@ -65,10 +65,19 @@ ARG DATABASE_URL
 # Also feeds the prerendered pages, which are generated in this stage.
 ARG NEXT_PUBLIC_SITE_URL
 
+# The path prefix EMETMATRIX's URLs hang off, needed at BUILD time for
+# the same reason as the line above: emetPath() writes every internal
+# link during prerender. Unset, lib/emet/routes.ts falls back to
+# "/emet" -- but an empty string is a value that ?? keeps, which
+# rendered every href at the domain root while the pages sat under
+# /emet, so each one 404'd.
+ARG EMET_BASE_PATH
+
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATA_SOURCE=${DATA_SOURCE}
 ENV DATABASE_URL=${DATABASE_URL}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV EMET_BASE_PATH=${EMET_BASE_PATH}
 
 RUN if [ -f pnpm-lock.yaml ]; then pnpm build; else npm run build; fi
 
