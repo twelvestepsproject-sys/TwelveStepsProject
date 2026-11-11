@@ -19,7 +19,22 @@ import { useEffect, useRef, useState } from "react";
  * Measured in a layout effect after paint and again on resize, because a
  * bio that fits on desktop can clamp on a narrow phone.
  */
-export function ExpandableBio({ bio, name }: { bio: string; name: string }) {
+export function ExpandableBio({
+  bio,
+  name,
+  clampClass = "line-clamp-3",
+}: {
+  bio: string;
+  name: string;
+  /**
+   * Which clamp to apply while collapsed. Defaults to three lines at every
+   * width, which is what a lecturer card wants. A caller with room on a
+   * wide screen can pass a responsive clamp — `line-clamp-4 sm:line-clamp-none`
+   * — so the toggle appears only on phones, where the card would otherwise
+   * run past a screenful.
+   */
+  clampClass?: string;
+}) {
   const textRef = useRef<HTMLParagraphElement>(null);
   const [isClamped, setIsClamped] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -55,7 +70,7 @@ export function ExpandableBio({ bio, name }: { bio: string; name: string }) {
       <p
         ref={textRef}
         id={`bio-${name}`}
-        className={`whitespace-pre-line text-sm text-ink-muted ${expanded ? "" : "line-clamp-3"}`}
+        className={`whitespace-pre-line text-sm text-ink-muted ${expanded ? "" : clampClass}`}
       >
         {bio}
       </p>

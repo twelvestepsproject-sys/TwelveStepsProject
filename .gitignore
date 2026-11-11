@@ -58,9 +58,14 @@ next-env.d.ts
 /storage/
 
 # Database dumps taken for a deploy — content, sometimes large, and never
-# something to version alongside the code.
+# something to version alongside the code. The glob matters as much as the
+# two named files: a dump pulled from production to debug against carries
+# real leads and contact details, and it is named for whatever the moment
+# called for, not `dump`.
 /dump.sql
 /dump.sql.gz
+*.sql.gz
+*.tar.gz
 /backups/
 
 # This project uses pnpm. A stray npm lockfile would make the Dockerfile
