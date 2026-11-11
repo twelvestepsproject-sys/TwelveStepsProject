@@ -299,6 +299,21 @@ export const faqBlockDataSchema = z.object({
 // because a source can legitimately be listed by name alone — the client
 // marked cover and link explicitly optional, and a description the editor
 // hasn't written yet shouldn't block saving the rest of the list.
+//
+// `purchase_links` carries one book's editions. A title in six languages
+// used to mean six cards, which made the library page a long scroll of
+// near-identical entries; now the editions hang off the one book. `group`
+// splits them into the two rows a reader actually chooses between —
+// shipping inside Israel, or ordering from abroad — and also decides how
+// each chip looks, so the editor picks a destination rather than a colour.
+// Defaulted rather than nullable: an item without editions is the old
+// single-link card, and every existing row stays valid without a migration.
+const purchaseLinkSchema = z.object({
+  label: z.string(),
+  href: z.string(),
+  group: z.enum(["israel", "world"]),
+});
+
 export const readingListBlockDataSchema = z.object({
   heading: z.string(),
   intro: z.string().nullable(),
@@ -309,6 +324,7 @@ export const readingListBlockDataSchema = z.object({
         cover_media_id: uuidSchema.nullable(),
         description: z.string().nullable(),
         link: linkSchema.nullable(),
+        purchase_links: z.array(purchaseLinkSchema).default([]),
       }),
     )
     .default([]),

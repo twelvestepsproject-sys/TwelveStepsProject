@@ -171,9 +171,9 @@ function defaultDataFor<T extends BlockType>(type: T): BlockDataOf<T> {
       heading: "ספרי ליבה",
       intro: null,
       items: [
-        { title: "", cover_media_id: null, description: null, link: null },
-        { title: "", cover_media_id: null, description: null, link: null },
-        { title: "", cover_media_id: null, description: null, link: null },
+        { title: "", cover_media_id: null, description: null, link: null, purchase_links: [] },
+        { title: "", cover_media_id: null, description: null, link: null, purchase_links: [] },
+        { title: "", cover_media_id: null, description: null, link: null, purchase_links: [] },
       ],
     },
     // Training sections: `data` holds presentation choices only. Headings

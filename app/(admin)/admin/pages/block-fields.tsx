@@ -1544,11 +1544,13 @@ export function ReadingListFields({
   onChange: UpdateFn;
   mediaById: Record<string, Media>;
 }) {
+  type PurchaseLink = { label: string; href: string; group: "israel" | "world" };
   type Item = {
     title: string;
     cover_media_id: string | null;
     description: string | null;
     link: { label: string; href: string; open_in_new_tab: boolean } | null;
+    purchase_links?: PurchaseLink[];
   };
   const d = data as { heading: string; intro: string | null; items?: Item[] };
   const items = d.items ?? [];
@@ -1560,7 +1562,10 @@ export function ReadingListFields({
   function addItem() {
     onChange({
       ...d,
-      items: [...items, { title: "", cover_media_id: null, description: null, link: null }],
+      items: [
+        ...items,
+        { title: "", cover_media_id: null, description: null, link: null, purchase_links: [] },
+      ],
     });
   }
 
@@ -1574,6 +1579,12 @@ export function ReadingListFields({
     const next = [...items];
     [next[index], next[target]] = [next[target], next[index]];
     onChange({ ...d, items: next });
+  }
+
+  /** The editions of one book. Kept beside the item rather than in its own
+   *  component so it shares updateItem and the surrounding styling. */
+  function updateLinks(itemIndex: number, links: PurchaseLink[]) {
+    updateItem(itemIndex, { purchase_links: links });
   }
 
   return (
@@ -1665,6 +1676,76 @@ export function ReadingListFields({
                   value={item.link}
                   onChange={(link) => updateItem(i, { link })}
                 />
+
+                <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+                  <p className="text-xs font-semibold text-ink-muted">
+                    מהדורות ושפות (אופציונלי)
+                  </p>
+                  <p className="text-[11px] text-ink-muted">
+                    כשיש מהדורות, הכרטיס מציג אותן ככפתורים ומפסיק להיות קישור אחד.
+                    ״ישראל״ מוצג בקו מתאר, ״חו״ל״ בכתום.
+                  </p>
+
+                  {(item.purchase_links ?? []).map((link, j) => {
+                    const links = item.purchase_links ?? [];
+                    const patch = (p: Partial<PurchaseLink>) =>
+                      updateLinks(
+                        i,
+                        links.map((l, k) => (k === j ? { ...l, ...p } : l)),
+                      );
+                    return (
+                      <div key={j} className="flex flex-wrap items-center gap-1.5">
+                        <input
+                          className={`${inputClass} w-24`}
+                          value={link.label}
+                          placeholder="עברית"
+                          aria-label={`שפת מהדורה ${j + 1} של פריט ${i + 1}`}
+                          onChange={(e) => patch({ label: e.target.value })}
+                        />
+                        <input
+                          className={`${inputClass} min-w-0 flex-1`}
+                          value={link.href}
+                          placeholder="https://..."
+                          dir="ltr"
+                          aria-label={`כתובת מהדורה ${j + 1} של פריט ${i + 1}`}
+                          onChange={(e) => patch({ href: e.target.value })}
+                        />
+                        <select
+                          className={`${inputClass} w-28`}
+                          value={link.group}
+                          aria-label={`יעד מהדורה ${j + 1} של פריט ${i + 1}`}
+                          onChange={(e) =>
+                            patch({ group: e.target.value as PurchaseLink["group"] })
+                          }
+                        >
+                          <option value="israel">ישראל</option>
+                          <option value="world">חו״ל</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => updateLinks(i, links.filter((_, k) => k !== j))}
+                          aria-label={`מחיקת מהדורה ${j + 1} של פריט ${i + 1}`}
+                          className="rounded p-1 text-error hover:bg-error/10"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateLinks(i, [
+                        ...(item.purchase_links ?? []),
+                        { label: "", href: "", group: "israel" },
+                      ])
+                    }
+                    className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                  >
+                    + הוספת מהדורה
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
