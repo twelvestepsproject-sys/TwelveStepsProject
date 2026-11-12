@@ -57,13 +57,25 @@ ok "site.conf names a real domain"
 # The certificate must exist before nginx loads a block referencing it, or
 # the reload fails and takes the running config down with it.
 if [ ! -f "certbot/conf/live/$EMET_DOMAIN/fullchain.pem" ]; then
+  # Run the certbot image directly rather than through compose. The compose
+  # service overrides entrypoint with a renewal loop, so `compose run certbot
+  # certonly ...` appends the arguments to that sh -c and never reaches
+  # certbot. The service also lives only in docker-compose.prod.yml, so a
+  # bare `docker compose` reports "no such service: certbot".
+  #
+  # --webroot writes the challenge into the volume nginx already serves
+  # /.well-known/acme-challenge/ from, so this needs no downtime.
   die "No certificate for $EMET_DOMAIN. Issue one first:
 
       cd $STACK_DIR
-      docker compose --env-file .env run --rm certbot certonly \\
-        --webroot -w /var/www/certbot -d $EMET_DOMAIN --agree-tos -n
+      docker run --rm \\
+        -v \"\$PWD/certbot/conf:/etc/letsencrypt\" \\
+        -v \"\$PWD/certbot/www:/var/www/certbot\" \\
+        certbot/certbot certonly --webroot -w /var/www/certbot \\
+        -d $EMET_DOMAIN --agree-tos -n --register-unsafely-without-email
 
-      DNS for $EMET_DOMAIN must already point at this server."
+      DNS for $EMET_DOMAIN must already point at this server, and the main
+      site must be up so nginx can serve the challenge over port 80."
 fi
 ok "certificate for $EMET_DOMAIN exists"
 
