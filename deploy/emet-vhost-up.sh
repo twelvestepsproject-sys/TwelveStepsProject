@@ -50,7 +50,9 @@ if ! docker inspect -f '{{.State.Running}}' "$EMET_CT" 2>/dev/null | grep -q tru
   # runs in whatever directory they were in, and if that is the main stack
   # it acts on the wrong site. That has happened on this host before.
   EMET_DIR=""
-  for d in /opt/emet /opt/emetmatrix /opt/emet-site /srv/emet /root/emet; do
+  # /opt/emetmatrix first: it is where the stack actually lives on this
+  # host. The rest are guesses kept for a differently-laid-out machine.
+  for d in /opt/emetmatrix /opt/emet /opt/emet-site /srv/emet /root/emet; do
     if [ -f "$d/docker-compose.yml" ] || [ -f "$d/docker-compose.prod.yml" ]; then
       EMET_DIR="$d"
       break
