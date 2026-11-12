@@ -41,6 +41,11 @@ NGINX_CT=${NGINX_CT:-twelvesteps-nginx}
 MAIN_DOMAIN=${MAIN_DOMAIN:-hineni.io}
 EMET_DOMAIN=${EMET_DOMAIN:-new.hineni.io}
 BRANCH=${BRANCH:-emetmatrix-site}
+# Normally discovered from the container in preflight; overridable for a
+# stack whose credentials are not in its container environment.
+DB_USER=${DB_USER:-}
+DB_NAME=${DB_NAME:-}
+DB_PASS=${DB_PASS:-}
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[32mOK\033[0m   %s\n' "$*"; }
@@ -100,6 +105,37 @@ grep -qE '^name:' "$COMPOSE_FILE" \
          directory, which is how a stack here clobbered another one before.
          Proceeding, but check it before adding a second stack."
 
+# The database user, name and password come from the container's own
+# environment rather than being assumed. postgres/postgres/emet was
+# hardcoded here and the backup failed on the server with `role "postgres"
+# does not exist`: that stack was brought up with its own
+# EMET_POSTGRES_USER. The container knows what it was started with; this
+# script does not get to guess.
+if [ -z "$DB_USER" ]; then
+  DB_USER=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_USER"' 2>/dev/null || true)
+fi
+if [ -z "$DB_NAME" ]; then
+  DB_NAME=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_DB"' 2>/dev/null || true)
+fi
+if [ -z "$DB_PASS" ]; then
+  DB_PASS=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_PASSWORD"' 2>/dev/null || true)
+fi
+
+[ -n "$DB_USER" ] || die "could not read POSTGRES_USER from $EMET_DB_CT.
+      Look at what it was started with:
+        docker exec $EMET_DB_CT env | grep POSTGRES_
+      then re-run with DB_USER=... DB_NAME=... DB_PASS=..."
+[ -n "$DB_NAME" ] || die "could not read POSTGRES_DB from $EMET_DB_CT (see above)."
+
+# Prove the credentials work before anything is written, so a wrong user
+# surfaces here instead of halfway through the deploy.
+docker exec -e PGPASSWORD="$DB_PASS" "$EMET_DB_CT" \
+  psql -U "$DB_USER" -d "$DB_NAME" -c 'select 1' >/dev/null 2>&1 \
+  || die "cannot connect to database $DB_NAME as $DB_USER inside $EMET_DB_CT.
+      Try it by hand:
+        docker exec -it $EMET_DB_CT psql -U $DB_USER -d $DB_NAME -c 'select 1'"
+ok "database: $DB_NAME as $DB_USER (connection verified)"
+
 ENV_FILE="$EMET_DIR/.env"
 [ -f "$ENV_FILE" ] || die "$ENV_FILE not found."
 ok "env file: $ENV_FILE"
@@ -123,7 +159,8 @@ DUMP="$BACKUP_DIR/emet-$STAMP.sql.gz"
 # publish one, and this works either way.
 if [ "$APPLY" = "1" ]; then
   mkdir -p "$BACKUP_DIR"
-  docker exec "$EMET_DB_CT" pg_dump -U postgres -d emet | gzip > "$DUMP" \
+  docker exec -e PGPASSWORD="$DB_PASS" "$EMET_DB_CT" \
+    pg_dump -U "$DB_USER" -d "$DB_NAME" | gzip > "$DUMP" \
     || die "database backup failed. Nothing has been changed."
   SIZE=$(du -h "$DUMP" | cut -f1)
   printf '%s\n' "$DUMP" > "$EMET_DIR/.emet-deploy-last-dump"
@@ -189,7 +226,7 @@ fi
 say "4/6  Upgrading embedded media URLs to https"
 # Run inside the app container: it has node and the pg module, and it can
 # reach the database over the compose network without a published port.
-DB_URL_IN_CT='postgresql://postgres:postgres@'"$EMET_DB_CT"':5432/emet'
+DB_URL_IN_CT="postgresql://$DB_USER:$DB_PASS@$EMET_DB_CT:5432/$DB_NAME"
 
 # Under a dry run the rebuild above did not happen, so the running image is
 # still the old one and the script may legitimately be missing from it.
@@ -217,7 +254,7 @@ else
   fi
 
   docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT"     node scripts/emet-https-media.mjs --write 2>&1 | tail -8 | sed 's/^/      /'     || die "the https rewrite failed. Restore with:
-      gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U postgres -d emet"
+      gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U $DB_USER -d $DB_NAME"
   ok "media URLs upgraded"
 fi
 
@@ -313,7 +350,7 @@ cat <<NEXT
       wp-content/uploads/2012/07/) - upload via the admin, or copy them to
       their original paths so the links in the content keep working.
     - Confirm the new English pages sit in the "english" category:
-        docker exec $EMET_DB_CT psql -U postgres -d emet \\
+        docker exec $EMET_DB_CT psql -U $DB_USER -d $DB_NAME \\
           -c "select p.slug, c.slug from posts p left join categories c \\
               on c.id=p.category_id where p.slug like 'en-source%' limit 10;"
       The /en/articles/[slug] route calls notFound() on any other category,

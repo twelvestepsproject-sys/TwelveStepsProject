@@ -34,6 +34,11 @@ EMET_CT=${EMET_CT:-emet-app}
 EMET_DB_CT=${EMET_DB_CT:-emet-postgres}
 NGINX_CT=${NGINX_CT:-twelvesteps-nginx}
 MAIN_DOMAIN=${MAIN_DOMAIN:-hineni.io}
+# Read from the container below, not assumed: this stack does not
+# necessarily use the postgres superuser.
+DB_USER=${DB_USER:-}
+DB_NAME=${DB_NAME:-}
+DB_PASS=${DB_PASS:-}
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[32mOK\033[0m   %s\n' "$*"; }
@@ -100,6 +105,14 @@ fi
 # --------------------------------------------------------------------------
 say "3/4  Database"
 if [ "$RESTORE_DB" = "1" ]; then
+  # Same discovery as the deploy script: a hardcoded "postgres" failed on
+  # the server with `role "postgres" does not exist`.
+  [ -n "$DB_USER" ] || DB_USER=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_USER"' 2>/dev/null || true)
+  [ -n "$DB_NAME" ] || DB_NAME=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_DB"' 2>/dev/null || true)
+  [ -n "$DB_PASS" ] || DB_PASS=$(docker exec "$EMET_DB_CT" sh -c 'printf %s "$POSTGRES_PASSWORD"' 2>/dev/null || true)
+  DB_USER=${DB_USER:-postgres}
+  DB_NAME=${DB_NAME:-emet}
+
   DUMP=""
   [ -f "$EMET_DIR/.emet-deploy-last-dump" ] && DUMP=$(cat "$EMET_DIR/.emet-deploy-last-dump")
   if [ -z "$DUMP" ] || [ ! -f "$DUMP" ]; then
@@ -108,11 +121,11 @@ if [ "$RESTORE_DB" = "1" ]; then
 
   if [ -n "$DUMP" ] && [ -f "$DUMP" ]; then
     warn "restoring $DUMP - this DISCARDS any admin edits made since the deploy"
-    if gunzip -c "$DUMP" | docker exec -i "$EMET_DB_CT" psql -U postgres -d emet >/dev/null 2>&1; then
+    if gunzip -c "$DUMP" | docker exec -i -e PGPASSWORD="$DB_PASS" "$EMET_DB_CT" psql -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
       ok "database restored"
     else
       warn "restore failed. By hand:
-         gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U postgres -d emet"
+         gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U $DB_USER -d $DB_NAME"
     fi
   else
     warn "no dump found under $EMET_DIR/backups - database left as it is"
