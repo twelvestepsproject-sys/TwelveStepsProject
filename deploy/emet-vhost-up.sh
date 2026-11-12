@@ -41,9 +41,48 @@ docker inspect -f '{{.State.Running}}' "$NGINX_CT" 2>/dev/null | grep -q true \
   || die "$NGINX_CT is not running."
 ok "$NGINX_CT is up"
 
-docker inspect -f '{{.State.Running}}' "$EMET_CT" 2>/dev/null | grep -q true \
-  || die "$EMET_CT is not running. Start the emet stack first:
-      cd /opt/emet && docker compose --env-file .env up -d"
+if ! docker inspect -f '{{.State.Running}}' "$EMET_CT" 2>/dev/null | grep -q true; then
+  # Locate the emet stack rather than naming a path that may not exist. A
+  # `cd` to a missing directory fails but does not stop a following
+  # `&& docker compose up`... except it does, which is why the chain below
+  # is written with && and not ;. The real hazard this guards against is an
+  # operator pasting the two as separate lines: the cd fails, the compose
+  # runs in whatever directory they were in, and if that is the main stack
+  # it acts on the wrong site. That has happened on this host before.
+  EMET_DIR=""
+  for d in /opt/emet /opt/emetmatrix /opt/emet-site /srv/emet /root/emet; do
+    if [ -f "$d/docker-compose.yml" ] || [ -f "$d/docker-compose.prod.yml" ]; then
+      EMET_DIR="$d"
+      break
+    fi
+  done
+  # Fall back to asking docker where the stopped container's stack lives.
+  if [ -z "$EMET_DIR" ]; then
+    EMET_DIR=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$EMET_CT" 2>/dev/null || true)
+  fi
+
+  if [ -n "$EMET_DIR" ] && [ -d "$EMET_DIR" ]; then
+    die "$EMET_CT is not running. Start the emet stack first:
+
+      cd $EMET_DIR && docker compose --env-file .env up -d
+
+      Run that as ONE command, exactly as written. If the cd fails on its
+      own line, the compose command acts on whichever stack you are
+      standing in - and in $STACK_DIR that is the live site."
+  fi
+
+  die "$EMET_CT is not running, and its stack directory could not be found.
+
+      Find it with:
+        docker inspect $EMET_CT --format '{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}'
+        ls -d /opt/*/
+
+      Then, as ONE command:
+        cd <that directory> && docker compose --env-file .env up -d
+
+      Do NOT run docker compose from $STACK_DIR to start emet: that
+      directory is the live site's stack."
+fi
 ok "$EMET_CT is up"
 
 # If site.conf still holds the template placeholder then something restored
