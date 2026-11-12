@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: post.title,
     description: post.excerpt?.slice(0, 155) || undefined,
-    alternates: { canonical: `/emet/en/articles/${post.slug}` },
+    alternates: { canonical: emetPath(`/en/articles/${post.slug}`) },
     robots: post.seo_noindex ? { index: false, follow: true } : undefined,
   };
 }

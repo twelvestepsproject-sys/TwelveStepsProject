@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   title: "English",
   description:
     "The English material on EMETMATRIX, including the source passages the Hebrew chapters discuss.",
-  alternates: { canonical: "/emet/en" },
+  alternates: { canonical: emetPath("/en") },
 };
 
 export const revalidate = 3600;

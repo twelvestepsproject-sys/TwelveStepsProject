@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "מקורות",
   description:
     "המקורות שעליהם נשענים פרקי האתר — רשימת ההפניות המלאה, לפי סדר הפרקים.",
-  alternates: { canonical: "/emet/sources" },
+  alternates: { canonical: emetPath("/sources") },
 };
 
 export const revalidate = 3600;

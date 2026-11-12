@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "כל הפרקים",
   description:
     "שבעה עשר פרקים על מציאות, תפיסה ואמת — מסע דרך שאלות על העולם שאנחנו חושבים שאנחנו מכירים.",
-  alternates: { canonical: "/emet/chapters" },
+  alternates: { canonical: emetPath("/chapters") },
 };
 
 export const revalidate = 3600;

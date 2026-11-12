@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: number ? `פרק ${number} — ${title}` : title,
     description: data.main?.excerpt?.slice(0, 155) || undefined,
-    alternates: { canonical: `/chapters/${data.category.slug}` },
+    alternates: { canonical: emetPath(`/chapters/${data.category.slug}`) },
     openGraph: {
       type: "article",
       title,
