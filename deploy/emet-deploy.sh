@@ -140,6 +140,34 @@ ENV_FILE="$EMET_DIR/.env"
 [ -f "$ENV_FILE" ] || die "$ENV_FILE not found."
 ok "env file: $ENV_FILE"
 
+# The build prerenders public pages, so it needs the database -- and
+# BuildKit cannot join a custom docker network, which is why the compose
+# file's build stanza uses `network: host` with DATABASE_URL pointing at
+# 127.0.0.1:$BUILD_DB_PORT. Nothing listens there by default: postgres is
+# on the internal network only. An overlay publishes the port for the
+# duration of the build, bound to 127.0.0.1, and is dropped afterwards.
+#
+# Without it the build fails with 'Failed to collect page data', which is
+# how this surfaced: the port was configured but never opened.
+BUILD_OVERLAY="$EMET_DIR/docker-compose.build.yml"
+if [ ! -f "$BUILD_OVERLAY" ]; then
+  die "$BUILD_OVERLAY not found. It publishes the database port for the
+      build. Fetch the branch again in $EMET_DIR, or build by hand with
+      the port published."
+fi
+
+# Read from the env file rather than the shell: sourcing .env would leak
+# its DATABASE_URL into this process, and a compose command run afterwards
+# in another stack's directory would inherit it. That is exactly how the
+# live site ended up reading the wrong database earlier.
+BUILD_DB_PORT=$(sed -n 's/^BUILD_DB_PORT=//p' "$ENV_FILE" | tail -1)
+if [ -z "$BUILD_DB_PORT" ]; then
+  die "BUILD_DB_PORT is not set in $ENV_FILE. The build needs it to reach
+      the database over host networking. The emet stack uses 55433 (the
+      main site uses 55432); add it and re-run."
+fi
+ok "build DB port: 127.0.0.1:$BUILD_DB_PORT (published only while building)"
+
 BASELINE=$(curl -sk -o /dev/null -w '%{http_code}' "https://$MAIN_DOMAIN/" || echo 000)
 [ "$BASELINE" = "200" ] || die "$MAIN_DOMAIN is returning $BASELINE before any change.
       Fix the live site first; do not deploy on top of an outage."
@@ -210,8 +238,55 @@ else
   BUILD_ARGS=""
 fi
 
+# The overlay is layered on for the build only. Order matters: postgres is
+# recreated with the published port, the build runs, then the stack is
+# brought up WITHOUT the overlay, which recreates postgres again and
+# closes the port.
+BUILD_COMPOSE="$COMPOSE -f $BUILD_OVERLAY"
+
 # shellcheck disable=SC2086
-run $COMPOSE build $BUILD_ARGS
+run $BUILD_COMPOSE up -d postgres
+
+if [ "$APPLY" = "1" ]; then
+  step "waiting for the database to accept connections on the published port"
+  for i in $(seq 1 30); do
+    if docker exec -e PGPASSWORD="$DB_PASS" "$EMET_DB_CT" \
+         pg_isready -U "$DB_USER" -d "$DB_NAME" -q 2>/dev/null; then
+      break
+    fi
+    if [ "$i" -eq 30 ]; then
+      die "the database did not come back up after publishing the port.
+      Check: docker logs --tail 30 $EMET_DB_CT
+      Then close the port again: $COMPOSE up -d postgres"
+    fi
+    sleep 2
+  done
+  ok "database ready"
+fi
+
+# shellcheck disable=SC2086
+if [ "$APPLY" = "1" ]; then
+  set +e
+  $BUILD_COMPOSE build $BUILD_ARGS
+  BUILD_RC=$?
+  set -e
+  # Close the port whether or not the build worked, so a failure does not
+  # leave the database published.
+  $COMPOSE up -d postgres >/dev/null 2>&1 || true
+  if [ "$BUILD_RC" != "0" ]; then
+    die "the build failed (exit $BUILD_RC). Nothing else has changed: the
+      app is still on its previous image, nginx is untouched, and the
+      database backup is at
+        $DUMP
+      Read the error above; the published build port has been closed again."
+  fi
+  ok "built"
+else
+  step "would run: $BUILD_COMPOSE build $BUILD_ARGS"
+  step "would then close the published port again"
+fi
+
+# shellcheck disable=SC2086
 run $COMPOSE up -d
 
 if [ "$APPLY" = "1" ]; then
