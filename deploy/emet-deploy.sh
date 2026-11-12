@@ -153,45 +153,16 @@ if [ "$APPLY" = "1" ]; then
 fi
 
 # --------------------------------------------------------------------------
-# 3. Upgrade the embedded media URLs to https
+# 3. Rebuild and restart
+#
+# BEFORE the database script, not after. The script lives in the repo and
+# is copied into the image by the Dockerfile, so an image built before the
+# script existed does not contain it -- which is exactly what the first dry
+# run on this server hit: "Cannot find module /app/scripts/
+# emet-https-media.mjs". Building first means the container that runs the
+# script is the one that has it.
 # --------------------------------------------------------------------------
-say "3/6  Upgrading embedded media URLs to https"
-# Run inside the app container: it has node and the pg module, and it can
-# reach the database over the compose network without a published port.
-DB_URL_IN_CT='postgresql://postgres:postgres@'"$EMET_DB_CT"':5432/emet'
-
-step "dry run first (always, even with --apply)"
-# PIPESTATUS, not $?: the pipe into sed would otherwise mask a failure and
-# the deploy would carry on past a script that never ran. Under --apply
-# this is fatal - a failed dry run means the write would fail too, and the
-# right time to find out is before the rebuild, not after.
-set +e
-docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT" \
-  node scripts/emet-https-media.mjs 2>&1 | sed 's/^/      /'
-DRY_RC=${PIPESTATUS[0]}
-set -e
-if [ "$DRY_RC" != "0" ]; then
-  if [ "$APPLY" = "1" ]; then
-    die "the https script failed to run (exit $DRY_RC). Nothing has been
-      changed: the database backup is the only thing written so far.
-      Check that the app image contains scripts/emet-https-media.mjs and
-      that $EMET_CT can reach $EMET_DB_CT."
-  fi
-  warn "the script could not run here (exit $DRY_RC) - it will be fatal under --apply"
-fi
-
-if [ "$APPLY" = "1" ]; then
-  docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT" \
-    node scripts/emet-https-media.mjs --write 2>&1 | tail -8 | sed 's/^/      /' \
-    || die "the https rewrite failed. Restore with:
-      gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U postgres -d emet"
-  ok "media URLs upgraded"
-fi
-
-# --------------------------------------------------------------------------
-# 4. Rebuild and restart
-# --------------------------------------------------------------------------
-say "4/6  Rebuilding the app"
+say "3/6  Rebuilding the app"
 if [ "$ROOT_URLS" = "1" ]; then
   warn "--root given: building with EMET_BASE_PATH empty, so links come out
          root-relative. The PAGES still build under /emet - that is what
@@ -208,9 +179,46 @@ run $COMPOSE up -d
 
 if [ "$APPLY" = "1" ]; then
   sleep 5
-  docker inspect -f '{{.State.Running}}' "$EMET_CT" | grep -q true \
-    || die "$EMET_CT did not come back up. Check: docker logs --tail 50 $EMET_CT"
+  docker inspect -f '{{.State.Running}}' "$EMET_CT" | grep -q true     || die "$EMET_CT did not come back up. Check: docker logs --tail 50 $EMET_CT"
   ok "$EMET_CT running"
+fi
+
+# --------------------------------------------------------------------------
+# 4. Upgrade the embedded media URLs to https
+# --------------------------------------------------------------------------
+say "4/6  Upgrading embedded media URLs to https"
+# Run inside the app container: it has node and the pg module, and it can
+# reach the database over the compose network without a published port.
+DB_URL_IN_CT='postgresql://postgres:postgres@'"$EMET_DB_CT"':5432/emet'
+
+# Under a dry run the rebuild above did not happen, so the running image is
+# still the old one and the script may legitimately be missing from it.
+# Say so rather than reporting it as a fault.
+if [ "$APPLY" = "0" ]; then
+  if docker exec "$EMET_CT" test -f scripts/emet-https-media.mjs 2>/dev/null; then
+    step "script present in the current image; would dry-run then apply it"
+  else
+    step "script not in the CURRENT image - step 3's rebuild adds it, so this"
+    step "  is expected on a dry run and is not a problem"
+  fi
+else
+  step "dry run first"
+  # PIPESTATUS, not $?: the pipe into sed would otherwise mask a failure
+  # and the deploy would carry on past a script that never ran.
+  set +e
+  docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT"     node scripts/emet-https-media.mjs 2>&1 | sed 's/^/      /'
+  DRY_RC=${PIPESTATUS[0]}
+  set -e
+  if [ "$DRY_RC" != "0" ]; then
+    die "the https script failed to run (exit $DRY_RC) even after the rebuild.
+      The app is up on the new image and the database is untouched; only
+      this content fix did not run. Check that the image contains
+      scripts/emet-https-media.mjs and that $EMET_CT can reach $EMET_DB_CT."
+  fi
+
+  docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT"     node scripts/emet-https-media.mjs --write 2>&1 | tail -8 | sed 's/^/      /'     || die "the https rewrite failed. Restore with:
+      gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U postgres -d emet"
+  ok "media URLs upgraded"
 fi
 
 # --------------------------------------------------------------------------
