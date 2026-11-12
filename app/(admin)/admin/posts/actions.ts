@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateEmetForPost } from "@/lib/emet/revalidate";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/queries";
 import { requireContentRole } from "@/lib/admin/role-check";
@@ -70,6 +71,11 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
     revalidatePath("/blog");
     revalidatePath(`/blog/${saved.slug}`);
     revalidatePath("/rss.xml");
+    // The EMETMATRIX pages too: they are built from the same posts table,
+    // and every (emet) route caches for an hour. Without this a saved
+    // chapter stays as it was until the cache lapses, and a newly created
+    // one 404s until the next deploy.
+    revalidateEmetForPost(saved);
     return { ok: true, data: { id: saved.id } };
   } catch (err) {
     return { ok: false, error: toFriendlyMessage(err) };
@@ -78,10 +84,15 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
 
 export async function deletePostAction(id: string): Promise<void> {
   await requireContentRole();
+  // Read it before deleting: afterwards there is no category to work out
+  // which EMETMATRIX pages listed it, and a deleted chapter would go on
+  // being served from the cache.
+  const doomed = await db.getPostAdmin(id);
   await db.deletePost(id);
   revalidatePath("/admin/posts");
   revalidatePath("/blog");
   revalidatePath("/rss.xml");
+  if (doomed) revalidateEmetForPost(doomed);
 }
 
 export async function togglePostPublishAction(id: string, nextStatus: "draft" | "published"): Promise<void> {
@@ -92,6 +103,7 @@ export async function togglePostPublishAction(id: string, nextStatus: "draft" | 
   revalidatePath("/blog");
   revalidatePath(`/blog/${saved.slug}`);
   revalidatePath("/rss.xml");
+  revalidateEmetForPost(saved);
 }
 
 export async function createPostAndRedirect(formData: FormData) {
