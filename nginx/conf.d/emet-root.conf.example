@@ -1,0 +1,131 @@
+# EMETMATRIX at the ROOT of new.hineni.io, with no /emet in the URL.
+#
+# A preview of how the site will look on emetmatrix.com, where it answers
+# at the root. Install this INSTEAD OF emet.conf, not alongside it: both
+# claim server_name new.hineni.io, and nginx would use whichever loads
+# first and warn about the duplicate.
+#
+# Why a rewrite rather than just EMET_BASE_PATH=""
+# ------------------------------------------------
+# EMET_BASE_PATH controls the links the app WRITES (lib/emet/routes.ts,
+# emetPath()). It does not move the pages: those are discovered from the
+# directory tree, app/(emet)/emet/..., so they exist at /emet/... whatever
+# the variable says. Setting it to "" alone makes every link point at the
+# root while every page still lives under /emet — the whole site 404s.
+#
+# So the app keeps serving from /emet internally and nginx puts the prefix
+# back on the way in. The app must still be BUILT with EMET_BASE_PATH=""
+# so the hrefs it emits are root-relative; this file handles the rest.
+#
+# Moving app/(emet)/emet/* up to app/(emet)/* is the real fix, and is what
+# emetmatrix.com should get. It is deliberately not done here: (site) and
+# (emet) would then both own "/" and the build would refuse ("two parallel
+# pages that resolve to the same path"). That is a structural change, not
+# something to land on a test domain before the content is signed off.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name new.hineni.io;
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name new.hineni.io;
+
+    ssl_certificate     /etc/letsencrypt/live/new.hineni.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/new.hineni.io/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 30M;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # A preview, not a published site: keep it out of search results so it
+    # cannot compete with the real domain later.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json
+               image/svg+xml application/xml+rss;
+
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    # A variable upstream is re-resolved per request, so restarting the app
+    # does not leave nginx holding a dead container IP. It also drops the
+    # request URI, so every proxy_pass below states the path explicitly.
+    set $upstream_emet emet-app:3000;
+
+    # Everything Next.js owns, and the app's own API, pass through
+    # untouched: these paths are the same with or without a base path, and
+    # rewriting them would break asset and data requests.
+    location /_next/ {
+        proxy_pass http://$upstream_emet$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    }
+
+    location /api/ {
+        proxy_pass http://$upstream_emet$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    }
+
+    # The four section roots the (emet) group actually defines, named one by
+    # one rather than caught by a catch-all. A blanket rewrite would also
+    # rewrite /_next, /api, /favicon.ico and anything added later, and the
+    # failure would show up as assets 404ing rather than as a config error.
+    #
+    # The trailing (/.*)?$ keeps both /chapters and /chapters/x/y matching
+    # in one rule. The prefix is added by naming it in proxy_pass rather
+    # than by a rewrite: with a variable upstream, proxy_pass takes the URI
+    # verbatim from what follows the host, so "/emet$request_uri" is the
+    # whole instruction and a rewrite as well would double the prefix.
+    location ~ ^/(chapters|sources|search|en)(/.*)?$ {
+        proxy_pass http://$upstream_emet/emet$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        "upgrade";
+        proxy_connect_timeout 60s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+    }
+
+    # The home page. Exact match so it cannot shadow anything else.
+    location = / {
+        proxy_pass http://$upstream_emet/emet;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    }
+
+    # Anything else — favicon, robots.txt, a stray path — goes to the app
+    # under /emet so its own 404 page answers, in its own styling.
+    location / {
+        proxy_pass http://$upstream_emet/emet$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    }
+}
