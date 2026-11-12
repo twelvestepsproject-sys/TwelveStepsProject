@@ -71,3 +71,12 @@ next-env.d.ts
 # This project uses pnpm. A stray npm lockfile would make the Dockerfile
 # choose `npm ci` over `pnpm install --frozen-lockfile`.
 package-lock.json
+
+# nginx config snapshots taken by deploy/emet-vhost-up.sh before it edits
+# anything. They live inside the stack directory so the rollback script can
+# find them without configuration, which also puts them inside the repo on
+# the server — hence this rule. The two pointer files record which snapshot
+# and which docker network the last run used.
+nginx/conf.d.bak.*
+.emet-vhost-last-backup
+.emet-vhost-last-network

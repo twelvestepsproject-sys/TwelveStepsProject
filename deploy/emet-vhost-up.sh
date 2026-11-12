@@ -84,6 +84,20 @@ printf '%s\n' "$BACKUP" > .emet-vhost-last-backup
 printf '%s\n' "$EMET_NET" > .emet-vhost-last-network
 ok "saved to $STACK_DIR/$BACKUP"
 
+# These are config snapshots, not an archive: the useful one is almost
+# always the newest, and the script is safe to re-run, so without a cap a
+# directory accumulates one per attempt. Five is enough to step back past a
+# few bad runs. Mirrors deploy/backup.sh, which keeps 2 of its much larger
+# database and media archives.
+KEEP=${BACKUP_KEEP:-5}
+STALE=$(ls -1d nginx/conf.d.bak.* 2>/dev/null | sort | head -n -"$KEEP")
+if [ -n "$STALE" ]; then
+  printf '%s\n' "$STALE" | while IFS= read -r old; do
+    [ -n "$old" ] && rm -rf "$old"
+  done
+  ok "pruned $(printf '%s\n' "$STALE" | wc -l) old snapshot(s), keeping $KEEP"
+fi
+
 # Restores the backed-up config and reloads, then exits non-zero. Used at
 # every point after the first edit, so a failure never leaves the main site
 # running on a half-applied config.
