@@ -87,6 +87,28 @@ server {
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
     }
 
+    # The admin is NOT part of the (emet) route group. It lives at
+    # app/(admin)/admin/, so it is served at /admin, with no prefix - the
+    # same path on both sites. Passing it through unchanged, like /_next and
+    # /api above, is what makes it reachable.
+    #
+    # Without this block /admin fell through to the catch-all below and was
+    # sent to /emet/admin, which no route defines, so it 404'd. The login
+    # gate is middleware.ts matcher ["/admin/:path*"], which runs on the
+    # path the app sees: /admin. Rewriting the prefix onto it would have
+    # moved the path OUT from under that matcher and served the admin with
+    # no auth gate at all - so this has to pass through, not be rewritten.
+    location /admin {
+        proxy_pass http://$upstream_emet$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+    }
+
     # The four section roots the (emet) group actually defines, named one by
     # one rather than caught by a catch-all. A blanket rewrite would also
     # rewrite /_next, /api, /favicon.ico and anything added later, and the
