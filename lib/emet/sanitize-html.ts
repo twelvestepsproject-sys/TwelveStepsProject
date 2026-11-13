@@ -45,8 +45,37 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   source: new Set(["src", "type"]),
   th: new Set(["colspan", "rowspan", "scope"]),
   td: new Set(["colspan", "rowspan"]),
-  "*": new Set(["lang", "dir"]),
+  "*": new Set(["lang", "dir", "class"]),
 };
+
+/**
+ * The only class names a body may carry.
+ *
+ * `class` is allowed, but not freely: an arbitrary class lets content
+ * reach into the site's stylesheet and restyle anything it names, and a
+ * body that sets `class="admin-bar"` or a utility class would move or
+ * hide parts of the page around it. These are the names the editor uses
+ * for chapter layout, each with styling defined in emet-prose.css, and
+ * anything else is dropped with the rest.
+ *
+ * `style` stays unavailable. It is a layout decision made per post that
+ * no stylesheet can later correct, and it does not survive a redesign.
+ */
+const ALLOWED_CLASSES = new Set([
+  "lead-q",
+  "part-cards",
+  "part-card",
+  "part-card-text",
+]);
+
+/** Keeps the allowed class names and drops the rest. Returns "" when
+ *  nothing survives, so the attribute is omitted rather than left empty. */
+function filterClasses(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter((c) => ALLOWED_CLASSES.has(c))
+    .join(" ");
+}
 
 /** Tags whose content goes too, not just the tag. */
 const DROP_WITH_CONTENT = /<(script|style|iframe|object|embed|form|input|button|noscript|svg|math)\b[\s\S]*?<\/\1\s*>/gi;
@@ -104,6 +133,11 @@ export function sanitizeArticleHtml(input: string): string {
         const safe = safeUrl(value);
         if (safe === null) continue;
         value = safe;
+      }
+      if (attr === "class") {
+        value = filterClasses(value);
+        // Every name was dropped, so there is no attribute left to write.
+        if (value === "") continue;
       }
       kept.push(`${attr}="${value.replace(/"/g, "&quot;")}"`);
     }

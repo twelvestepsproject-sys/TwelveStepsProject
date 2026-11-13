@@ -1,5 +1,4 @@
 import { revalidatePath } from "next/cache";
-import { emetPath } from "./routes";
 
 /**
  * Revalidates the EMETMATRIX pages a post appears on.
@@ -22,9 +21,27 @@ import { emetPath } from "./routes";
  *   sources    -> /sources and /sources/<slug>
  *   chapter-NN -> /chapters, /chapters/chapter-NN and the article page
  *
- * Everything runs through emetPath(), so this keeps working when
- * EMET_BASE_PATH is emptied for the site's own domain.
+ * Paths are built with routePath(), NOT emetPath(). The two answer
+ * different questions, and the difference is what broke this:
+ *
+ *   emetPath()  - where a LINK should point, which the base path controls
+ *   routePath() - where Next.js SERVES the page, which it does not
+ *
+ * The routes come from the directory tree, app/(emet)/emet/..., so they
+ * are always /emet/... whatever EMET_BASE_PATH says. Once the base path
+ * was emptied for the root-URL build, emetPath("/chapters") returned
+ * "/chapters" and revalidatePath() cleared a cache entry that does not
+ * exist, while /emet/chapters stayed stale for the full hour. Saves
+ * looked like they did nothing - exactly the symptom this file was
+ * written to fix.
  */
+
+/** Where the (emet) routes actually live, fixed by the directory tree
+ *  and unaffected by EMET_BASE_PATH. */
+function routePath(path = "/"): string {
+  if (path === "/" || path === "") return "/emet";
+  return `/emet${path.startsWith("/") ? path : `/${path}`}`;
+}
 export function revalidateEmetForPost(post: {
   slug: string;
   category?: { slug?: string | null } | null;
@@ -33,27 +50,27 @@ export function revalidateEmetForPost(post: {
 
   // The home page carries the latest-content lists, so it changes whatever
   // the category is.
-  revalidatePath(emetPath("/"));
+  revalidatePath(routePath("/"));
 
   if (!category) return;
 
   if (category === "english") {
-    revalidatePath(emetPath("/en"));
-    revalidatePath(emetPath(`/en/articles/${post.slug}`));
+    revalidatePath(routePath("/en"));
+    revalidatePath(routePath(`/en/articles/${post.slug}`));
     return;
   }
 
   if (category === "sources") {
-    revalidatePath(emetPath("/sources"));
-    revalidatePath(emetPath(`/sources/${post.slug}`));
+    revalidatePath(routePath("/sources"));
+    revalidatePath(routePath(`/sources/${post.slug}`));
     return;
   }
 
   // Chapters are one category per chapter — "chapter-1" ... "chapter-17" —
   // and an article lives under its own chapter's slug.
   if (/^chapter-\d+$/.test(category)) {
-    revalidatePath(emetPath("/chapters"));
-    revalidatePath(emetPath(`/chapters/${category}`));
+    revalidatePath(routePath("/chapters"));
+    revalidatePath(routePath(`/chapters/${category}`));
 
     // A post whose slug starts with "chapter-" IS the chapter's own page
     // and lives at the chapter URL, not under it — the same rule the
@@ -61,7 +78,7 @@ export function revalidateEmetForPost(post: {
     // posts. Revalidating a /chapters/x/chapter-y path would be a route
     // that does not exist.
     if (!post.slug.startsWith("chapter-")) {
-      revalidatePath(emetPath(`/chapters/${category}/${post.slug}`));
+      revalidatePath(routePath(`/chapters/${category}/${post.slug}`));
     }
   }
 }
