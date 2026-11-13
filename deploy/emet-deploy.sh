@@ -15,11 +15,16 @@
 # database is reached through the running container rather than a published
 # port, and the live site is checked before and after.
 #
-#   bash deploy/emet-deploy.sh                 # dry run, changes nothing
-#   bash deploy/emet-deploy.sh --apply         # deploy
-#   bash deploy/emet-deploy.sh --apply --root  # also switch to root URLs
+# Run it from /opt/emetmatrix, which is where this branch is checked out.
+# It reads /opt/twelvesteps for the nginx config and writes to both, using
+# absolute paths throughout, so the directory it is launched from does not
+# otherwise matter - but the script itself only exists on this branch:
 #
-# Rollback: deploy/emet-deploy-rollback.sh
+#   cd /opt/emetmatrix && bash deploy/emet-deploy.sh                 # dry run
+#   cd /opt/emetmatrix && bash deploy/emet-deploy.sh --apply         # deploy
+#   cd /opt/emetmatrix && bash deploy/emet-deploy.sh --apply --root  # root URLs
+#
+# Rollback: cd /opt/emetmatrix && bash deploy/emet-deploy-rollback.sh
 
 set -Eeuo pipefail
 

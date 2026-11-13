@@ -11,8 +11,11 @@
 # whether the main site is serving at the end - the single outcome that
 # matters here.
 #
-#   bash deploy/emet-deploy-rollback.sh              # nginx + app only
-#   bash deploy/emet-deploy-rollback.sh --database   # also restore the dump
+# Run from /opt/emetmatrix, where this branch is checked out - the script
+# exists only on it. All paths inside are absolute.
+#
+#   cd /opt/emetmatrix && bash deploy/emet-deploy-rollback.sh             # nginx + app
+#   cd /opt/emetmatrix && bash deploy/emet-deploy-rollback.sh --database  # also the dump
 #
 # The database is NOT restored unless asked: the https rewrite is harmless
 # to leave in place, and a restore would also discard any content edited in
