@@ -38,7 +38,22 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
 
     const status = (formData.get("status") as Post["status"]) ?? "draft";
     const publishedAtRaw = (formData.get("published_at") as string) || "";
-    const published_at = publishedAtRaw ? new Date(publishedAtRaw).toISOString() : null;
+    // A post marked published with the date left blank is invisible to the
+    // public site and gives no hint why: the public filter checks the status
+    // and the date as two independent conditions (lib/queries/supabase/
+    // index.ts - getPost, listPosts, search), so a null date fails it even
+    // though the status passes. Fifteen of the English sources were saved
+    // this way and 404'd while looking published in the admin.
+    //
+    // Publishing without a date means "publish now", so that is what it
+    // does. An explicit date is still honoured, including a future one,
+    // which is how scheduled publishing keeps working. A draft keeps its
+    // null: a draft is not waiting on a date.
+    const published_at = publishedAtRaw
+      ? new Date(publishedAtRaw).toISOString()
+      : status === "published"
+        ? new Date().toISOString()
+        : null;
 
     const input: Partial<Post> & { id?: string } = {
       id,
