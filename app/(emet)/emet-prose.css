@@ -327,3 +327,28 @@
     padding: 0.7rem;
   }
 }
+
+/* The wrapper sanitize-html.ts builds around an allowed YouTube player.
+ * It is written after sanitising, not taken from the body, so its class
+ * is not in the editor's allowlist and a body cannot produce one.
+ *
+ * The ratio lives here because the bodies carry width="420" height="315"
+ * from a 2012 layout, which overflows a phone and leaves a letterboxed
+ * frame on a desktop column. */
+.emet-prose .emet-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-block: 1.75em;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.emet-prose .emet-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}

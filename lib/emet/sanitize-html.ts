@@ -81,6 +81,60 @@ function filterClasses(value: string): string {
 const DROP_WITH_CONTENT = /<(script|style|iframe|object|embed|form|input|button|noscript|svg|math)\b[\s\S]*?<\/\1\s*>/gi;
 const DROP_SELF_CLOSING = /<(script|style|iframe|object|embed|form|input|button|link|meta)\b[^>]*\/?>/gi;
 
+/**
+ * The only hosts an <iframe> may point at.
+ *
+ * An iframe runs another site's page inside this one, so the host is the
+ * whole of the trust decision. These two serve a video player and nothing
+ * else; youtube-nocookie.com is the same player without the tracking
+ * cookies. Both are matched on the FULL host, never as a substring:
+ * "youtube.com.evil.test" contains the string and is a different site.
+ *
+ * Path matters too. Only /embed/<id> is a player; youtube.com/<anything>
+ * else is an ordinary page that has no business in a frame here.
+ */
+const IFRAME_HOSTS = new Set([
+  "www.youtube.com",
+  "youtube.com",
+  "www.youtube-nocookie.com",
+  "youtube-nocookie.com",
+]);
+
+/**
+ * Returns a normalised https embed URL, or null if this is not one.
+ *
+ * Parsed with URL() rather than matched with a regex: a regex over a URL
+ * has to get userinfo, ports, backslashes and encoded characters right,
+ * and "https://www.youtube.com@evil.test/embed/x" reads as youtube to a
+ * careless pattern while the browser goes to evil.test. The parser
+ * already knows these rules.
+ */
+function youtubeEmbedUrl(raw: string): string | null {
+  let u: URL;
+  try {
+    // A protocol-relative //host/path has no scheme for the parser, and
+    // the bodies carry http:// from the WordPress era; both become https.
+    u = new URL(raw.trim().replace(/^\/\//, "https://"));
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+  // A username or password before the host is only ever an attempt to
+  // make the host look like something it is not.
+  if (u.username || u.password) return null;
+  if (!IFRAME_HOSTS.has(u.hostname.toLowerCase())) return null;
+  if (!/^\/embed\/[A-Za-z0-9_-]+$/.test(u.pathname)) return null;
+
+  // Rebuilt rather than passed through, so only the parts named here
+  // survive. The query is dropped: it carries player options nobody set
+  // deliberately in this content, and an unexpected one is not worth
+  // carrying.
+  u.protocol = "https:";
+  u.search = "";
+  u.hash = "";
+  return u.toString();
+}
+
 /** A URL is safe if it cannot execute. `javascript:` and `data:` are the
  *  two that can, and both have been smuggled past naive checks with
  *  whitespace and entities, so they are stripped before testing. */
@@ -96,6 +150,32 @@ export function sanitizeArticleHtml(input: string): string {
   if (!input) return "";
 
   let html = input;
+
+  // 0. Lift out the YouTube players before anything else runs.
+  //
+  // Step 1 deletes every <iframe> with its content, and the tag walk in
+  // step 3 would unwrap any that survived, so a player cannot be kept by
+  // allowing the tag: the markup is gone before the walk sees it. It is
+  // replaced by a placeholder here and written back at the end, which
+  // leaves the drop rules below exactly as strict as they were.
+  //
+  // This is what made the source-55 video vanish in the migration: the
+  // body still holds its <iframe>, and the reader saw nothing.
+  //
+  // The placeholder uses characters that cannot appear in HTML text —
+  // the body is escaped by the time it reaches a reader — and anything
+  // in the source that resembles one is removed first, so content cannot
+  // forge a slot and have an arbitrary iframe written into it.
+  const players: string[] = [];
+  html = html.replace(/\u0000EMET_YT_\d+\u0000/g, "");
+  html = html.replace(/<iframe\b[^>]*>(?:[\s\S]*?<\/iframe\s*>)?/gi, (tag) => {
+    const src = /\ssrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(tag);
+    const url = src ? youtubeEmbedUrl(src[2] ?? src[3] ?? src[4] ?? "") : null;
+    if (!url) return ""; // not a player: dropped exactly as before
+    const slot = `\u0000EMET_YT_${players.length}\u0000`;
+    players.push(url);
+    return slot;
+  });
 
   // 1. Remove the tags that carry executable or layout-breaking content.
   html = html.replace(DROP_WITH_CONTENT, "");
@@ -195,6 +275,29 @@ export function sanitizeArticleHtml(input: string): string {
   // 4. Collapse the empty paragraphs the removals leave behind.
   html = html.replace(/<p>\s*(<br\s*\/?>)?\s*<\/p>/gi, "");
   html = html.replace(/(\s*<br\s*\/?>\s*){3,}/gi, "<br><br>");
+
+  // 5. Write the players back.
+  //
+  // The URL came from youtubeEmbedUrl(), which rebuilt it from a parsed
+  // host and an /embed/<id> path, so it holds no quote to break out of
+  // the attribute. The wrapper carries the 16:9 ratio, since the bodies
+  // specify a 2012 pixel size that does not fit a modern column.
+  //
+  // sandbox is deliberately omitted: it would block the player's own
+  // scripts and leave a dead frame. The host allowlist is what makes the
+  // frame safe, not an attribute.
+  html = html.replace(/\u0000EMET_YT_(\d+)\u0000/g, (_m, i: string) => {
+    const url = players[Number(i)];
+    if (!url) return "";
+    return (
+      `<div class="emet-embed">` +
+      `<iframe src="${url}" title="YouTube video player" loading="lazy" ` +
+      `referrerpolicy="strict-origin-when-cross-origin" ` +
+      `allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ` +
+      `allowfullscreen></iframe>` +
+      `</div>`
+    );
+  });
 
   return html.trim();
 }
