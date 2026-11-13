@@ -7,6 +7,21 @@ const nextConfig: NextConfig = {
   // and roll back comfortably on a small VPS.
   output: "standalone",
 
+  // DATA_SOURCE decides which branch lib/media.ts takes when it builds a
+  // URL, and four components that call it are "use client". In the
+  // browser `process.env.DATA_SOURCE` is undefined, so every branch fell
+  // through to the mock one and the admin showed /api/mock-media/... for
+  // files actually served from /api/media/... — a URL that 404s if copied
+  // out of the media library.
+  //
+  // Inlined here rather than renamed to NEXT_PUBLIC_DATA_SOURCE: the name
+  // is read by the server in lib/queries/index.ts and set in every .env
+  // and compose file, so renaming it would mean changing deployment
+  // config on two live servers to fix a client-side bug.
+  env: {
+    DATA_SOURCE: process.env.DATA_SOURCE ?? "",
+  },
+
   images: {
     // Next's default deviceSizes go up to 3840 (4K). On a 4-core VPS that
     // meant a page with 16 images asking sharp for six 4K resizes at once,
