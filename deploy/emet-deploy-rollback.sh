@@ -72,6 +72,33 @@ fi
 # 2. Roll the code back one commit and rebuild
 # --------------------------------------------------------------------------
 say "2/4  Rebuilding the app from the previous commit"
+# Put EMET_BASE_PATH back BEFORE rebuilding. The deploy's --root empties it
+# so the app emits root-relative links, and step 1 above has just restored
+# the nginx config that serves the site under /emet again. Rebuilding
+# without this would pair /emet pages with root-relative links and every
+# link on the site would 404 - a worse state than the one being rolled
+# back from.
+if [ -d "$EMET_DIR" ]; then
+  ENV_BAK=$(ls -1 "$EMET_DIR"/.env.bak.* 2>/dev/null | sort | tail -1)
+  if [ -n "$ENV_BAK" ] && [ -f "$ENV_BAK" ]; then
+    if cp "$ENV_BAK" "$EMET_DIR/.env"; then
+      ok "restored .env from $ENV_BAK"
+    else
+      warn "could not restore $ENV_BAK - check $EMET_DIR/.env by hand"
+    fi
+  elif grep -q '^EMET_BASE_PATH=$' "$EMET_DIR/.env" 2>/dev/null; then
+    # No backup, but the value is empty, which the /emet vhost cannot serve.
+    if sed -i 's|^EMET_BASE_PATH=$|EMET_BASE_PATH=/emet|' "$EMET_DIR/.env"; then
+      ok "no .env backup found; set EMET_BASE_PATH=/emet to match the restored vhost"
+    else
+      warn "EMET_BASE_PATH is empty in $EMET_DIR/.env and could not be set.
+         Set it to /emet by hand before the rebuild, or links will 404."
+    fi
+  else
+    ok ".env needs no change"
+  fi
+fi
+
 if cd "$EMET_DIR" 2>/dev/null; then
   COMPOSE_FILE=${COMPOSE_FILE:-}
   if [ -z "$COMPOSE_FILE" ]; then

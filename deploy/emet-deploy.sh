@@ -64,7 +64,7 @@ run() {
 # --------------------------------------------------------------------------
 # 0. Preflight
 # --------------------------------------------------------------------------
-say "0/6  Preflight"
+say "0/7  Preflight"
 
 [ -d "$EMET_DIR" ] || die "$EMET_DIR does not exist. Find the stack with: ls -d /opt/*/"
 ok "emet stack dir: $EMET_DIR"
@@ -178,7 +178,7 @@ COMPOSE="docker compose -f $COMPOSE_FILE --env-file $ENV_FILE"
 # --------------------------------------------------------------------------
 # 1. Back up the emet database
 # --------------------------------------------------------------------------
-say "1/6  Backing up the emet database"
+say "1/7  Backing up the emet database"
 STAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR="$EMET_DIR/backups"
 DUMP="$BACKUP_DIR/emet-$STAMP.sql.gz"
@@ -200,7 +200,7 @@ fi
 # --------------------------------------------------------------------------
 # 2. Fetch the code
 # --------------------------------------------------------------------------
-say "2/6  Fetching $BRANCH"
+say "2/7  Fetching $BRANCH"
 cd "$EMET_DIR"
 BEFORE=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 step "currently at $BEFORE"
@@ -227,15 +227,43 @@ fi
 # emet-https-media.mjs". Building first means the container that runs the
 # script is the one that has it.
 # --------------------------------------------------------------------------
-say "3/6  Rebuilding the app"
+say "3/7  Rebuilding the app"
+BUILD_ARGS=""
 if [ "$ROOT_URLS" = "1" ]; then
   warn "--root given: building with EMET_BASE_PATH empty, so links come out
          root-relative. The PAGES still build under /emet - that is what
          nginx/conf.d/emet-root.conf.example exists to bridge. Step 5
          installs it; without that every link 404s."
-  BUILD_ARGS="--build-arg EMET_BASE_PATH="
-else
-  BUILD_ARGS=""
+
+  # The value is set in .env, NOT passed as --build-arg.
+  #
+  # `--build-arg EMET_BASE_PATH=` with an empty value is ignored by compose:
+  # it falls back to the compose file's own args:, which reads .env, where
+  # the value was still /emet. The build then baked /emet into the SSR
+  # bundle while every link said otherwise, and the whole site 404'd. That
+  # cost a full deploy cycle to find, so the flag is not used at all here.
+  if grep -q '^EMET_BASE_PATH=' "$ENV_FILE"; then
+    CURRENT_BP=$(sed -n 's/^EMET_BASE_PATH=//p' "$ENV_FILE" | tail -1)
+    if [ -z "$CURRENT_BP" ]; then
+      ok "EMET_BASE_PATH is already empty in $ENV_FILE"
+    elif [ "$APPLY" = "1" ]; then
+      cp "$ENV_FILE" "$ENV_FILE.bak.$STAMP"         || die "could not back up $ENV_FILE before editing it."
+      sed -i 's|^EMET_BASE_PATH=.*|EMET_BASE_PATH=|' "$ENV_FILE"         || die "could not set EMET_BASE_PATH in $ENV_FILE."
+      ok "EMET_BASE_PATH emptied in $ENV_FILE (was \"$CURRENT_BP\", backup: $ENV_FILE.bak.$STAMP)"
+    else
+      step "would set EMET_BASE_PATH= in $ENV_FILE (currently \"$CURRENT_BP\")"
+    fi
+  else
+    if [ "$APPLY" = "1" ]; then
+      cp "$ENV_FILE" "$ENV_FILE.bak.$STAMP"         || die "could not back up $ENV_FILE before editing it."
+      printf '
+EMET_BASE_PATH=
+' >> "$ENV_FILE"
+      ok "EMET_BASE_PATH= appended to $ENV_FILE (backup: $ENV_FILE.bak.$STAMP)"
+    else
+      step "would append EMET_BASE_PATH= to $ENV_FILE (not currently set)"
+    fi
+  fi
 fi
 
 # The overlay is layered on for the build only. Order matters: postgres is
@@ -298,7 +326,7 @@ fi
 # --------------------------------------------------------------------------
 # 4. Upgrade the embedded media URLs to https
 # --------------------------------------------------------------------------
-say "4/6  Upgrading embedded media URLs to https"
+say "4/7  Upgrading embedded media URLs to https"
 # Run inside the app container: it has node and the pg module, and it can
 # reach the database over the compose network without a published port.
 DB_URL_IN_CT="postgresql://$DB_USER:$DB_PASS@$EMET_DB_CT:5432/$DB_NAME"
@@ -334,9 +362,42 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 5. Optionally switch new.hineni.io to root URLs
+# 5. Give published posts a date, so they actually appear
 # --------------------------------------------------------------------------
-say "5/6  nginx"
+say "5/7  Backfilling published_at"
+# Fifteen English sources were saved as published with the date field left
+# blank. The public filter checks status and published_at independently, so
+# those posts 404'd while reading as published in the admin. The admin no
+# longer writes a null date when publishing; this repairs the rows that
+# already have one. Drafts are reported, never published.
+if [ "$APPLY" = "0" ]; then
+  if docker exec "$EMET_CT" test -f scripts/emet-backfill-published-at.mjs 2>/dev/null; then
+    step "script present in the current image; would dry-run then apply it"
+  else
+    step "script not in the CURRENT image - step 3's rebuild adds it, so this"
+    step "  is expected on a dry run and is not a problem"
+  fi
+else
+  step "dry run first"
+  set +e
+  docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT"     node scripts/emet-backfill-published-at.mjs 2>&1 | sed 's/^/      /'
+  BF_DRY_RC=${PIPESTATUS[0]}
+  set -e
+  if [ "$BF_DRY_RC" != "0" ]; then
+    die "the backfill script failed to run (exit $BF_DRY_RC) even after the
+      rebuild. The app is up on the new image and the database is
+      untouched; only this content fix did not run."
+  fi
+
+  docker exec -e DATABASE_URL="$DB_URL_IN_CT" "$EMET_CT"     node scripts/emet-backfill-published-at.mjs --write 2>&1 | tail -12 | sed 's/^/      /'     || die "the backfill failed. Restore with:
+      gunzip -c $DUMP | docker exec -i $EMET_DB_CT psql -U $DB_USER -d $DB_NAME"
+  ok "published dates backfilled"
+fi
+
+# --------------------------------------------------------------------------
+# 6. Optionally switch new.hineni.io to root URLs
+# --------------------------------------------------------------------------
+say "6/7  nginx"
 if [ "$ROOT_URLS" = "1" ]; then
   SRC="$MAIN_DIR/nginx/conf.d/emet-root.conf.example"
   [ -f "$SRC" ] || die "$SRC not found. In $MAIN_DIR, run: git pull"
@@ -372,9 +433,9 @@ else
 fi
 
 # --------------------------------------------------------------------------
-# 6. Verify
+# 7. Verify
 # --------------------------------------------------------------------------
-say "6/6  Verifying"
+say "7/7  Verifying"
 if [ "$APPLY" = "0" ]; then
   step "would check both sites respond"
   printf '\n\033[1;33mDry run finished.\033[0m Re-run with --apply to deploy.\n\n'
