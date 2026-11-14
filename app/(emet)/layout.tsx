@@ -2,6 +2,11 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { EmetHeader } from "@/components/emet/emet-header";
 import { EmetFooter } from "@/components/emet/emet-footer";
+// Attached here rather than in the root layout: these two faces belong to
+// the EMETMATRIX design only, and scoping them to this group keeps their
+// bytes off הנני's pages. `--font-body` (Assistant) already comes from the
+// root layout, so it is not re-declared.
+import { fontSecularOne, fontPlexMono } from "@/lib/fonts";
 import { db } from "@/lib/queries";
 import "./emet-prose.css";
 
@@ -60,7 +65,7 @@ export default async function EmetLayout({ children }: { children: ReactNode }) 
   };
 
   return (
-    <>
+    <div className={`${fontSecularOne.variable} ${fontPlexMono.variable} emet-root flex min-h-full flex-col`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
@@ -70,6 +75,6 @@ export default async function EmetLayout({ children }: { children: ReactNode }) 
         {children}
       </main>
       <EmetFooter siteName={settings.site_name} />
-    </>
+    </div>
   );
 }

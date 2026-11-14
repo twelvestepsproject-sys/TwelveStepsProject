@@ -62,8 +62,12 @@ export default async function ChaptersPage() {
           </ol>
         </nav>
 
+        {/* The index keeps its cover-image grid; only the heading is
+            brought onto the new type scale, so the two pages read as one
+            site. The grid itself was not part of the redesign brief. */}
         <header className="mb-12">
-          <h1 className="font-display text-3xl font-light text-[#2b2b2b] sm:text-4xl">
+          <p className="emet-eyebrow">ALL CHAPTERS</p>
+          <h1 className="emet-title" style={{ fontSize: "clamp(32px, 5vw, 52px)" }}>
             כל הפרקים
           </h1>
         </header>

@@ -14,6 +14,7 @@ import {
   byReadingOrder,
   chapterNumberOf,
   chapterTitleOf,
+  hebrewNumeralOf,
   isChapterCategory,
 } from "@/lib/emet/chapters";
 
@@ -206,11 +207,23 @@ export default async function SubchapterPage({ params }: PageProps) {
           </aside>
 
           <article className="order-1 min-w-0 flex-1">
-            <header className="mb-10 border-b border-black/10 pb-8">
-              <p className="text-xs tracking-[0.2em] text-emerald-700/80">
-                {number ? `פרק ${number}` : chapterTitle} · חלק {position}
+            {/* On the new type scale, matching the chapter hero. No
+                falling letters here: the animation marks the opening of a
+                chapter, and repeating it on every part would make it
+                wallpaper rather than a signal. */}
+            <header
+              className="mb-10 pb-8"
+              style={{ borderBottom: "1px solid var(--emet-line)" }}
+            >
+              {/* Both ordinals in Hebrew numerals, so the line does not
+                  mix "פרק ב׳" with a Latin "1" in the same breath. */}
+              <p className="emet-eyebrow">
+                {number
+                  ? `פרק ${hebrewNumeralOf(number) ?? number}`
+                  : chapterTitle}{" "}
+                · חלק {hebrewNumeralOf(position) ?? position}
               </p>
-              <h1 className="mt-3 font-display text-2xl font-bold leading-tight text-[#1a1a1a] sm:text-4xl">
+              <h1 className="emet-title" style={{ fontSize: "clamp(28px, 5vw, 46px)" }}>
                 {post.title}
               </h1>
             </header>

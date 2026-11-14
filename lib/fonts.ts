@@ -97,3 +97,38 @@ export const FONT_FAMILY_CSS: Record<string, string> = {
   Rubik: "var(--font-rubik)",
   "Noto Sans Hebrew": "var(--font-noto-sans-hebrew)",
 };
+
+/**
+ * EMETMATRIX design system (2026-11, Roni's chapter-page direction).
+ *
+ * Secular One for display, IBM Plex Mono for the small Latin eyebrow
+ * labels ("CHAPTER B"). Assistant is already loaded above as `fontBody`
+ * and is reused for running text rather than loaded twice.
+ *
+ * Self-hosted like every other family here, NOT linked from Google's CDN:
+ * §3 makes that a hard constraint, so the woff2 subsets were downloaded
+ * from gstatic and committed under /public/fonts. Secular One ships
+ * hebrew + latin subsets; IBM Plex Mono only ever renders Latin labels,
+ * so only its latin subset is carried. SIL Open Font License 1.1.
+ * See docs/licenses.md for source URLs.
+ *
+ * Scoped to the (emet) route group by its layout — adding these variables
+ * does not change how הנני's pages render.
+ */
+export const fontSecularOne = localFont({
+  variable: "--font-secular-one",
+  display: "swap",
+  src: [
+    { path: "../public/fonts/secular-one-hebrew.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/secular-one-latin.woff2", weight: "400", style: "normal" },
+  ],
+});
+
+export const fontPlexMono = localFont({
+  variable: "--font-plex-mono",
+  display: "swap",
+  src: [
+    { path: "../public/fonts/ibm-plex-mono-400-latin.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/ibm-plex-mono-600-latin.woff2", weight: "600", style: "normal" },
+  ],
+});
