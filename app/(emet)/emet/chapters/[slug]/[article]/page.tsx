@@ -35,7 +35,7 @@ interface PageProps {
   params: Promise<{ slug: string; article: string }>;
 }
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   const categories = await db.listCategories();

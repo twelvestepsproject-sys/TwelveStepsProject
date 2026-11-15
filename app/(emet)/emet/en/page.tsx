@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   alternates: { canonical: emetPath("/en") },
 };
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export default async function EnglishIndexPage() {
   const { items } = await db.listPosts({ categorySlug: "english", perPage: 300 });

@@ -25,7 +25,7 @@ import {
  * Images come from the media table by filename rather than by hardcoded
  * path, so replacing one through the admin is enough — no deploy.
  */
-export const revalidate = 3600;
+export const revalidate = 60;
 
 /** From the live homepage, verbatim. */
 const OPENING_QUESTION =

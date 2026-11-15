@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   alternates: { canonical: emetPath("/chapters") },
 };
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export default async function ChaptersPage() {
   const categories = await db.listCategories();

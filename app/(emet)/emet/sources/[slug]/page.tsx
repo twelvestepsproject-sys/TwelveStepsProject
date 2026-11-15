@@ -22,7 +22,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   const { items } = await db.listPosts({ categorySlug: "sources", perPage: 200 });
