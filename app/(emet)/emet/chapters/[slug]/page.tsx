@@ -24,6 +24,7 @@ import {
   partExcerptOf,
 } from "@/lib/emet/chapters";
 import { MatrixRain } from "@/components/emet/matrix-rain";
+import { partCoverFallback } from "@/lib/emet/part-cover";
 import { mediaUrlFor } from "@/lib/media";
 
 /**
@@ -64,17 +65,30 @@ async function loadChapter(slug: string) {
   // text is the point of this page, so the main post is fetched in full.
   const main = summary ? await db.getPost(summary.slug) : null;
 
-  // Cover images for the parts list. Resolved in parallel rather than in
-  // the render, and tolerant of a missing one: the admin's post form does
-  // not set cover_image_id at all today, so most parts have none and the
-  // card falls back to its own illustration texture.
-  const covers = await Promise.all(
-    subchapters.map((p) =>
-      p.cover_image_id ? db.getMedia(p.cover_image_id) : Promise.resolve(null),
+  // The picture for each part card, in three tiers.
+  //
+  // 1. A cover chosen in the admin. The post form saves one again, so
+  //    this is now reachable; it was not before.
+  // 2. The part's own video still, derived from the first YouTube id in
+  //    its body. This is what gives the 29 existing parts a picture with
+  //    no editing work — see lib/emet/part-cover.ts.
+  // 3. The numbered tile, for a part with neither.
+  //
+  // Bodies are fetched here because `listPosts` returns summaries, which
+  // carry no body by contract. One query per part, all in flight at once,
+  // on a page that rebuilds at most once a minute.
+  const [covers, bodies] = await Promise.all([
+    Promise.all(
+      subchapters.map((p) =>
+        p.cover_image_id ? db.getMedia(p.cover_image_id) : Promise.resolve(null),
+      ),
     ),
-  );
+    Promise.all(subchapters.map((p) => db.getPost(p.slug))),
+  ]);
 
-  return { category, main, subchapters, covers };
+  const fallbackCovers = bodies.map((p) => partCoverFallback(p?.body));
+
+  return { category, main, subchapters, covers, fallbackCovers };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -111,7 +125,7 @@ export default async function ChapterPage({ params }: PageProps) {
   const data = await loadChapter(slug);
   if (!data) notFound();
 
-  const { category, main, subchapters, covers } = data;
+  const { category, main, subchapters, covers, fallbackCovers } = data;
   const number = chapterNumberOf(category.slug);
   const title = chapterTitleOf(category.name);
 
@@ -236,7 +250,9 @@ export default async function ChapterPage({ params }: PageProps) {
             </h2>
             <ol className="emet-parts mt-6">
               {subchapters.map((post, i) => {
+                // A chosen cover first, then the part's own video still.
                 const cover = covers[i];
+                const artUrl = cover ? mediaUrlFor(cover) : fallbackCovers[i];
                 const partSentence = partExcerptOf(post.excerpt, post.title);
                 return (
                   <li key={post.id}>
@@ -245,14 +261,17 @@ export default async function ChapterPage({ params }: PageProps) {
                       className="emet-part-card"
                     >
                       <div className="emet-part-art">
-                        {cover ? (
+                        {artUrl ? (
                           /* Plain <img>, not next/image: these are
                              decorative thumbnails in a list, and the
                              optimizer was what made image-heavy pages
-                             slow on this VPS (see next.config.ts). */
+                             slow on this VPS (see next.config.ts). A
+                             YouTube still is cross-origin besides, and
+                             would need the host allowlisted for no gain
+                             on a decorative 150px tile. */
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={mediaUrlFor(cover)}
+                            src={artUrl}
                             alt=""
                             loading="lazy"
                             decoding="async"

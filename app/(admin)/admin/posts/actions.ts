@@ -65,7 +65,11 @@ export async function savePostAction(formData: FormData): Promise<ActionResult<{
       // to decide whether to render the button at all.
       cta_label: String(formData.get("cta_label") ?? "").trim() || null,
       cta_url: String(formData.get("cta_url") ?? "").trim() || null,
-      cover_image_id: null,
+      // Was hardcoded null, which silently discarded whatever the editor
+      // chose — and since the form had no field at all, no post in the
+      // database ever carried a cover. Blank means "no cover", which the
+      // part card and the blog card both handle.
+      cover_image_id: String(formData.get("cover_image_id") ?? "").trim() || null,
       category_id: categoryId,
       category,
       author_id: null,

@@ -14,10 +14,20 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
 
   const canEdit = session?.role === "admin" || session?.role === "editor";
 
+  // Resolved here rather than inside the picker: the form is a client
+  // component, and without the row it would have to fetch the whole media
+  // list just to render one thumbnail it already has the id for.
+  const coverImage = post.cover_image_id ? await db.getMedia(post.cover_image_id) : null;
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="font-display text-2xl font-bold text-ink">עריכת מאמר</h1>
-      <PostForm post={post} categories={categories} canEdit={canEdit} />
+      <PostForm
+        post={post}
+        categories={categories}
+        canEdit={canEdit}
+        coverImage={coverImage}
+      />
     </div>
   );
 }

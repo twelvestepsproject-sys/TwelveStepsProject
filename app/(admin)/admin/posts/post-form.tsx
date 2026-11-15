@@ -7,13 +7,15 @@ import { useAutosave } from "@/components/admin/use-autosave";
 import { AutosaveStatus } from "@/components/admin/autosave-status";
 import { Field, inputClass, textareaClass, PrimaryButton, SecondaryButton } from "@/components/admin/fields";
 import { PlaceholderBadge } from "@/components/admin/badges";
-import type { Category, Post } from "@/lib/schemas";
+import { MediaPickerField } from "@/components/admin/media-picker";
+import type { Category, Media, Post } from "@/lib/schemas";
 
 interface FormState {
   title: string;
   slug: string;
   excerpt: string;
   body: string;
+  cover_image_id: string | null;
   cta_label: string;
   cta_url: string;
   category_id: string;
@@ -28,6 +30,7 @@ function toFormState(p?: Post | null): FormState {
     slug: p?.slug ?? "",
     excerpt: p?.excerpt ?? "",
     body: p?.body ?? "",
+    cover_image_id: p?.cover_image_id ?? null,
     cta_label: p?.cta_label ?? "",
     cta_url: p?.cta_url ?? "",
     category_id: p?.category_id ?? "",
@@ -44,6 +47,10 @@ function toFormData(state: FormState, id?: string): FormData {
   fd.set("slug", state.slug);
   fd.set("excerpt", state.excerpt);
   fd.set("body", state.body);
+  // Empty string, not omitted: the action distinguishes "no cover" from
+  // "field absent", and an absent field during autosave must not be read
+  // as a request to clear a cover the editor never touched.
+  fd.set("cover_image_id", state.cover_image_id ?? "");
   fd.set("cta_label", state.cta_label);
   fd.set("cta_url", state.cta_url);
   fd.set("category_id", state.category_id);
@@ -57,10 +64,14 @@ export function PostForm({
   post,
   categories,
   canEdit,
+  coverImage,
 }: {
   post?: Post | null;
   categories: Category[];
   canEdit: boolean;
+  /** The resolved media row for `post.cover_image_id`, loaded by the page
+   *  so the picker can show the current thumbnail without a round trip. */
+  coverImage?: Media | null;
 }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>(() => toFormState(post));
@@ -142,6 +153,22 @@ export function PostForm({
             required
           />
         </Field>
+
+        {/* The field this form was missing. `cover_image_id` has been in
+            the posts table and the public card markup all along, but the
+            save action hardcoded null, so no post could ever have one and
+            every EMETMATRIX part card fell back to its numbered tile.
+            Leaving it empty is a real choice, not a gap: a chapter part
+            with a video gets its thumbnail automatically (see
+            lib/emet/part-cover.ts), so this is the override for the cases
+            where that picture is the wrong one. */}
+        <MediaPickerField
+          label="תמונת שער (אופציונלי)"
+          hint="מוצגת בכרטיס של החלק בדף הפרק. אם יישאר ריק ולחלק יש סרטון, התמונה תילקח מהסרטון אוטומטית."
+          value={state.cover_image_id}
+          media={coverImage}
+          onChange={(id) => update("cover_image_id", id)}
+        />
 
         <Field label="תוכן מלא" htmlFor="body" required>
           <textarea
