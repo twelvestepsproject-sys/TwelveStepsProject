@@ -664,3 +664,96 @@
     transform: none;
   }
 }
+
+/* ------------------------------------------------------------------
+ * The English archive index (/en).
+ *
+ * Its own classes rather than arbitrary Tailwind colour values: §3.5
+ * bans a hardcoded hex in app code, and the page repeats the same few
+ * colours across three sections, a jump list and a hundred-odd rows.
+ * Driving them from the tokens above keeps the page in the palette and
+ * keeps the hex out of the JSX.
+ *
+ * Scoped under .emet-root, like everything else in this file, so none
+ * of it can reach הנני's pages.
+ * ------------------------------------------------------------------ */
+
+.emet-root .emet-en-crumb { color: var(--emet-muted); }
+.emet-root .emet-en-crumb a:hover { color: var(--emet-fg); }
+
+.emet-root .emet-en-intro { color: var(--emet-muted); }
+
+/* The jump list at the top of the archive. */
+.emet-root .emet-en-jump {
+  border: 1px solid var(--emet-line);
+  color: var(--emet-fg);
+  background: transparent;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+.emet-root .emet-en-jump:hover {
+  border-color: var(--emet-green);
+  background: var(--emet-panel);
+  color: var(--emet-green-deep);
+}
+
+/* A section heading and its count. */
+.emet-root .emet-en-h2 {
+  font-family: var(--emet-f-display);
+  color: var(--emet-fg);
+}
+.emet-root .emet-en-count {
+  color: var(--emet-green-dim);
+  font-variant-numeric: tabular-nums;
+}
+.emet-root .emet-en-blurb { color: var(--emet-muted); }
+
+/* The rows. One rule for the list, so a hundred entries do not each
+ * carry their own colour classes. */
+.emet-root .emet-en-list { border-top: 1px solid var(--emet-line); }
+.emet-root .emet-en-list > li { border-bottom: 1px solid var(--emet-line); }
+
+.emet-root .emet-en-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: 1rem;
+  color: var(--emet-fg);
+  transition: background-color 0.2s, color 0.2s;
+}
+.emet-root .emet-en-row:hover { background: var(--emet-panel); }
+.emet-root .emet-en-row:hover .emet-en-row-title { color: var(--emet-green-deep); }
+.emet-root .emet-en-row:focus-visible {
+  outline: 2px solid var(--emet-green);
+  outline-offset: 2px;
+}
+
+.emet-root .emet-en-row-title {
+  min-width: 0;
+  flex: 1;
+  /* Titles imported from WordPress include long unbroken strings; the
+   * part cards needed the same guard. */
+  overflow-wrap: anywhere;
+  transition: color 0.2s;
+}
+
+.emet-root .emet-en-arrow {
+  flex-shrink: 0;
+  color: var(--emet-green-dim);
+  transition: transform 0.2s, color 0.2s;
+}
+.emet-root .emet-en-row:hover .emet-en-arrow {
+  color: var(--emet-green);
+  /* Points the way the surrounding text runs: this page is LTR. */
+  transform: translateX(4px);
+}
+
+.emet-root .emet-en-foot {
+  border-top: 1px solid var(--emet-line);
+  color: var(--emet-muted);
+}
+.emet-root .emet-en-foot a {
+  color: var(--emet-green-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.emet-root .emet-en-foot a:hover { color: var(--emet-green); }
