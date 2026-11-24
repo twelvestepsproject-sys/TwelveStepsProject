@@ -8,6 +8,12 @@ import { EmetFooter } from "@/components/emet/emet-footer";
 // root layout, so it is not re-declared.
 import { fontSecularOne, fontPlexMono } from "@/lib/fonts";
 import { db } from "@/lib/queries";
+import { emetPath } from "@/lib/emet/routes";
+import {
+  languageCategoriesOf,
+  languageMetaFor,
+  languageSegment,
+} from "@/lib/emet/languages";
 import "./emet-prose.css";
 
 /**
@@ -49,6 +55,16 @@ export default async function EmetLayout({ children }: { children: ReactNode }) 
   const settings = await db.getSiteSettings();
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 
+  // The translated sections, discovered rather than listed: the client
+  // creates a category in the admin and the language appears in the menu
+  // on the next revalidation, with no deploy. That was the brief — give
+  // him infrastructure he can extend himself.
+  const categories = await db.listCategories();
+  const languages = languageCategoriesOf(categories).map((category) => ({
+    href: emetPath(`/${languageSegment(category.slug)}`),
+    label: languageMetaFor(category.slug, category.name).endonym,
+  }));
+
   // Site-wide structured data. Kept at the layout rather than repeated on
   // each page, and pointed at this site's own search route.
   const websiteJsonLd = {
@@ -70,7 +86,11 @@ export default async function EmetLayout({ children }: { children: ReactNode }) 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
-      <EmetHeader siteName={settings.site_name} tagline={settings.tagline} />
+      <EmetHeader
+        siteName={settings.site_name}
+        tagline={settings.tagline}
+        languages={languages}
+      />
       <main id="main" className="flex-1">
         {children}
       </main>

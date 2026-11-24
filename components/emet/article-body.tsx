@@ -28,6 +28,7 @@ import {
 export function ArticleBody({
   html,
   lang,
+  dir,
   routes,
   titleRoutes,
   sourcesRoute,
@@ -35,7 +36,24 @@ export function ArticleBody({
   stripIndex = false,
 }: {
   html: string;
-  lang?: "he" | "en";
+  /**
+   * The article's language tag. Hebrew when omitted, which is the site's
+   * primary language and most of its content.
+   *
+   * Widened from "he" | "en" when the translated sections were added: a
+   * French article passed "fr" and the old type rejected it, while the
+   * direction logic below — `english ? ltr : rtl` — would have typeset it
+   * right-to-left. Direction is now derived from the language rather than
+   * from "is this English", so every added language is handled and only
+   * a genuinely RTL one gets RTL.
+   */
+  lang?: string;
+  /**
+   * Overrides the direction derived from `lang`. Needed for a language
+   * this component has no business knowing about: the caller already
+   * resolved it (see lib/emet/languages.ts).
+   */
+  dir?: "ltr" | "rtl";
   /** Legacy id -> route, so `/?p=8` links resolve. Omitted on pages
    *  that have no cross-references to fix. */
   routes?: LegacyRouteMap;
@@ -65,16 +83,20 @@ export function ArticleBody({
     source = rewriteAbsoluteLinks(source, titleRoutes, sourcesRoute, chapterRoutes).html;
   }
   const clean = sanitizeArticleHtml(source);
-  const english = lang === "en";
+  const language = lang?.trim() || "he";
+  // Hebrew and Arabic are the right-to-left languages this site plausibly
+  // carries; anything else is left-to-right. An explicit `dir` from the
+  // caller wins, because it was resolved from the language registry.
+  const direction = dir ?? (/^(he|ar|fa|ur|yi)/i.test(language) ? "rtl" : "ltr");
 
   return (
     <div
-      lang={english ? "en" : "he"}
-      dir={english ? "ltr" : "rtl"}
+      lang={language}
+      dir={direction}
       className={[
         "emet-prose mx-auto max-w-[70ch]",
         "text-[1.0625rem] leading-[1.9] text-[#333] sm:text-[1.125rem]",
-        english ? "text-left" : "text-right",
+        direction === "rtl" ? "text-right" : "text-left",
       ].join(" ")}
       dangerouslySetInnerHTML={{ __html: clean }}
     />

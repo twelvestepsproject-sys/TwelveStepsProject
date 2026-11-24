@@ -5,25 +5,47 @@ import { emetPath } from "@/lib/emet/routes";
 /**
  * Site header for EMETMATRIX.
  *
- * Navigation is static rather than read from the `menus` table: this site
- * has one fixed top-level shape — chapters, sources, English, search — and
- * a database round-trip on every page for four links that nobody will
- * reorder is a cost without a benefit. Section pages are the place to add
- * depth.
+ * The Hebrew shape of the navigation is static: chapters, sources,
+ * search. A database round-trip for three links nobody will reorder is a
+ * cost without a benefit.
  *
- * The desktop list and the mobile drawer render the same `NAV` array, so
- * the two cannot drift apart. Both are plain anchors, which is what keeps
- * the whole site navigable with JavaScript disabled — the search engine
+ * The LANGUAGES are not static, and that is deliberate. The client asked
+ * to be able to add a language himself, so the layout discovers them from
+ * the categories table and passes them in — creating a category in the
+ * admin puts a language in this menu with no deploy. An empty list
+ * renders no language entries at all rather than a stub.
+ *
+ * The desktop list and the mobile drawer render the same array, so the
+ * two cannot drift apart. Both are plain anchors, which is what keeps the
+ * whole site navigable with JavaScript disabled — the search engine
  * requirement in the brief, and the accessible default besides.
  */
-const NAV = [
+const HEBREW_NAV = [
   { href: emetPath("/chapters"), label: "הפרקים" },
   { href: emetPath("/sources"), label: "מקורות" },
-  { href: emetPath("/en"), label: "English" },
-  { href: emetPath("/search"), label: "חיפוש" },
 ];
 
-export function EmetHeader({ siteName, tagline }: { siteName: string; tagline: string }) {
+const SEARCH_NAV = { href: emetPath("/search"), label: "חיפוש" };
+
+export interface HeaderLanguage {
+  href: string;
+  label: string;
+}
+
+export function EmetHeader({
+  siteName,
+  tagline,
+  languages = [],
+}: {
+  siteName: string;
+  tagline: string;
+  /** Translated sections, discovered from the categories table. */
+  languages?: HeaderLanguage[];
+}) {
+  // Search stays last, after however many languages exist, so the menu
+  // does not reorder itself as the client adds one.
+  const NAV = [...HEBREW_NAV, ...languages, SEARCH_NAV];
+
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-white/95 backdrop-blur">
       {/* A skip link is the one piece of keyboard navigation that has to come
