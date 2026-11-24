@@ -116,12 +116,35 @@ async function legacyRedirect(request: NextRequest): Promise<NextResponse | null
   // this site at the root. Behind the /emet base path — how it runs until
   // the domain moves — the same request arrives as "/emet?p=18", so the
   // prefix is stripped before matching rather than stored twice.
-  const basePath = process.env.EMET_BASE_PATH ?? "/emet";
-  const prefix = basePath.replace(/\/$/, "");
-  const withinSite =
-    prefix && url.pathname.startsWith(prefix)
-      ? url.pathname.slice(prefix.length) || "/"
-      : url.pathname;
+  // Two different prefixes are in play here, and conflating them is why
+  // this did not fire in production on the first deploy.
+  //
+  //   ROUTE prefix   The pages are served from app/(emet)/emet/**, so the
+  //                  router's own path for the homepage is "/emet"
+  //                  whatever the links say. nginx rewrites an incoming
+  //                  "/" to "/emet" so the request reaches those pages,
+  //                  which means middleware sees "/emet" even though the
+  //                  reader asked for "/".
+  //
+  //   LINK prefix    EMET_BASE_PATH, which is only what the app WRITES
+  //                  into hrefs. It is "/emet" in local development and
+  //                  EMPTY in production, where the site answers on its
+  //                  own hostname.
+  //
+  // The first deploy stripped the LINK prefix from the incoming path. In
+  // production that is empty, so nothing was stripped, the key came out
+  // "/emet?p=18", and no rule matched — a silent 200 instead of a 301.
+  //
+  // So: the route prefix is stripped on the way IN (it is a property of
+  // the directory layout, not of configuration), and the link prefix is
+  // put back on the way OUT (it is what this site's URLs look like).
+  const ROUTE_PREFIX = "/emet";
+  const withinSite = url.pathname.startsWith(ROUTE_PREFIX)
+    ? url.pathname.slice(ROUTE_PREFIX.length) || "/"
+    : url.pathname;
+
+  const linkPrefix = (process.env.EMET_BASE_PATH ?? "").replace(/\/$/, "");
+  const prefix = linkPrefix;
 
   const rule = map.get(`${withinSite}?p=${p}`) ?? map.get(`/?p=${p}`);
   if (!rule) return null;
