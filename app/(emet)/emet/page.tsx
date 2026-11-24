@@ -37,10 +37,19 @@ const AUTHOR_BIO =
 const CHAPTERS_HEADING =
   "פיצוח קוד המטריקס… בואו להציץ אל מעבר לאשליה";
 
-/** The homepage shows the first six chapters. Covers are keyed by the
- *  chapter's own slug, the same set /chapters uses, so a cover replaced
- *  in the admin changes in both places. */
-const HOMEPAGE_CHAPTERS = 6;
+/**
+ * The homepage shows every chapter.
+ *
+ * It showed the first six, which read as an excerpt of the work rather
+ * than the work: a visitor landing here saw six of seventeen with no
+ * sign the rest existed, and the client asked for all of them. Nothing
+ * was gained by the cut — the grid is the same component /chapters uses,
+ * the covers come from one batched media query, and eleven more cards
+ * cost one row of that query and a few hundred bytes of HTML.
+ *
+ * Covers are keyed by the chapter's own slug, the same set /chapters
+ * uses, so a cover replaced in the admin changes in both places.
+ */
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await db.getSiteSettings();
@@ -59,7 +68,7 @@ export default async function EmetHomePage() {
     .filter((c) => isChapterCategory(c.slug))
     .sort((a, b) => (chapterNumberOf(a.slug) ?? 0) - (chapterNumberOf(b.slug) ?? 0));
 
-  const featured = chapters.slice(0, HOMEPAGE_CHAPTERS);
+  const featured = chapters;
   const media = await loadMediaByFilename([
     "hero-bg.webp",
     "author-portrait.webp",

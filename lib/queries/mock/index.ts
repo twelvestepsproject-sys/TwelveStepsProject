@@ -173,6 +173,7 @@ function toPostSummary(p: Post): PostSummary {
     excerpt: p.excerpt,
     cover_image_id: p.cover_image_id,
     category: p.category,
+    status: p.status,
     published_at: p.published_at,
     reading_time: p.reading_time,
   };
@@ -1322,6 +1323,12 @@ async function listRedirectsAdmin(opts: AdminListOptions = {}): Promise<Paginate
   return paginate(rows, opts.page ?? 1, opts.perPage ?? 50);
 }
 
+async function listRedirects(): Promise<Redirect[]> {
+  await delay();
+  maybeFail("listRedirects");
+  return mockDb.redirects.slice().sort((a, b) => a.from_path.localeCompare(b.from_path));
+}
+
 async function saveRedirect(input: Partial<Redirect> & { id?: string }): Promise<Redirect> {
   await delay();
   maybeFail("saveRedirect");
@@ -1502,6 +1509,7 @@ export const mockDataSource: DataSource = {
   saveNewsletterSubscriber,
 
   listRedirectsAdmin,
+  listRedirects,
   saveRedirect,
   deleteRedirect,
 

@@ -313,6 +313,7 @@ function rowToPostSummary(row: any): PostSummary {
     cover_image_id: row.cover_image_id,
     category: row.category ?? null,
     published_at: row.published_at,
+    status: row.status,
     reading_time: row.reading_time,
   };
 }
@@ -1402,6 +1403,21 @@ async function listRedirectsAdmin(opts: AdminListOptions = {}): Promise<Paginate
   return { items: (data ?? []) as Redirect[], total: count ?? 0, page, perPage };
 }
 
+/**
+ * Every redirect, for the public site. Ordered so the result is stable
+ * between calls, which keeps the cached copy on the consuming route from
+ * changing identity for no reason.
+ */
+async function listRedirects(): Promise<Redirect[]> {
+  const supabase = await getClient();
+  const { data, error } = await supabase
+    .from("redirects")
+    .select("*")
+    .order("from_path", { ascending: true });
+  throwIfError(error, "listRedirects");
+  return (data ?? []) as Redirect[];
+}
+
 async function saveRedirect(input: Partial<Redirect> & { id?: string }): Promise<Redirect> {
   const supabase = await getClient();
   const { id, ...fields } = input;
@@ -1627,6 +1643,7 @@ export const supabaseDataSource: DataSource = {
   saveNewsletterSubscriber,
 
   listRedirectsAdmin,
+  listRedirects,
   saveRedirect,
   deleteRedirect,
 

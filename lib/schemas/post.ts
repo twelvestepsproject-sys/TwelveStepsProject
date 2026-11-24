@@ -56,5 +56,14 @@ export const postSummarySchema = postSchema.pick({
   category: true,
   published_at: true,
   reading_time: true,
+  // Carried on the summary so the admin list can show and filter by it
+  // without a second query per row. The listing query already selects
+  // every column, so this costs nothing to fetch — it was only absent
+  // from the type, which made the admin screen call getPostAdmin() once
+  // per row: 200 extra round trips to render one page of a list.
+  //
+  // Public callers ignore it. They filter on status inside the data
+  // source (§5.5 rule 4) and never see a draft in the first place.
+  status: true,
 });
 export type PostSummary = z.infer<typeof postSummarySchema>;

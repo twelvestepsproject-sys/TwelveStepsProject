@@ -235,6 +235,15 @@ export interface DataSource {
   listRedirectsAdmin(opts?: AdminListOptions): Promise<Paginated<Redirect>>;
   saveRedirect(input: Partial<Redirect> & { id?: string }): Promise<Redirect>;
   deleteRedirect(id: string): Promise<void>;
+  /**
+   * Every redirect, for the public site to apply.
+   *
+   * The whole table rather than a lookup by path: 192 rows is a few
+   * kilobytes, the public route that uses it caches the result, and one
+   * query per 404 would put a database round trip on a path that is
+   * mostly crawlers. `redirects_select_public` already allows the read.
+   */
+  listRedirects(): Promise<Redirect[]>;
 
   // ---- Users / profiles (§8 "invite, set role, deactivate — admin only") ----
   // ADDED (this task): §6's `profiles` table had no DataSource coverage.
